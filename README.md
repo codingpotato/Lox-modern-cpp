@@ -1,2 +1,2 @@
-# Lox-modern-cpp
+# Lox Modern CPP
 Lox modern cpp implement
