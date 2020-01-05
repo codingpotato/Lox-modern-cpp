@@ -4,4 +4,5 @@ target_compile_options(lox
                        PRIVATE -Wall
                                -Werror
                                -Wextra
-                               -Wpedantic)
+                               -Wpedantic
+                               -pedantic-errors)

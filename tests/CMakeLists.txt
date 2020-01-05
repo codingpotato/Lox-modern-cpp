@@ -17,11 +17,11 @@ function(add_test_executable)
                                  -Wpedantic
                                  -pedantic-errors)
   target_include_directories(${ADD_NAME}
-                             PUBLIC .. ${catch_SOURCE_DIR}/single_include)
+                             PUBLIC ../src ${catch_SOURCE_DIR}/single_include)
   parseandaddcatchtests(${ADD_NAME})
 endfunction(add_test_executable)
 
 add_test_executable(NAME
-                    lox_tests
+                    scanner_tests
                     SOURCES
-                    lox_tests.cpp)
+                    scanner_tests.cpp)
