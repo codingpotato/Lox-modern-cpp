@@ -17,9 +17,20 @@ function(add_test_executable)
                                  -Wpedantic
                                  -pedantic-errors)
   target_include_directories(${ADD_NAME}
-                             PUBLIC ../src ${catch_SOURCE_DIR}/single_include)
+                             PUBLIC ../include
+                                    ${catch_SOURCE_DIR}/single_include)
   parseandaddcatchtests(${ADD_NAME})
 endfunction(add_test_executable)
+
+add_test_executable(NAME
+                    expression_tests
+                    SOURCES
+                    expression_tests.cpp)
+
+add_test_executable(NAME
+                    parser_tests
+                    SOURCES
+                    parser_tests.cpp)
 
 add_test_executable(NAME
                     scanner_tests

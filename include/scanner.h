@@ -1,5 +1,5 @@
-#ifndef SCANNER_H
-#define SCANNER_H
+#ifndef LOX_SCANNER_H
+#define LOX_SCANNER_H
 
 #include <map>
 #include <string>
