@@ -10,8 +10,7 @@ function(add_test_executable)
                         ${ARGN})
   add_executable(${ADD_NAME} ${ADD_SOURCES})
   target_include_directories(${ADD_NAME}
-                             PRIVATE 
-                                    ${catch_SOURCE_DIR}/single_include)
+                             PRIVATE ${catch_SOURCE_DIR}/single_include)
   target_link_libraries(${ADD_NAME} lox-interpreter)
   parseandaddcatchtests(${ADD_NAME})
 endfunction(add_test_executable)
@@ -30,8 +29,3 @@ add_test_executable(NAME
                     scanner_tests
                     SOURCES
                     scanner_tests.cpp)
-
-add_test_executable(NAME
-                    token_tests
-                    SOURCES
-                    token_tests.cpp)

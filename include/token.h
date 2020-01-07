@@ -3,6 +3,7 @@
 
 #include <string>
 #include <variant>
+#include <vector>
 
 namespace lox {
 
@@ -58,8 +59,19 @@ struct token {
   };
 
   struct literal {
-    std::variant<int, std::string> value;
+    std::variant<int, double, std::string> value;
   };
+
+  explicit token(type_t t) noexcept : type{t} {}
+
+  token(type_t t, int int_value) noexcept : type{t}, value{int_value} {}
+  token(type_t t, double double_value) noexcept
+      : type{t}, value{double_value} {}
+  token(type_t t, std::string string_value) noexcept
+      : type{t}, value{string_value} {}
+
+  token(type_t t, std::string l, int li) noexcept
+      : type{t}, lexeme{std::move(l)}, line{li} {}
 
   type_t type;
   std::string lexeme;
@@ -67,6 +79,8 @@ struct token {
   int line;
 };
 
-}  // namespace lox
+using token_vector = std::vector<token>;
+
+} // namespace lox
 
 #endif
