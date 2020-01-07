@@ -106,6 +106,54 @@ inline token_vector scan(const std::string &source) {
   return tokens;
 }
 
+/*struct scanner {
+  scanner(std::string source) noexcept : source_{std::move(source)} {}
+
+  token_vector scan();
+
+ private:
+  void scan_token();
+
+  void number();
+  void identifier();
+  void string();
+
+  char advance() noexcept { return source_[current_++]; }
+
+  char peek() const noexcept {
+    if (is_end()) return '\0';
+    return source_[current_];
+  }
+
+  char peek_next() {
+    if (current_ + 1 >= source_.size()) return '\0';
+    return source_[current_ + 1];
+  }
+
+  bool is_end() const noexcept { return current_ >= source_.size(); }
+
+  bool isalpha(char c) { return std::isalpha(c) || c == '_'; }
+  bool isalphanumeric(char c) { return isalpha(c) || isdigit(c); }
+
+  bool match(char expect) {
+    if (is_end()) return false;
+    if (source_[current_] != expect) return false;
+    current_++;
+    return true;
+  }
+
+  template <typename T>
+  void add_token(token::type_t t, T &&v) {
+    tokens_.emplace_back(t, source_.substr(start_, current_ - start_),
+                         std::forward<T>(v), line_);
+  }
+
+  std::string source_;
+  std::string::const_iterator token_start_;
+  std::string::const_iterator current_;
+  int line_ = 1;
+}; */
+
 }  // namespace lox
 
 #endif

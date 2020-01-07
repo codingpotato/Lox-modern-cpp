@@ -3,9 +3,7 @@
 
 #include "scanner.h"
 
-using namespace std;
-using namespace lox;
-
 TEST_CASE("scan", "[scanner]") {
-  REQUIRE(scan(")") == vector<token>{token{token::right_paren}});
+  lox::scanner scanner("test");
+  auto s = std::move(scanner);
 }
