@@ -3,7 +3,4 @@
 
 #include "parser.h"
 
-using namespace std;
-using namespace lox;
-
-TEST_CASE("parse", "[parser]") { REQUIRE(1 == 1); }
+TEST_CASE("parse", "[parser]") { lox::parser parser{}; }
