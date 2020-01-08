@@ -2,19 +2,20 @@
 #define LOX_SCANNER_H
 
 #include "token.h"
+
 namespace lox {
 
-struct scanner {
+class scanner {
   scanner(std::string source) noexcept : source_{std::move(source)} {}
 
   token_vector scan();
 
 private:
-  void scan_token();
+  void scan_token(token_vector &tokens);
 
-  void number();
-  void identifier();
-  void string();
+  void number(token_vector &tokens);
+  void identifier(token_vector &tokens);
+  void string(token_vector &tokens);
 
   char peek() const noexcept {
     if (is_end()) {
@@ -47,7 +48,6 @@ private:
   std::string::const_iterator token_start_;
   std::string::const_iterator current_;
   int line_ = 1;
-  token_vector tokens_;
 };
 
 } // namespace lox

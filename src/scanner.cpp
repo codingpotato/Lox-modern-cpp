@@ -2,64 +2,65 @@
 
 #include <map>
 #include <string>
+
 namespace lox {
 
 token_vector scanner::scan() {
+  token_vector tokens;
   current_ = source_.cbegin();
-  tokens_.clear();
   while (!is_end()) {
     token_start_ = current_;
-    scan_token();
+    scan_token(tokens);
   }
-  tokens_.emplace_back(token::eof, "", line_);
-  return std::move(tokens_);
+  tokens.emplace_back(token::eof, "", line_);
+  return tokens;
 }
 
-void scanner::scan_token() {
+void scanner::scan_token(token_vector &tokens) {
   auto c = *current_;
   ++current_;
   switch (c) {
   case '(':
-    tokens_.emplace_back(token::left_paren);
+    tokens.emplace_back(token::left_paren);
     break;
   case ')':
-    tokens_.emplace_back(token::right_paren);
+    tokens.emplace_back(token::right_paren);
     break;
   case '{':
-    tokens_.emplace_back(token::left_brace);
+    tokens.emplace_back(token::left_brace);
     break;
   case '}':
-    tokens_.emplace_back(token::right_brace);
+    tokens.emplace_back(token::right_brace);
     break;
   case ',':
-    tokens_.emplace_back(token::comma);
+    tokens.emplace_back(token::comma);
     break;
   case '.':
-    tokens_.emplace_back(token::dot);
+    tokens.emplace_back(token::dot);
     break;
   case '-':
-    tokens_.emplace_back(token::minus);
+    tokens.emplace_back(token::minus);
     break;
   case '+':
-    tokens_.emplace_back(token::plus);
+    tokens.emplace_back(token::plus);
     break;
   case ';':
-    tokens_.emplace_back(token::semicolon);
+    tokens.emplace_back(token::semicolon);
     break;
   case '*':
-    tokens_.emplace_back(token::star);
+    tokens.emplace_back(token::star);
     break;
   case '!':
-    tokens_.emplace_back(match('=') ? token::bang_equal : token::bang);
+    tokens.emplace_back(match('=') ? token::bang_equal : token::bang);
     break;
   case '=':
-    tokens_.emplace_back(match('=') ? token::equal_equal : token::equal);
+    tokens.emplace_back(match('=') ? token::equal_equal : token::equal);
     break;
   case '<':
-    tokens_.emplace_back(match('=') ? token::less_equal : token::less);
+    tokens.emplace_back(match('=') ? token::less_equal : token::less);
     break;
   case '>':
-    tokens_.emplace_back(match('=') ? token::greater_equal : token::greater);
+    tokens.emplace_back(match('=') ? token::greater_equal : token::greater);
     break;
   case '/':
     if (match('/')) {
@@ -67,7 +68,7 @@ void scanner::scan_token() {
         ++current_;
       }
     } else {
-      tokens_.emplace_back(token::slash);
+      tokens.emplace_back(token::slash);
     }
     break;
   case ' ':
@@ -78,13 +79,13 @@ void scanner::scan_token() {
     line_++;
     break;
   case '"':
-    string();
+    string(tokens);
     break;
   default:
     if (isdigit(c)) {
-      number();
+      number(tokens);
     } else if (isalpha(c)) {
-      identifier();
+      identifier(tokens);
     } else {
       // throw "Unexpected character."
     }
@@ -92,7 +93,7 @@ void scanner::scan_token() {
   }
 }
 
-void scanner::number() {
+void scanner::number(token_vector &tokens) {
   while (isdigit(peek())) {
     ++current_;
   }
@@ -101,15 +102,15 @@ void scanner::number() {
     while (isdigit(peek())) {
       ++current_;
     }
-    tokens_.emplace_back(token::number,
-                         std::stod(std::string{token_start_, current_}));
+    tokens.emplace_back(token::number,
+                        std::stod(std::string{token_start_, current_}));
   } else {
-    tokens_.emplace_back(token::number,
-                         std::stoi(std::string{token_start_, current_}));
+    tokens.emplace_back(token::number,
+                        std::stoi(std::string{token_start_, current_}));
   }
 }
 
-void scanner::identifier() {
+void scanner::identifier(token_vector &tokens) {
   static const std::map<std::string, token::type_t> keywords = {
       {"and", token::k_and},     {"class", token::k_class},
       {"else", token::k_else},   {"false", token::k_false},
@@ -124,13 +125,13 @@ void scanner::identifier() {
   }
   auto text = std::string(token_start_, current_);
   if (keywords.find(text) != keywords.cend()) {
-    tokens_.emplace_back(keywords.at(text));
+    tokens.emplace_back(keywords.at(text));
   } else {
-    tokens_.emplace_back(token::identifier);
+    tokens.emplace_back(token::identifier);
   }
 }
 
-void scanner::string() {
+void scanner::string(token_vector &tokens) {
   while (peek() != '"' && !is_end()) {
     if (peek() == '\n') {
       line_++;
@@ -142,8 +143,8 @@ void scanner::string() {
     return;
   }
   ++current_;
-  tokens_.emplace_back(token::string,
-                       std::string{token_start_ + 1, current_ - 2});
+  tokens.emplace_back(token::string,
+                      std::string{token_start_ + 1, current_ - 2});
 }
 
 } // namespace lox
