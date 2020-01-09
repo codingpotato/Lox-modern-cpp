@@ -3,7 +3,8 @@
 
 #include "expression.h"
 
-using namespace std;
-using namespace lox;
-
-TEST_CASE("scan", "[scanner]") { REQUIRE(1 == 1); }
+TEST_CASE("element", "[epression]") {
+  lox::expression::element e{std::in_place_type<lox::expression::binary>, 1,
+                             lox::expression::plus, 2};
+  REQUIRE(std::get<lox::expression::binary>(e).left == 1);
+}

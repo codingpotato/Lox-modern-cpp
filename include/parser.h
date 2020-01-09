@@ -9,22 +9,23 @@
 #include "statement.h"
 #include "token.h"
 
+
 namespace lox {
 
 class parser {
   explicit parser(token_vector tokens) noexcept : tokens_{std::move(tokens)} {}
 
-  program parse() {
+  /*program parse() {
     program prog;
     while (!is_end()) {
       parse_declaration(prog);
     }
     return prog;
-  }
+  }*/
 
-private:
+ private:
   // declaration → funDecl | varDecl | statement
-  void parse_declaration(program &prog) {
+  /*void parse_declaration(program &prog) {
     try {
       if (match(token::k_fun)) {
         parse_function(prog);
@@ -227,13 +228,13 @@ private:
       throw parse_error{"Invalid assignment target."};
     }
     return n;
-  }
+  }*/
 
   // equality → comparison ( ( "!=" | "==" ) comparison )*
-  int parse_equality(expression &expr) {
-    auto n = parse_comparison(expr);
+  int parse_equality(program &prog) {
+    auto n = parse_comparison(prog);
     while (match({token::bang_equal, token::equal_equal})) {
-      auto op = expression::from_token_type(previous().get_type());
+      auto op = expression::from_token_type(previous().type);
       auto right = parse_comparison(expr);
       n = expr.add(std::in_place_type<expression::binary>, n, op, right);
     }
@@ -241,7 +242,7 @@ private:
   }
 
   // comparison → addition ( ( ">" | ">=" | "<" | "<=" ) addition )*
-  int parse_comparison(expression &expr) {
+  int parse_comparison(program &prog) {
     auto n = parse_addition(expr);
     while (match({token::greater, token::greater_equal, token::less,
                   token::less_equal})) {
@@ -253,7 +254,7 @@ private:
   }
 
   // addition → multiplication ( ( "-" | "+" ) multiplication )*
-  int parse_addition(expression &expr) {
+  int parse_addition(program &prog) {
     auto n = parse_multiplication(expr);
     while (match({token::minus, token::plus})) {
       auto op = expression::from_token_type(previous().get_type());
@@ -264,7 +265,7 @@ private:
   }
 
   // multiplication → unary ( ( "/" | "*" ) unary )*
-  int parse_multiplication(expression &expr) {
+  int parse_multiplication(program &prog) {
     auto n = parse_unary(expr);
     while (match({token::slash, token::star})) {
       auto op = expression::from_token_type(previous().get_type());
@@ -275,7 +276,7 @@ private:
   }
 
   // unary → ( "!" | "-" ) unary | call
-  int parse_unary(expression &expr) {
+  int parse_unary(program &prog) {
     if (match({token::bang, token::minus})) {
       auto op = expression::from_token_type(previous().get_type());
       auto right = parse_unary(expr);
@@ -285,7 +286,7 @@ private:
   }
 
   // call → primary ( "(" arguments? ")" )*
-  int parse_call(expression &expr) {
+  /*int parse_call(expression &expr) {
     auto callee = parse_primary(expr);
     while (true) {
       if (match(token::left_paren)) {
@@ -295,10 +296,10 @@ private:
       }
     }
     return callee;
-  }
+  }*/
 
   // arguments → expression ( "," expression )*
-  int parse_arguments(expression &expr, int callee) {
+  /*int parse_arguments(expression &expr, int callee) {
     std::vector<int> arguments;
     if (!check(token::right_paren)) {
       do {
@@ -312,10 +313,10 @@ private:
                           std::move(arguments));
     consume(token::right_paren, "Expect ')' after arguments.");
     return index;
-  }
+  }*/
 
   // logic_or → logic_and ( "or" logic_and )*
-  int parse_or(expression &expr) {
+  int parse_or(program &prog) {
     auto left = parse_and(expr);
     while (match(token::k_or)) {
       auto op = expression::from_token_type(previous().get_type());
@@ -326,7 +327,7 @@ private:
   }
 
   // logic_and → equality ( "and" equality )*
-  int parse_and(expression &expr) {
+  int parse_and(program &prog) {
     auto left = parse_equality(expr);
     while (match(token::k_and)) {
       auto op = expression::from_token_type(previous().get_type());
@@ -338,7 +339,7 @@ private:
 
   // primary → NUMBER | STRING | "false" | "true" | "nil" | "(" expression ")" |
   //           IDENTIFIER
-  int parse_primary(expression &expr) {
+  int parse_primary(program &prog) {
     if (match(token::k_false)) {
       return expr.add(std::in_place_type<expression::literal>, false);
     }
@@ -382,39 +383,35 @@ private:
   }
 
   bool check(token::type_t t) const noexcept {
-    if (is_end())
-      return false;
+    if (is_end()) return false;
     return peek().get_type() == t;
   }
 
   const token &advance() noexcept {
-    if (!is_end())
-      current_++;
+    if (!is_end()) current_++;
     return previous();
   }
 
   const token &consume(token::type_t t, const std::string &message) {
-    if (check(t))
-      return advance();
+    if (check(t)) return advance();
     throw parse_error{message};
   }
 
   void synchronize() {
     advance();
     while (!is_end()) {
-      if (previous().get_type() != token::semicolon)
-        return;
+      if (previous().get_type() != token::semicolon) return;
       switch (peek().get_type()) {
-      case token::k_class:
-      case token::k_fun:
-      case token::k_var:
-      case token::k_for:
-      case token::k_if:
-      case token::k_while:
-      case token::k_return:
-        return;
-      default:
-        throw parse_error{""};
+        case token::k_class:
+        case token::k_fun:
+        case token::k_var:
+        case token::k_for:
+        case token::k_if:
+        case token::k_while:
+        case token::k_return:
+          return;
+        default:
+          throw parse_error{""};
       }
       advance();
     }
@@ -429,6 +426,6 @@ private:
   token_vector::const_iterator current_;
 };
 
-} // namespace lox
+}  // namespace lox
 
 #endif
