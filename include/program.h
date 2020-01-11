@@ -1,63 +1,48 @@
 #ifndef LOX_PROGRAM_H
 #define LOX_PROGRAM_H
 
+#include <string>
+#include <string_view>
+#include <unordered_map>
 #include <variant>
 #include <vector>
 
+#include "exception.h"
 #include "expression.h"
 #include "statement.h"
 
 namespace lox {
 
-struct int_t {};
-struct double_t {};
-struct string_t {};
-
-struct literal_index {
-  std::variant<int_t, double_t, string_t> type;
-  index_t index;
-};
-
-struct literal_vector {
-  template <typename T>
-  literal_index push_back(T &&value) noexcept {
-    if constexpr (std::is_same_v<T, int>) {
-      int_values.push_back(value);
-      return {int_t{}, static_cast<index_t>(int_values.size()) - 1};
-    } else if constexpr (std::is_same_v<T, double>) {
-      double_values.push_back(value);
-      return {double_t{}, static_cast<index_t>(double_values.size()) - 1};
-    } else if constexpr (std::is_same_v<T, std::string>) {
-      string_values.push_back(value);
-      return {string_t{}, static_cast<index_t>(string_values.size()) - 1};
+class string_cache {
+ public:
+  string_id insert(std::string string) {
+    const auto [iterator, inserted] =
+        strings.emplace(std::move(string), current);
+    if (inserted) {
+      const auto &new_str = iterator->first;
+      ids.emplace(current, std::string_view{new_str.data(), new_str.size()});
+      ++current;
+      if (current == 0) {
+        throw internal_error{"String cache overflow"};
+      }
+      return current - 1;
     }
+    return strings[string];
   }
 
-  template <typename T>
-  const auto &get(index_t index) const noexcept {
-    if constexpr (std::is_same_v<T, int>) {
-      return int_values[index];
-    } else if constexpr (std::is_same_v<T, double>) {
-      return double_values[index];
-    } else if constexpr (std::is_same_v<T, std::string>) {
-      return string_values[index];
-    }
-  }
+  string_id size() const noexcept { return current; }
 
-  std::vector<int> int_values;
-  std::vector<double> double_values;
-  std::vector<std::string> string_values;
+  std::string_view get(string_id id) const noexcept { return ids.at(id); }
+
+ private:
+  std::unordered_map<std::string, string_id> strings;
+  std::unordered_map<string_id, std::string_view> ids;
+  string_id current = 0;
 };
 
 struct program {
-  template <typename T>
-  literal_index add_literal(T &&value) noexcept {
-    return literals.push_back(value);
-  }
-
-  template <typename T>
-  const T &get(index_t index) noexcept {
-    return literals.get<T>(index);
+  index_t add_string(std::string string) noexcept {
+    return strings.insert(std::move(string));
   }
 
   template <typename Type, typename... Args>
@@ -71,7 +56,7 @@ struct program {
     }
   }
 
-  literal_vector literals;
+  string_cache strings;
   expression_vector expressions;
   statement_vector statements;
 };
