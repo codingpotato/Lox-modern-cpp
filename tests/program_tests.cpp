@@ -18,7 +18,7 @@ TEST_CASE("string cache", "[program]") {
   REQUIRE(cache.get(id2) == string2);
 }
 
-TEST_CASE("program add string", "[program]") {
+TEST_CASE("add string", "[program]") {
   lox::program program;
   REQUIRE(program.add_string("string") == 0);
 }

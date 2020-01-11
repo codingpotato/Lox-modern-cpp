@@ -4,7 +4,6 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
-#include <variant>
 #include <vector>
 
 #include "exception.h"
@@ -23,7 +22,7 @@ class string_cache {
       ids.emplace(current, std::string_view{new_str.data(), new_str.size()});
       ++current;
       if (current == 0) {
-        throw internal_error{"String cache overflow"};
+        throw internal_error{"String cache overflow."};
       }
       return current - 1;
     }
@@ -47,7 +46,10 @@ struct program {
 
   template <typename Type, typename... Args>
   index_t add(Args &&... args) {
-    if constexpr (std::is_same_v<Type, expression>) {
+    if constexpr (std::is_same_v<Type, expression::element>) {
+      expression_elements.emplace_back(std::forward<Args>(args)...);
+      return expression_elements.size() - 1;
+    } else if constexpr (std::is_same_v<Type, expression>) {
       expressions.emplace_back(std::forward<Args>(args)...);
       return expressions.size() - 1;
     } else if constexpr (std::is_same_v<Type, statement>) {
@@ -59,8 +61,10 @@ struct program {
   }
 
   string_cache strings;
+  expression_element_vector expression_elements;
   expression_vector expressions;
   statement_vector statements;
+  index_t start_block;
 };
 
 }  // namespace lox

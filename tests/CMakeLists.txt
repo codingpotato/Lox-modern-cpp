@@ -34,3 +34,8 @@ add_test_executable(NAME
                     scanner_tests
                     SOURCES
                     scanner_tests.cpp)
+
+add_test_executable(NAME
+                    statement_tests
+                    SOURCES
+                    statement_tests.cpp)

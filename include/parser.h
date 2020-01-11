@@ -1,7 +1,6 @@
 #ifndef LOX_PARSER_H
 #define LOX_PARSER_H
 
-#include <iostream>
 #include <vector>
 
 #include "exception.h"
@@ -14,31 +13,41 @@ namespace lox {
 
 class parser {
  public:
-  explicit parser(token_vector ts) noexcept : tokens{std::move(ts)} {
-    current = tokens.cbegin();
-  }
-
-  /*program parse() {
-    program prog;
-    while (!is_end()) {
-      parse_declaration(prog);
-    }
-    return prog;
-  }*/
-
-  // declaration → funDecl | varDecl | statement
-  /*void parse_declaration(program &prog) {
+  program parse(token_vector ts) {
     try {
-      if (match(token::k_fun)) {
-        parse_function(prog);
-      } else if (match(token::k_var)) {
-        parse_var_decl(prog);
-      } else {
-        parse_statement(prog);
-      }
-    } catch (const parse_error &e) {
+      tokens = std::move(ts);
+      current = tokens.cbegin();
+      program prog;
+      prog.start_block = parse_block(prog);
+      return prog;
+    } catch (const std::exception &e) {
       synchronize();
       throw;
+    }
+  }
+
+  // block → "{" declaration* "}"
+  index_t parse_block(program &prog) {
+    statement_vector block_statements;
+    while (!is_end() && !check(token::right_brace)) {
+      parse_declaration(prog, block_statements);
+    }
+    consume(token::right_brace, "Expect '}' after block.");
+    index_t first = prog.statements.size() - 1;
+    std::copy(block_statements.cbegin(), block_statements.cend(),
+              prog.statements.end());
+    index_t last = prog.statements.size() - 1;
+    prog.add<statement>(std::in_place_type<statement::block>, first, last);
+  }
+
+  // declaration → function declaration | variable declaration | statement
+  /*void parse_declaration(program &prog) {
+    if (match(token::k_fun)) {
+      parse_function(prog);
+    } else if (match(token::k_var)) {
+      parse_variable_declaration(prog);
+    } else {
+      parse_statement(prog);
     }
   }
 
@@ -55,8 +64,8 @@ class parser {
         }
         auto parameter =
             consume(token::identifier, "Expect parameter name for function '" +
-                                           name.get_lexeme() + "'.");
-        parameters.emplace_back(parameter.get_lexeme());
+                                           name.lexeme + "'.");
+        parameters.emplace_back(parameter.lexeme);
       } while (match(token::comma));
     }
     consume(token::right_paren, "Expect ')' after parameters.");
@@ -72,7 +81,7 @@ class parser {
   }
 
   // varDecl → "var" IDENTIFIER ( "=" expression ) ";"
-  void parse_var_decl(program &prog) {
+  void parse_variable_declaration(program &prog) {
     auto name = consume(token::identifier, "Expect variable name");
     consume(token::equal, "Expect initializer");
     auto expr = parse_expression();
@@ -94,7 +103,7 @@ class parser {
     } else if (match(token::left_brace)) {
       parse_block(prog);
     } else {
-      parse_expr_statement(prog);
+      parse_expression_statement(prog);
     }
   }
 
@@ -104,9 +113,9 @@ class parser {
     consume(token::left_paren, "Expect '(' after 'for'.");
     statement_indices initializer;
     if (match(token::k_var)) {
-      parse_var_decl(initializer);
+      parse_variable_declaration(initializer);
     } else if (!match(token::semicolon)) {
-      parse_expr_statement(initializer);
+      parse_expression_statement(initializer);
     }
     expression condition;
     if (!check(token::semicolon)) {
@@ -192,16 +201,6 @@ class parser {
                     std::move(condition), std::move(new_body));
   }
 
-  // block → "{" declaration* "}"
-  void parse_block(statements &ss) {
-    statements bs;
-    while (!is_end() && !check(token::right_brace)) {
-      parse_declaration(bs);
-    }
-    consume(token::right_brace, "Expect '}' after block.");
-    ss.emplace_back(std::in_place_type<statement::block>, std::move(bs));
-  }
-
   // exprStmt  → expression ";"
   void parse_expr_statement(statements &ss) {
     auto expr = parse_expression();
@@ -259,25 +258,19 @@ class parser {
 
   // addition → multiplication ( ( "-" | "+" ) multiplication )*
   index_t parse_addition(program &prog) {
-    std::cout << "start addition\n";
     auto n = parse_multiplication(prog);
-    std::cout << "after multiplication\n";
     while (match({token::minus, token::plus})) {
-      std::cout << "after while\n";
       auto op = expression::from_token_type(previous().type);
       auto right = parse_multiplication(prog);
       n = prog.add<expression>(std::in_place_type<expression::binary>, n, op,
                                right);
     }
-    std::cout << "before return\n";
     return n;
   }
 
   // multiplication → unary ( ( "/" | "*" ) unary )*
   index_t parse_multiplication(program &prog) {
-    std::cout << "start multiplication\n";
     auto n = parse_unary(prog);
-    std::cout << "after unary\n";
     while (match({token::slash, token::star})) {
       auto op = expression::from_token_type(previous().type);
       auto right = parse_unary(prog);
@@ -289,9 +282,7 @@ class parser {
 
   // unary → ( "!" | "-" ) unary | call
   index_t parse_unary(program &prog) {
-    std::cout << "start unary\n";
     if (match({token::bang, token::minus})) {
-      std::cout << "in if\n";
       auto op = expression::from_token_type(previous().type);
       auto right = parse_unary(prog);
       return prog.add<expression>(std::in_place_type<expression::unary>, op,
@@ -302,11 +293,8 @@ class parser {
 
   // call → primary ( "(" arguments? ")" )*
   index_t parse_call(program &prog) {
-    std::cout << "start call\n";
     auto callee = parse_primary(prog);
-    std::cout << "after primary\n";
     while (true) {
-      std::cout << "after while\n";
       if (match(token::left_paren)) {
         callee = parse_arguments(prog, callee);
       } else {
@@ -360,7 +348,6 @@ class parser {
   // primary → NUMBER | STRING | "false" | "true" | "nil" | "(" expression ")" |
   //           IDENTIFIER
   index_t parse_primary(program &prog) {
-    std::cout << "in primary\n";
     if (match(token::k_false)) {
       return prog.add<expression>(false);
     }
@@ -371,7 +358,6 @@ class parser {
       return prog.add<expression>(expression::literal{});
     }
     if (match(token::number)) {
-      std::cout << "in number\n";
       auto &literal = previous().value;
       if (std::holds_alternative<int>(literal.value)) {
         return prog.add<expression>(std::get<int>(literal.value));
@@ -396,9 +382,7 @@ class parser {
   }
 
   bool match(const std::initializer_list<token::type_t> &types) noexcept {
-    std::cout << "in match\n";
     for (auto t : types) {
-      std::cout << "in for\n";
       if (match(t)) {
         return true;
       }

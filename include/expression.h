@@ -102,7 +102,7 @@ struct expression {
         {token::k_or, operator_t::logic_or},
         {token::k_and, operator_t::logic_and}};
     if (token_map.find(type) == token_map.end()) {
-      throw internal_error("Unknow token");
+      throw internal_error("Unknow token type.");
     }
     return token_map.at(type);
   }
@@ -111,7 +111,8 @@ struct expression {
   index_t last;
 };
 
-using expression_vector = std::vector<expression::element>;
+using expression_element_vector = std::vector<expression::element>;
+using expression_vector = std::vector<expression>;
 
 }  // namespace lox
 

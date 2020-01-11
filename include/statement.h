@@ -6,93 +6,87 @@
 #include <vector>
 
 #include "expression.h"
-#include "program.h"
-#include "statement.h"
 #include "types.h"
 
 namespace lox {
 
-struct statement;
-using statement_index = int;
-using statement_indices = std::vector<statement_index>;
-using statement_vector = std::vector<statement>;
-
 struct statement {
   struct block {
-    template <typename S>
-    constexpr explicit block(S &&ss) noexcept
-        : statements_{std::forward<S>(ss)} {}
+    block(index_t f, index_t l) noexcept : first{f}, last{l} {}
 
-    statement_indices statements_;
+    index_t first;
+    index_t last;
   };
 
-  struct expr {
-    template <typename E>
-    constexpr explicit expr(E &&expr) noexcept : expr_{std::forward<E>(expr)} {}
+  struct expression_s {
+    explicit expression_s(expression e) noexcept : expr{e} {}
 
-    expression expr_;
+    expression expr;
   };
 
   struct function {
-    std::string name;
-    std::vector<std::string> parameters;
-    statement_indices body;
+    function(string_id n, std::vector<string_id> ps, block b) noexcept
+        : name{n}, parameters{std::move(ps)}, body{b} {}
+
+    string_id name;
+    std::vector<string_id> parameters;
+    block body;
   };
 
   struct if_else {
-    template <typename E, typename S1, typename S2>
-    constexpr if_else(E &&condition, S1 &&ts, S2 &&es) noexcept
-        : condition_{std::forward<E>(condition)}, then_{std::forward<S1>(ts)},
-          else_{std::forward<S2>(es)} {}
+    if_else(expression c, block t, block e) noexcept
+        : condition{c}, then_block{t}, else_block{e} {}
 
-    expression condition_;
-    statement_indices then_;
-    statement_indices else_;
+    expression condition;
+    block then_block;
+    block else_block;
   };
 
   struct return_s {
-    template <typename E>
-    constexpr explicit return_s(E &&value) noexcept
-        : value_{std::forward<E>(value)} {}
+    explicit return_s(expression v) noexcept : value{v} {}
 
-    expression value_;
+    expression value;
   };
 
-  struct var {
-    template <typename S, typename E>
-    constexpr var(S &&name, E &&initializer) noexcept
-        : name_{std::forward<S>(name)}, initializer_{
-                                            std::forward<E>(initializer)} {}
+  struct variable_s {
+    variable_s(string_id n, expression i) noexcept : name{n}, initializer{i} {}
 
-    std::string name_;
-    expression initializer_;
+    string_id name;
+    expression initializer;
   };
 
-  struct while_loop {
+  struct while_s {
     expression condition;
-    statement_indices statements;
+    block body;
   };
 
   template <typename T, typename... Args>
-  constexpr explicit statement(std::in_place_type_t<T> t,
-                               Args &&... args) noexcept
-      : statement_{t, std::forward<Args>(args)...} {}
+  constexpr statement(std::in_place_type_t<T> t, Args &&... args) noexcept
+      : element{t, std::forward<Args>(args)...} {}
 
-  template <typename T> constexpr bool is_type() const noexcept {
-    return std::holds_alternative<T>(statement_);
+  template <typename T>
+  constexpr bool is_type() const noexcept {
+    return std::holds_alternative<T>(element);
   }
 
-  template <typename T> auto &get() noexcept { return std::get<T>(statement_); }
-
-  template <typename... Ts> auto visit(overloaded<Ts...> &&visitor) const {
-    return std::visit(visitor, statement_);
+  template <typename T>
+  const auto &get() const noexcept {
+    return std::get<T>(element);
   }
 
-  using statement_t =
-      std::variant<block, expr, function, if_else, return_s, var, while_loop>;
-  statement_t statement_;
+  template <typename... Ts>
+  auto visit(overloaded<Ts...> &&visitor) const {
+    return std::visit(visitor, element);
+  }
+
+  using element_t = std::variant<block, expression_s, function, if_else,
+                                 return_s, variable_s, while_s>;
+
+  element_t element;
 };
 
-} // namespace lox
+using statement_vector = std::vector<statement>;
+
+}  // namespace lox
 
 #endif
