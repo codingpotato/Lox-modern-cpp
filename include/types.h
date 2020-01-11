@@ -7,6 +7,8 @@
 
 namespace lox {
 
+using index_t = int;
+
 struct null {};
 
 inline bool operator==(const null &, const null &) noexcept { return true; }
@@ -15,13 +17,11 @@ using string = std::string;
 
 using type_id_t = int;
 
-template <typename... Ts>
-struct type_list {
+template <typename... Ts> struct type_list {
   static constexpr type_id_t size = sizeof...(Ts);
 };
 
-template <typename T, typename types>
-struct type_id;
+template <typename T, typename types> struct type_id;
 
 template <typename T, typename First, typename... Rest>
 struct type_id<T, type_list<First, Rest...>> {
@@ -30,8 +30,7 @@ struct type_id<T, type_list<First, Rest...>> {
                                  : type_id<T, type_list<Rest...>>::id;
 };
 
-template <typename T>
-struct type_id<T, type_list<>> {
+template <typename T> struct type_id<T, type_list<>> {
   static constexpr type_id_t id = -1;
 };
 
@@ -47,13 +46,11 @@ constexpr inline std::size_t variant_index() {
   }
 }
 
-template <typename... Ts>
-struct overloaded : Ts... {
+template <typename... Ts> struct overloaded : Ts... {
   using Ts::operator()...;
 };
-template <typename... Ts>
-overloaded(Ts...)->overloaded<Ts...>;
+template <typename... Ts> overloaded(Ts...)->overloaded<Ts...>;
 
-}  // namespace lox
+} // namespace lox
 
 #endif

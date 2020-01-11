@@ -8,10 +8,7 @@
 #include "token.h"
 #include "types.h"
 
-
 namespace lox {
-
-using expression_index = int;
 
 struct expression {
   enum operator_t {
@@ -30,26 +27,26 @@ struct expression {
   };
 
   struct binary {
-    binary(expression_index l, operator_t op, expression_index r) noexcept
+    binary(index_t l, operator_t op, index_t r) noexcept
         : left{l}, oper{op}, right{r} {}
 
-    expression_index left;
+    index_t left;
     operator_t oper;
-    expression_index right;
+    index_t right;
   };
 
   struct assignment {
     std::string name;
-    expression_index value;
+    index_t value;
   };
 
   struct call {
-    expression_index callee;
-    std::vector<expression_index> arguments;
+    index_t callee;
+    std::vector<index_t> arguments;
   };
 
   struct group {
-    expression_index expr;
+    index_t expr;
   };
 
   // struct literal {
@@ -58,7 +55,7 @@ struct expression {
 
   struct unary {
     operator_t oper;
-    expression_index expr;
+    index_t expr;
   };
 
   struct variable {
@@ -88,12 +85,12 @@ struct expression {
     return token_map.at(type);
   }
 
-  expression_index first;
-  expression_index last;
+  index_t first;
+  index_t last;
 };
 
 using expression_vector = std::vector<expression::element>;
 
-}  // namespace lox
+} // namespace lox
 
 #endif

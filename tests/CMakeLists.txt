@@ -26,6 +26,11 @@ add_test_executable(NAME
                     parser_tests.cpp)
 
 add_test_executable(NAME
+                    program_tests
+                    SOURCES
+                    program_tests.cpp)
+
+add_test_executable(NAME
                     scanner_tests
                     SOURCES
                     scanner_tests.cpp)
