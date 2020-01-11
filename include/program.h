@@ -41,18 +41,20 @@ class string_cache {
 };
 
 struct program {
-  index_t add_string(std::string string) noexcept {
+  string_id add_string(std::string string) noexcept {
     return strings.insert(std::move(string));
   }
 
   template <typename Type, typename... Args>
-  index_t add(Args &&... args) noexcept {
+  index_t add(Args &&... args) {
     if constexpr (std::is_same_v<Type, expression>) {
       expressions.emplace_back(std::forward<Args>(args)...);
       return expressions.size() - 1;
     } else if constexpr (std::is_same_v<Type, statement>) {
       statements.emplace_back(std::forward<Args>(args)...);
       return statements.size() - 1;
+    } else {
+      throw internal_error("Need expression or statement.");
     }
   }
 

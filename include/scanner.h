@@ -6,11 +6,12 @@
 namespace lox {
 
 class scanner {
-  scanner(std::string source) noexcept : source_{std::move(source)} {}
+ public:
+  explicit scanner(std::string src) noexcept : source{std::move(src)} {}
 
   token_vector scan();
 
-private:
+ private:
   void scan_token(token_vector &tokens);
 
   void number(token_vector &tokens);
@@ -21,35 +22,35 @@ private:
     if (is_end()) {
       return '\0';
     }
-    return *current_;
+    return *current;
   }
 
   char peek_next() const noexcept {
-    if (current_ == source_.cend()) {
+    if (current == source.cend()) {
       return '\0';
     }
-    return *(current_ + 1);
+    return *(current + 1);
   }
 
-  bool is_end() const noexcept { return current_ == source_.cend(); }
+  bool is_end() const noexcept { return current == source.cend(); }
 
   bool is_alpha(char ch) noexcept { return isalpha(ch) || ch == '_'; }
   bool is_alpha_numeric(char ch) noexcept { return isalpha(ch) || isdigit(ch); }
 
   bool match(char expect) noexcept {
-    if (is_end() || *current_ != expect) {
+    if (is_end() || *current != expect) {
       return false;
     }
-    current_++;
+    ++current;
     return true;
   }
 
-  std::string source_;
-  std::string::const_iterator token_start_;
-  std::string::const_iterator current_;
-  int line_ = 1;
+  std::string source;
+  std::string::const_iterator token_start;
+  std::string::const_iterator current;
+  int line = 1;
 };
 
-} // namespace lox
+}  // namespace lox
 
 #endif

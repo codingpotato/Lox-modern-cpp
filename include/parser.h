@@ -1,6 +1,7 @@
 #ifndef LOX_PARSER_H
 #define LOX_PARSER_H
 
+#include <iostream>
 #include <vector>
 
 #include "exception.h"
@@ -9,11 +10,13 @@
 #include "statement.h"
 #include "token.h"
 
-
 namespace lox {
 
 class parser {
-  explicit parser(token_vector tokens) noexcept : tokens_{std::move(tokens)} {}
+ public:
+  explicit parser(token_vector ts) noexcept : tokens{std::move(ts)} {
+    current = tokens.cbegin();
+  }
 
   /*program parse() {
     program prog;
@@ -23,7 +26,6 @@ class parser {
     return prog;
   }*/
 
- private:
   // declaration → funDecl | varDecl | statement
   /*void parse_declaration(program &prog) {
     try {
@@ -211,16 +213,16 @@ class parser {
     expression expr;
     parse_expression(expr);
     return expr;
-  }
+  }*/
 
   // expression → assignment
-  int parse_expression(expression &expr) { return parse_assignment(expr); }
+  int parse_expression(program &) { return 0; /*parse_assignment(prog); */ }
 
   // assignment → IDENTIFIER "=" assignment | logic_or
-  int parse_assignment(expression &expr) {
-    auto n = parse_or(expr);
+  /*int parse_assignment(program &prog) {
+    auto n = parse_or(prog);
     if (match(token::equal)) {
-      auto v = parse_assignment(expr);
+      auto v = parse_assignment(prog);
       if (expr[n].is_type<expression::variable>()) {
         return expr.add(std::in_place_type<expression::assignment>,
                         expr[n].get<expression::variable>().name_, v);
@@ -231,142 +233,172 @@ class parser {
   }*/
 
   // equality → comparison ( ( "!=" | "==" ) comparison )*
-  int parse_equality(program &prog) {
+  index_t parse_equality(program &prog) {
     auto n = parse_comparison(prog);
     while (match({token::bang_equal, token::equal_equal})) {
       auto op = expression::from_token_type(previous().type);
-      auto right = parse_comparison(expr);
-      n = expr.add(std::in_place_type<expression::binary>, n, op, right);
+      auto right = parse_comparison(prog);
+      n = prog.add<expression>(std::in_place_type<expression::binary>, n, op,
+                               right);
     }
     return n;
   }
 
   // comparison → addition ( ( ">" | ">=" | "<" | "<=" ) addition )*
-  int parse_comparison(program &prog) {
-    auto n = parse_addition(expr);
+  index_t parse_comparison(program &prog) {
+    auto n = parse_addition(prog);
     while (match({token::greater, token::greater_equal, token::less,
                   token::less_equal})) {
-      auto op = expression::from_token_type(previous().get_type());
-      auto right = parse_addition(expr);
-      n = expr.add(std::in_place_type<expression::binary>, n, op, right);
+      auto op = expression::from_token_type(previous().type);
+      auto right = parse_addition(prog);
+      n = prog.add<expression>(std::in_place_type<expression::binary>, n, op,
+                               right);
     }
     return n;
   }
 
   // addition → multiplication ( ( "-" | "+" ) multiplication )*
-  int parse_addition(program &prog) {
-    auto n = parse_multiplication(expr);
+  index_t parse_addition(program &prog) {
+    std::cout << "start addition\n";
+    auto n = parse_multiplication(prog);
+    std::cout << "after multiplication\n";
     while (match({token::minus, token::plus})) {
-      auto op = expression::from_token_type(previous().get_type());
-      auto right = parse_multiplication(expr);
-      n = expr.add(std::in_place_type<expression::binary>, n, op, right);
+      std::cout << "after while\n";
+      auto op = expression::from_token_type(previous().type);
+      auto right = parse_multiplication(prog);
+      n = prog.add<expression>(std::in_place_type<expression::binary>, n, op,
+                               right);
     }
+    std::cout << "before return\n";
     return n;
   }
 
   // multiplication → unary ( ( "/" | "*" ) unary )*
-  int parse_multiplication(program &prog) {
-    auto n = parse_unary(expr);
+  index_t parse_multiplication(program &prog) {
+    std::cout << "start multiplication\n";
+    auto n = parse_unary(prog);
+    std::cout << "after unary\n";
     while (match({token::slash, token::star})) {
-      auto op = expression::from_token_type(previous().get_type());
-      auto right = parse_unary(expr);
-      n = expr.add(std::in_place_type<expression::binary>, n, op, right);
+      auto op = expression::from_token_type(previous().type);
+      auto right = parse_unary(prog);
+      n = prog.add<expression>(std::in_place_type<expression::binary>, n, op,
+                               right);
     }
     return n;
   }
 
   // unary → ( "!" | "-" ) unary | call
-  int parse_unary(program &prog) {
+  index_t parse_unary(program &prog) {
+    std::cout << "start unary\n";
     if (match({token::bang, token::minus})) {
-      auto op = expression::from_token_type(previous().get_type());
-      auto right = parse_unary(expr);
-      return expr.add(std::in_place_type<expression::unary>, op, right);
+      std::cout << "in if\n";
+      auto op = expression::from_token_type(previous().type);
+      auto right = parse_unary(prog);
+      return prog.add<expression>(std::in_place_type<expression::unary>, op,
+                                  right);
     }
-    return parse_call(expr);
+    return parse_call(prog);
   }
 
   // call → primary ( "(" arguments? ")" )*
-  /*int parse_call(expression &expr) {
-    auto callee = parse_primary(expr);
+  index_t parse_call(program &prog) {
+    std::cout << "start call\n";
+    auto callee = parse_primary(prog);
+    std::cout << "after primary\n";
     while (true) {
+      std::cout << "after while\n";
       if (match(token::left_paren)) {
-        callee = parse_arguments(expr, callee);
+        callee = parse_arguments(prog, callee);
       } else {
         break;
       }
     }
     return callee;
-  }*/
+  }
 
   // arguments → expression ( "," expression )*
-  /*int parse_arguments(expression &expr, int callee) {
-    std::vector<int> arguments;
+  index_t parse_arguments(program &prog, index_t callee) {
+    index_vector arguments;
     if (!check(token::right_paren)) {
       do {
         if (arguments.size() >= 8) {
           throw parse_error{"Cannot have more than 8 arguments."};
         }
-        arguments.emplace_back(parse_expression(expr));
+        arguments.emplace_back(parse_expression(prog));
       } while (match(token::comma));
     }
-    auto index = expr.add(std::in_place_type<expression::call>, callee,
-                          std::move(arguments));
+    auto index = prog.add<expression>(std::in_place_type<expression::call>,
+                                      callee, std::move(arguments));
     consume(token::right_paren, "Expect ')' after arguments.");
     return index;
-  }*/
+  }
 
   // logic_or → logic_and ( "or" logic_and )*
   int parse_or(program &prog) {
-    auto left = parse_and(expr);
+    auto left = parse_and(prog);
     while (match(token::k_or)) {
-      auto op = expression::from_token_type(previous().get_type());
-      auto right = parse_and(expr);
-      left = expr.add(std::in_place_type<expression::binary>, left, op, right);
+      auto op = expression::from_token_type(previous().type);
+      auto right = parse_and(prog);
+      left = prog.add<expression>(std::in_place_type<expression::binary>, left,
+                                  op, right);
     }
     return left;
   }
 
   // logic_and → equality ( "and" equality )*
   int parse_and(program &prog) {
-    auto left = parse_equality(expr);
+    auto left = parse_equality(prog);
     while (match(token::k_and)) {
-      auto op = expression::from_token_type(previous().get_type());
-      auto right = parse_equality(expr);
-      left = expr.add(std::in_place_type<expression::binary>, left, op, right);
+      auto op = expression::from_token_type(previous().type);
+      auto right = parse_equality(prog);
+      left = prog.add<expression>(std::in_place_type<expression::binary>, left,
+                                  op, right);
     }
     return left;
   }
 
   // primary → NUMBER | STRING | "false" | "true" | "nil" | "(" expression ")" |
   //           IDENTIFIER
-  int parse_primary(program &prog) {
+  index_t parse_primary(program &prog) {
+    std::cout << "in primary\n";
     if (match(token::k_false)) {
-      return expr.add(std::in_place_type<expression::literal>, false);
+      return prog.add<expression>(false);
     }
     if (match(token::k_true)) {
-      return expr.add(std::in_place_type<expression::literal>, true);
+      return prog.add<expression>(true);
     }
     if (match(token::k_nil)) {
-      return expr.add(std::in_place_type<expression::literal>);
+      return prog.add<expression>(expression::literal{});
     }
-    if (match({token::number, token::string})) {
-      return expr.add(std::in_place_type<expression::literal>,
-                      previous().get_value());
+    if (match(token::number)) {
+      std::cout << "in number\n";
+      auto &literal = previous().value;
+      if (std::holds_alternative<int>(literal.value)) {
+        return prog.add<expression>(std::get<int>(literal.value));
+      }
+      if (std::holds_alternative<double>(literal.value)) {
+        return prog.add<expression>(std::get<double>(literal.value));
+      }
+    }
+    if (match(token::string)) {
+      auto id = prog.add_string(std::get<std::string>(previous().value.value));
+      return prog.add<expression>(id);
     }
     if (match(token::identifier)) {
-      return expr.add(std::in_place_type<expression::variable>,
-                      previous().get_lexeme());
+      return prog.add<expression>(prog.add_string(previous().lexeme));
     }
     if (match(token::left_paren)) {
-      auto n = parse_expression(expr);
+      auto n = parse_expression(prog);
       consume(token::right_paren, "Expect ')' after expression.");
-      return expr.add(std::in_place_type<expression::group>, n);
+      return prog.add<expression>(n);
     }
     throw parse_error{"Expect expression."};
   }
 
   bool match(const std::initializer_list<token::type_t> &types) noexcept {
+    std::cout << "in match\n";
     for (auto t : types) {
+      std::cout << "in for\n";
       if (match(t)) {
         return true;
       }
@@ -382,13 +414,17 @@ class parser {
     return false;
   }
 
-  bool check(token::type_t t) const noexcept {
-    if (is_end()) return false;
-    return peek().get_type() == t;
+  bool check(token::type_t type) const noexcept {
+    if (is_end()) {
+      return false;
+    }
+    return peek().type == type;
   }
 
   const token &advance() noexcept {
-    if (!is_end()) current_++;
+    if (!is_end()) {
+      ++current;
+    }
     return previous();
   }
 
@@ -400,8 +436,8 @@ class parser {
   void synchronize() {
     advance();
     while (!is_end()) {
-      if (previous().get_type() != token::semicolon) return;
-      switch (peek().get_type()) {
+      if (previous().type != token::semicolon) return;
+      switch (peek().type) {
         case token::k_class:
         case token::k_fun:
         case token::k_var:
@@ -417,13 +453,13 @@ class parser {
     }
   }
 
-  const token &peek() const noexcept { return tokens_[current_]; }
-  token &previous() noexcept { return tokens_[current_ - 1]; }
+  const token &peek() const noexcept { return *current; }
+  const token &previous() const noexcept { return *(current - 1); }
 
-  bool is_end() const noexcept { return peek().get_type() == token::eof; }
+  bool is_end() const noexcept { return peek().type == token::eof; }
 
-  token_vector tokens_;
-  token_vector::const_iterator current_;
+  token_vector tokens;
+  token_vector::const_iterator current;
 };
 
 }  // namespace lox

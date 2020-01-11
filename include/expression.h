@@ -1,13 +1,14 @@
 #ifndef LOX_EXPRESSION_H
 #define LOX_EXPRESSION_H
 
+#include <memory>
 #include <unordered_map>
 #include <variant>
+#include <vector>
 
 #include "exception.h"
 #include "token.h"
 #include "types.h"
-
 
 namespace lox {
 
@@ -44,10 +45,12 @@ struct expression {
   };
 
   struct call {
-    call(index_t c, index_vector args) noexcept : callee{c}, arguments{args} {}
+    call(index_t c, index_vector args) noexcept
+        : callee{c},
+          arguments{std::make_unique<index_vector>(std::move(args))} {}
 
     index_t callee;
-    std::vector<index_t> arguments;
+    std::unique_ptr<index_vector> arguments;
   };
 
   struct group {
@@ -57,11 +60,15 @@ struct expression {
   };
 
   struct literal {
+    struct null {};
+
+    literal() noexcept : value{null{}} {}
+    explicit literal(bool b) noexcept : value{b} {}
     explicit literal(int i) noexcept : value{i} {}
     explicit literal(double d) noexcept : value{d} {}
     explicit literal(string_id id) noexcept : value{id} {}
 
-    std::variant<int, double, string_id> value;
+    std::variant<null, bool, int, double, string_id> value;
   };
 
   struct unary {
@@ -78,7 +85,7 @@ struct expression {
   };
 
   using element =
-      std::variant<assignment, binary, call, group, unary, variable>;
+      std::variant<assignment, binary, call, group, literal, unary, variable>;
 
   static operator_t from_token_type(token::type_t type) {
     static const std::unordered_map<token::type_t, operator_t> token_map = {
