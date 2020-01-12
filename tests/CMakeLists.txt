@@ -16,6 +16,11 @@ function(add_test_executable)
 endfunction(add_test_executable)
 
 add_test_executable(NAME
+                    cache_tests
+                    SOURCES
+                    cache_tests.cpp)
+
+add_test_executable(NAME
                     expression_tests
                     SOURCES
                     expression_tests.cpp)
