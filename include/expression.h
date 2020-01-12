@@ -12,56 +12,42 @@
 
 namespace lox {
 
-enum class operator_t {
-  plus,
-  minus,
-  multiple,
-  divide,
-  equal,
-  not_equal,
-  great,
-  less,
-  great_equal,
-  less_equal,
-  logic_or,
-  logic_and
-};
-
 struct expression {
-  struct binary {
-    binary(index_t l, operator_t op, index_t r) noexcept
-        : left{l}, oper{op}, right{r} {}
-
-    index_t left;
-    operator_t oper;
-    index_t right;
+  enum class operator_t {
+    plus,
+    minus,
+    multiple,
+    divide,
+    equal,
+    not_equal,
+    great,
+    less,
+    great_equal,
+    less_equal,
+    logic_or,
+    logic_and
   };
 
+  // layout in expressions: [value, assignment]
   struct assignment {
-    assignment(string_id var, index_t v) noexcept : variable{var}, value{v} {}
+    explicit assignment(string_id v) noexcept : variable{v} {}
 
     string_id variable;
-    index_t value;
   };
 
-  struct call {
-    call(index_t c, index_vector args) noexcept
-        : callee{c},
-          arguments{std::make_unique<index_vector>(std::move(args))} {}
+  // layout in expressions: [left, right, binary]
+  struct binary {
+    explicit binary(operator_t op) noexcept : oper{op} {}
 
-    index_t callee;
-    std::unique_ptr<index_vector> arguments;
+    operator_t oper;
   };
 
-  struct group {
-    explicit group(index_t e) noexcept : expr{e} {}
+  // layout in expressions: [callee, argument*, call]
+  struct call {};
 
-    index_t expr;
-  };
+  struct group {};
 
   struct literal {
-    struct null {};
-
     literal() noexcept : value{null{}} {}
     explicit literal(bool b) noexcept : value{b} {}
     explicit literal(int i) noexcept : value{i} {}
@@ -72,19 +58,18 @@ struct expression {
   };
 
   struct unary {
-    unary(operator_t o, index_t e) noexcept : oper{o}, expr{e} {}
+    explicit unary(operator_t op) noexcept : oper{op} {}
 
     operator_t oper;
-    index_t expr;
   };
 
   struct variable {
-    variable(string_id n) noexcept : name{n} {}
+    explicit variable(string_id n) noexcept : name{n} {}
 
     string_id name;
   };
 
-  using element =
+  using element_t =
       std::variant<assignment, binary, call, group, literal, unary, variable>;
 
   static operator_t from_token_type(token::type_t type) {
@@ -107,11 +92,30 @@ struct expression {
     return token_map.at(type);
   }
 
+  template <typename T, typename... Args>
+  constexpr expression(index_t f, std::in_place_type_t<T> t,
+                       Args &&... args) noexcept
+      : first{f}, element{t, std::forward<Args>(args)...} {}
+
+  template <typename T>
+  constexpr bool is_type() const noexcept {
+    return std::holds_alternative<T>(element);
+  }
+
+  template <typename T>
+  const auto &get() const noexcept {
+    return std::get<T>(element);
+  }
+
+  template <typename... Ts>
+  auto visit(overloaded<Ts...> visitor) const {
+    return std::visit(visitor, element);
+  }
+
   index_t first;
-  index_t last;
+  element_t element;
 };
 
-using expression_element_vector = std::vector<expression::element>;
 using expression_vector = std::vector<expression>;
 
 }  // namespace lox

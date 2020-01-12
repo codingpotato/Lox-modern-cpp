@@ -11,19 +11,9 @@ namespace lox {
 using index_t = int;
 using index_vector = std::vector<index_t>;
 
-struct string_id {
-  string_id(int i) noexcept : id{i} {}
+constexpr index_t invalid_index = -1;
 
-  operator int() const noexcept { return id; }
-
-  string_id &operator++() noexcept {
-    ++id;
-    return *this;
-  }
-
- private:
-  int id;
-};
+using string_id = unsigned int;
 
 struct null {};
 
@@ -73,16 +63,5 @@ template <typename... Ts>
 overloaded(Ts...)->overloaded<Ts...>;
 
 }  // namespace lox
-
-namespace std {
-
-template <>
-struct hash<lox::string_id> {
-  size_t operator()(const lox::string_id &id) const {
-    return std::hash<int>{}(id);
-  }
-};
-
-}  // namespace std
 
 #endif

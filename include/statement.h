@@ -12,52 +12,61 @@ namespace lox {
 
 struct statement {
   struct block {
-    block(index_t f, index_t l) noexcept : first{f}, last{l} {}
-
     index_t first;
     index_t last;
   };
 
   struct expression_s {
-    explicit expression_s(expression e) noexcept : expr{e} {}
+    explicit expression_s(index_t e) noexcept : expr{e} {}
 
-    expression expr;
+    index_t expr;
   };
 
+  // layout in statements: [initializer?, body, for]
+  struct for_s {
+    for_s(bool h_i, index_t c, index_t i) noexcept
+        : has_initializer{h_i}, condition{c}, increament{i} {}
+
+    bool has_initializer;
+    index_t condition;
+    index_t increament;
+  };
+
+  // layout in statements: [body, function]
   struct function {
-    function(string_id n, std::vector<string_id> ps, block b) noexcept
-        : name{n}, parameters{std::move(ps)}, body{b} {}
+    function(string_id n, string_id first, string_id last) noexcept
+        : name{n}, first_parameter{first}, last_parameter{last} {}
 
     string_id name;
-    std::vector<string_id> parameters;
-    block body;
+    string_id first_parameter;
+    string_id last_parameter;
   };
 
+  // layout in statements: [then block, else block, if_else]
   struct if_else {
-    if_else(expression c, block t, block e) noexcept
-        : condition{c}, then_block{t}, else_block{e} {}
+    explicit if_else(index_t c) noexcept : condition{c} {}
 
-    expression condition;
-    block then_block;
-    block else_block;
+    index_t condition;
   };
 
   struct return_s {
-    explicit return_s(expression v) noexcept : value{v} {}
+    explicit return_s(index_t v) noexcept : value{v} {}
 
-    expression value;
+    index_t value;
   };
 
   struct variable_s {
-    variable_s(string_id n, expression i) noexcept : name{n}, initializer{i} {}
+    variable_s(string_id n, index_t i) noexcept : name{n}, initializer{i} {}
 
     string_id name;
-    expression initializer;
+    index_t initializer;
   };
 
+  // layout in statements: [block, while]
   struct while_s {
-    expression condition;
-    block body;
+    explicit while_s(index_t c) noexcept : condition{c} {}
+
+    index_t condition;
   };
 
   template <typename T, typename... Args>
@@ -79,7 +88,7 @@ struct statement {
     return std::visit(visitor, element);
   }
 
-  using element_t = std::variant<block, expression_s, function, if_else,
+  using element_t = std::variant<block, expression_s, for_s, function, if_else,
                                  return_s, variable_s, while_s>;
 
   element_t element;

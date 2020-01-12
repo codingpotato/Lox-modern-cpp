@@ -14,9 +14,9 @@ namespace lox {
 
 class string_cache {
  public:
-  string_id insert(std::string string) {
-    const auto [iterator, inserted] =
-        strings.emplace(std::move(string), current);
+  string_id add(std::string string) {
+    auto str = std::move(string);
+    const auto [iterator, inserted] = strings.emplace(str, current);
     if (inserted) {
       const auto &new_str = iterator->first;
       ids.emplace(current, std::string_view{new_str.data(), new_str.size()});
@@ -26,7 +26,7 @@ class string_cache {
       }
       return current - 1;
     }
-    return strings[string];
+    return strings[str];
   }
 
   string_id size() const noexcept { return current; }
@@ -40,28 +40,42 @@ class string_cache {
 };
 
 struct program {
-  string_id add_string(std::string string) noexcept {
-    return strings.insert(std::move(string));
-  }
-
   template <typename Type, typename... Args>
   index_t add(Args &&... args) {
-    if constexpr (std::is_same_v<Type, expression::element>) {
-      expression_elements.emplace_back(std::forward<Args>(args)...);
-      return expression_elements.size() - 1;
-    } else if constexpr (std::is_same_v<Type, expression>) {
+    if constexpr (std::is_same_v<Type, expression>) {
       expressions.emplace_back(std::forward<Args>(args)...);
       return expressions.size() - 1;
     } else if constexpr (std::is_same_v<Type, statement>) {
       statements.emplace_back(std::forward<Args>(args)...);
       return statements.size() - 1;
     } else {
-      throw internal_error("Need expression or statement.");
+      throw internal_error("Type shall be expression or statement.");
+    }
+  }
+
+  template <typename Type>
+  index_t size() const noexcept {
+    if constexpr (std::is_same_v<Type, expression>) {
+      return expressions.size();
+    } else if constexpr (std::is_same_v<Type, statement>) {
+      return statements.size();
+    } else {
+      throw internal_error("Type shall be expression or statement.");
+    }
+  }
+
+  template <typename Type>
+  const auto &get(index_t index) const {
+    if constexpr (std::is_same_v<Type, expression>) {
+      return expressions.at(index);
+    } else if constexpr (std::is_same_v<Type, statement>) {
+      return statements.at(index);
+    } else {
+      throw internal_error("Type shall be expression or statement.");
     }
   }
 
   string_cache strings;
-  expression_element_vector expression_elements;
   expression_vector expressions;
   statement_vector statements;
   index_t start_block;

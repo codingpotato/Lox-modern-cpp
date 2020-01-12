@@ -3,4 +3,6 @@
 
 #include "statement.h"
 
-TEST_CASE("scan", "[statements]") { REQUIRE(sizeof(lox::statement) == 4); }
+TEST_CASE("size of statement", "[statements]") {
+  REQUIRE(sizeof(lox::statement) == 16);
+}

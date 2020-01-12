@@ -6,9 +6,9 @@
 #include "scanner.h"
 
 TEST_CASE("parse primary", "[parser]") {
-  lox::scanner scanner{"1 + 2"};
-  lox::parser parser{scanner.scan()};
-  lox::program program;
-  parser.parse_addition(program);
-  REQUIRE(program.expressions.size() == 3);
+  lox::scanner scanner{"1 + 2;"};
+  lox::parser parser{};
+  auto program = parser.parse(scanner.scan());
+  REQUIRE(program.size<lox::expression>() == 3);
+  REQUIRE(program.size<lox::statement>() == 2);
 }

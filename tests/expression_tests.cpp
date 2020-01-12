@@ -3,11 +3,14 @@
 
 #include "expression.h"
 
-TEST_CASE("element", "[epression]") {
-  lox::expression::element element{std::in_place_type<lox::expression::binary>,
-                                   1, lox::operator_t::plus, 2};
-  const auto& binary = std::get<lox::expression::binary>(element);
-  REQUIRE(binary.left == 1);
-  REQUIRE(binary.oper == lox::operator_t::plus);
-  REQUIRE(binary.right == 2);
+TEST_CASE("size of expression", "[expression]") {
+  CHECK(sizeof(lox::expression::assignment) == 4);
+  CHECK(sizeof(lox::expression::binary) == 4);
+  CHECK(sizeof(lox::expression::call) == 1);
+  CHECK(sizeof(lox::expression::group) == 1);
+  CHECK(sizeof(lox::expression::literal) == 16);
+  CHECK(sizeof(lox::expression::unary) == 4);
+  CHECK(sizeof(lox::expression::variable) == 4);
+  CHECK(sizeof(lox::expression::element_t) == 32);
+  CHECK(sizeof(lox::expression) == 40);
 }
