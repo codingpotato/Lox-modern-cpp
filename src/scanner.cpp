@@ -1,8 +1,8 @@
 #include "scanner.h"
 
 #include <map>
-#include <string>
 
+#include "exception.h"
 
 namespace lox {
 
@@ -80,21 +80,21 @@ void scanner::scan_token(token_vector &tokens) {
       ++line;
       break;
     case '"':
-      string(tokens);
+      scan_string(tokens);
       break;
     default:
       if (isdigit(c)) {
-        number(tokens);
+        scan_number(tokens);
       } else if (isalpha(c)) {
-        identifier(tokens);
+        scan_identifier(tokens);
       } else {
-        // throw "Unexpected character."
+        throw scan_error{"Unexpected character."};
       }
       break;
   }
 }
 
-void scanner::number(token_vector &tokens) {
+void scanner::scan_number(token_vector &tokens) {
   while (isdigit(peek())) {
     ++current;
   }
@@ -103,16 +103,16 @@ void scanner::number(token_vector &tokens) {
     while (isdigit(peek())) {
       ++current;
     }
-    tokens.emplace_back(token::number,
-                        std::stod(std::string{token_start, current}));
+    tokens.emplace_back(token::l_number,
+                        std::stod(string{token_start, current}));
   } else {
-    tokens.emplace_back(token::number,
-                        std::stoi(std::string{token_start, current}));
+    tokens.emplace_back(token::l_number,
+                        std::stoi(string{token_start, current}));
   }
 }
 
-void scanner::identifier(token_vector &tokens) {
-  static const std::map<std::string, token::type_t> keywords = {
+void scanner::scan_identifier(token_vector &tokens) {
+  static const std::map<string, token::type_t> keywords = {
       {"and", token::k_and},     {"class", token::k_class},
       {"else", token::k_else},   {"false", token::k_false},
       {"for", token::k_for},     {"fun", token::k_fun},
@@ -124,15 +124,15 @@ void scanner::identifier(token_vector &tokens) {
   while (is_alpha_numeric(peek())) {
     ++current;
   }
-  auto text = std::string(token_start, current);
+  auto text = string(token_start, current);
   if (keywords.find(text) != keywords.cend()) {
     tokens.emplace_back(keywords.at(text));
   } else {
-    tokens.emplace_back(token::identifier);
+    tokens.emplace_back(token::l_identifier);
   }
 }
 
-void scanner::string(token_vector &tokens) {
+void scanner::scan_string(token_vector &tokens) {
   while (peek() != '"' && !is_end()) {
     if (peek() == '\n') {
       line++;
@@ -140,11 +140,11 @@ void scanner::string(token_vector &tokens) {
     ++current;
   }
   if (is_end()) {
-    // throw "Unterminated string"
+    throw parse_error{"Unterminated string."};
     return;
   }
   ++current;
-  tokens.emplace_back(token::string, std::string{token_start + 1, current - 2});
+  tokens.emplace_back(token::l_string, string{token_start + 1, current - 2});
 }
 
 }  // namespace lox

@@ -8,16 +8,11 @@
 
 namespace lox {
 
-using index_t = int;
-using index_vector = std::vector<index_t>;
-
-constexpr index_t invalid_index = -1;
-
-using string_id = unsigned int;
-
-struct null {};
-
-inline bool operator==(const null &, const null &) noexcept { return true; }
+struct null {
+  friend constexpr bool operator==(const null &, const null &) noexcept {
+    return true;
+  }
+};
 
 using string = std::string;
 

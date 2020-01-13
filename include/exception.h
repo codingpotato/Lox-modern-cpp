@@ -9,6 +9,10 @@ struct internal_error : std::runtime_error {
   using std::runtime_error::runtime_error;
 };
 
+struct scan_error : std::runtime_error {
+  using std::runtime_error::runtime_error;
+};
+
 struct parse_error : std::runtime_error {
   using std::runtime_error::runtime_error;
 };

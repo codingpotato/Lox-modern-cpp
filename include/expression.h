@@ -1,12 +1,11 @@
 #ifndef LOX_EXPRESSION_H
 #define LOX_EXPRESSION_H
 
-#include <memory>
 #include <unordered_map>
 #include <variant>
-#include <vector>
 
 #include "exception.h"
+#include "program.h"
 #include "token.h"
 #include "types.h"
 
@@ -28,51 +27,43 @@ struct expression {
     logic_and
   };
 
-  struct base {
-    index_t first;
-  };
-
   // layout in expressions: [value, assignment]
-  struct assignment : base {
-    assignment(index_t f, string_id v) noexcept : base{f}, variable{v} {}
+  struct assignment {
+    assignment(string_id v) noexcept : variable{v} {}
 
     string_id variable;
   };
 
   // layout in expressions: [left, right, binary]
-  struct binary : base {
-    binary(index_t f, operator_t op) noexcept : base{f}, oper{op} {}
+  struct binary {
+    binary(operator_t op) noexcept : oper{op} {}
 
     operator_t oper;
   };
 
   // layout in expressions: [callee, argument*, call]
-  struct call : base {
-    explicit call(index_t f) noexcept : base{f} {}
+  struct call {};
+
+  struct group {};
+
+  struct literal {
+    explicit literal() noexcept : value{null{}} {}
+    literal(bool b) noexcept : value{b} {}
+    literal(int i) noexcept : value{i} {}
+    literal(double_id d) noexcept : value{d} {}
+    literal(string_id id) noexcept : value{id} {}
+
+    std::variant<null, bool, int, double_id, string_id> value;
   };
 
-  struct group : base {
-    explicit group(index_t f) noexcept : base{f} {}
-  };
-
-  struct literal : base {
-    explicit literal(index_t f) noexcept : base{f}, value{null{}} {}
-    literal(index_t f, bool b) noexcept : base{f}, value{b} {}
-    literal(index_t f, int i) noexcept : base{f}, value{i} {}
-    // literal(index_t f, double d) noexcept : base{f}, value{d} {}
-    literal(index_t f, string_id id) noexcept : base{f}, value{id} {}
-
-    std::variant<null, bool, int, string_id> value;
-  };
-
-  struct unary : base {
-    unary(index_t f, operator_t op) noexcept : base{f}, oper{op} {}
+  struct unary {
+    unary(operator_t op) noexcept : oper{op} {}
 
     operator_t oper;
   };
 
-  struct variable : base {
-    variable(index_t f, string_id n) noexcept : base{f}, name{n} {}
+  struct variable {
+    variable(string_id n) noexcept : name{n} {}
 
     string_id name;
   };
@@ -101,8 +92,9 @@ struct expression {
   }
 
   template <typename T, typename... Args>
-  constexpr expression(std::in_place_type_t<T> t, Args &&... args) noexcept
-      : element{t, std::forward<Args>(args)...} {}
+  constexpr expression(expression_id f, std::in_place_type_t<T> t,
+                       Args &&... args) noexcept
+      : first{f}, element{t, std::forward<Args>(args)...} {}
 
   template <typename T>
   constexpr bool is_type() const noexcept {
@@ -119,10 +111,9 @@ struct expression {
     return std::visit(visitor, element);
   }
 
+  expression_id first;
   element_t element;
 };
-
-using expression_vector = std::vector<expression>;
 
 }  // namespace lox
 

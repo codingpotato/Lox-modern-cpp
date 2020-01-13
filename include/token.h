@@ -5,6 +5,8 @@
 #include <variant>
 #include <vector>
 
+#include "types.h"
+
 namespace lox {
 
 struct token {
@@ -33,9 +35,9 @@ struct token {
     less_equal,
 
     // Literals
-    identifier,
-    string,
-    number,
+    l_identifier,
+    l_string,
+    l_number,
 
     // Keywords
     k_and,
@@ -59,7 +61,7 @@ struct token {
   };
 
   struct literal {
-    std::variant<int, double, std::string> value;
+    std::variant<int, double, string> value;
   };
 
   explicit token(type_t t) noexcept : type{t} {}
@@ -67,20 +69,20 @@ struct token {
   token(type_t t, int int_value) noexcept : type{t}, value{int_value} {}
   token(type_t t, double double_value) noexcept
       : type{t}, value{double_value} {}
-  token(type_t t, std::string string_value) noexcept
+  token(type_t t, string string_value) noexcept
       : type{t}, value{string_value} {}
 
-  token(type_t t, std::string l, int li) noexcept
+  token(type_t t, string l, int li) noexcept
       : type{t}, lexeme{std::move(l)}, line{li} {}
 
   type_t type;
-  std::string lexeme;
+  string lexeme;
   literal value;
   int line;
 };
 
 using token_vector = std::vector<token>;
 
-} // namespace lox
+}  // namespace lox
 
 #endif

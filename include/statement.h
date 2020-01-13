@@ -1,35 +1,35 @@
 #ifndef LOX_STATEMENT_H
 #define LOX_STATEMENT_H
 
-#include <string>
 #include <variant>
 #include <vector>
 
 #include "expression.h"
+#include "program.h"
 #include "types.h"
 
 namespace lox {
 
 struct statement {
   struct block {
-    index_t first;
-    index_t last;
+    statement_id first;
+    statement_id last;
   };
 
   struct expression_s {
-    explicit expression_s(index_t e) noexcept : expr{e} {}
+    explicit expression_s(expression_id e) noexcept : expr{e} {}
 
-    index_t expr;
+    expression_id expr;
   };
 
   // layout in statements: [initializer?, body, for]
   struct for_s {
-    for_s(bool h_i, index_t c, index_t i) noexcept
+    for_s(bool h_i, expression_id c, expression_id i) noexcept
         : has_initializer{h_i}, condition{c}, increament{i} {}
 
     bool has_initializer;
-    index_t condition;
-    index_t increament;
+    expression_id condition;
+    expression_id increament;
   };
 
   // layout in statements: [body, function]
@@ -44,29 +44,30 @@ struct statement {
 
   // layout in statements: [then block, else block, if_else]
   struct if_else {
-    explicit if_else(index_t c) noexcept : condition{c} {}
+    explicit if_else(expression_id c) noexcept : condition{c} {}
 
-    index_t condition;
+    expression_id condition;
   };
 
   struct return_s {
-    explicit return_s(index_t v) noexcept : value{v} {}
+    explicit return_s(expression_id v) noexcept : value{v} {}
 
-    index_t value;
+    expression_id value;
   };
 
   struct variable_s {
-    variable_s(string_id n, index_t i) noexcept : name{n}, initializer{i} {}
+    variable_s(string_id n, expression_id i) noexcept
+        : name{n}, initializer{i} {}
 
     string_id name;
-    index_t initializer;
+    expression_id initializer;
   };
 
   // layout in statements: [block, while]
   struct while_s {
-    explicit while_s(index_t c) noexcept : condition{c} {}
+    explicit while_s(expression_id c) noexcept : condition{c} {}
 
-    index_t condition;
+    expression_id condition;
   };
 
   template <typename T, typename... Args>
