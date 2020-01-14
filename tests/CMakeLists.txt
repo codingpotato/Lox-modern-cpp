@@ -21,11 +21,6 @@ add_test_executable(NAME
                     cache_tests.cpp)
 
 add_test_executable(NAME
-                    expression_tests
-                    SOURCES
-                    expression_tests.cpp)
-
-add_test_executable(NAME
                     parser_tests
                     SOURCES
                     parser_tests.cpp)
@@ -44,3 +39,8 @@ add_test_executable(NAME
                     statement_tests
                     SOURCES
                     statement_tests.cpp)
+
+add_test_executable(NAME
+                    to_string_tests
+                    SOURCES
+                    to_string_tests.cpp)

@@ -17,6 +17,10 @@ class cache {
     constexpr index(size_t i) noexcept : idx{static_cast<int>(i)} {}
 
     constexpr operator int() const noexcept { return idx; }
+    index& operator++() noexcept {
+      ++idx;
+      return *this;
+    }
 
    private:
     int idx = -1;
@@ -42,14 +46,6 @@ class cache {
  private:
   std::vector<T> elements;
 };
-
-using double_index = cache<double>::index;
-using string_index = cache<string>::index;
-
-struct expression;
-struct statement;
-using expression_index = cache<expression>::index;
-using statement_index = cache<statement>::index;
 
 }  // namespace lox
 

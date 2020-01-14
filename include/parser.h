@@ -108,7 +108,7 @@ class parser {
     }
   }
 
-  // forStmt → "for" "(" ( varDecl | exprStmt | ";" ) expression ? ";"
+  // forStmt: "for" "(" ( varDecl | exprStmt | ";" ) expression ? ";"
   //           expression ? ")" statement
   void parse_for(program &prog, statement_vector &block_statements) {
     consume(token::left_paren, "Expect '(' after 'for'.");
@@ -185,22 +185,22 @@ class parser {
   }
 
   // expression: assignment
-  expression_index parse_expression(program &prog) {
+  expression_id parse_expression(program &prog) {
     return parse_assignment(prog);
   }
 
   // assignment is an expression!
   // assignment: IDENTIFIER "=" assignment | logic_or
-  expression_index parse_assignment(program &prog) {
+  expression_id parse_assignment(program &prog) {
     const auto first = prog.expressions.size();
     const auto index = parse_or(prog);
     if (match(token::equal)) {
-      parse_assignment(prog);
+      const auto value = parse_assignment(prog);
       if (const auto &expr = prog.expressions.get(index);
           expr.is_type<expression::variable>()) {
-        return prog.expressions.add(first,
-                                    std::in_place_type<expression::assignment>,
-                                    expr.get<expression::variable>().name);
+        return prog.expressions.add(
+            first, std::in_place_type<expression::assignment>,
+            expr.get<expression::variable>().name, value);
       }
       throw parse_error{"Invalid assignment target."};
     }
@@ -208,62 +208,62 @@ class parser {
   }
 
   template <typename Fun>
-  expression_index parse_binary(
-      program &prog, const std::initializer_list<token::type_t> &types,
-      Fun parse_sub_expression) noexcept {
+  expression_id parse_binary(program &prog,
+                             const std::initializer_list<token::type_t> &types,
+                             Fun parse_sub_expression) noexcept {
     const auto first = prog.expressions.size();
     auto left = parse_sub_expression(prog);
     while (match(types)) {
       const auto op = expression::from_token_type(previous().type);
-      parse_sub_expression(prog);
+      const auto right = parse_sub_expression(prog);
       left = prog.expressions.add(first, std::in_place_type<expression::binary>,
-                                  op);
+                                  left, op, right);
     }
     return left;
   }
 
-  // equality → comparison ( ( "!=" | "==" ) comparison )*
-  expression_index parse_equality(program &prog) {
+  // equality: comparison ( ( "!=" | "==" ) comparison )*
+  expression_id parse_equality(program &prog) {
     return parse_binary(
         prog, {token::bang_equal, token::equal_equal},
         [this](program &prog) { return parse_comparison(prog); });
   }
 
-  // comparison → addition ( ( ">" | ">=" | "<" | "<=" ) addition )*
-  expression_index parse_comparison(program &prog) {
+  // comparison: addition ( ( ">" | ">=" | "<" | "<=" ) addition )*
+  expression_id parse_comparison(program &prog) {
     return parse_binary(
         prog,
         {token::greater, token::greater_equal, token::less, token::less_equal},
         [this](program &prog) { return parse_addition(prog); });
   }
 
-  // addition → multiplication ( ( "-" | "+" ) multiplication )*
-  expression_index parse_addition(program &prog) {
+  // addition: multiplication ( ( "-" | "+" ) multiplication )*
+  expression_id parse_addition(program &prog) {
     return parse_binary(
         prog, {token::minus, token::plus},
         [this](program &prog) { return parse_multiplication(prog); });
   }
 
-  // multiplication → unary ( ( "/" | "*" ) unary )*
-  expression_index parse_multiplication(program &prog) {
+  // multiplication: unary ( ( "/" | "*" ) unary )*
+  expression_id parse_multiplication(program &prog) {
     return parse_binary(prog, {token::slash, token::star},
                         [this](program &prog) { return parse_unary(prog); });
   }
 
-  // unary → ( "!" | "-" ) unary | call
-  expression_index parse_unary(program &prog) {
+  // unary: ( "!" | "-" ) unary | call
+  expression_id parse_unary(program &prog) {
     const auto first = prog.expressions.size();
     if (match({token::bang, token::minus})) {
       const auto op = expression::from_token_type(previous().type);
-      parse_unary(prog);
+      const auto expr = parse_unary(prog);
       return prog.expressions.add(first, std::in_place_type<expression::unary>,
-                                  op);
+                                  op, expr);
     }
     return parse_call(prog);
   }
 
-  // call → primary ( "(" arguments? ")" )*
-  expression_index parse_call(program &prog) {
+  // call: primary ( "(" arguments? ")" )*
+  expression_id parse_call(program &prog) {
     auto callee = parse_primary(prog);
     if (match(token::left_paren)) {
       callee = parse_arguments(prog, callee);
@@ -271,34 +271,36 @@ class parser {
     return callee;
   }
 
-  // arguments → expression ( "," expression )*
-  expression_index parse_arguments(program &prog, expression_index first) {
+  // arguments: expression ( "," expression )*
+  expression_id parse_arguments(program &prog, expression_id callee) {
+    const auto first = prog.parameters.size();
     if (!check(token::right_paren)) {
       do {
-        parse_expression(prog);
+        prog.parameters.add(parse_expression(prog));
       } while (match(token::comma));
     }
-    const auto index =
-        prog.expressions.add(first, std::in_place_type<expression::call>);
+    const auto last = prog.parameters.size();
+    const auto index = prog.expressions.add(
+        callee, std::in_place_type<expression::call>, callee, first, last);
     consume(token::right_paren, "Expect ')' after arguments.");
     return index;
   }
 
-  // logic_or → logic_and ( "or" logic_and )*
-  expression_index parse_or(program &prog) {
+  // logic_or: logic_and ( "or" logic_and )*
+  expression_id parse_or(program &prog) {
     return parse_binary(prog, {token::k_or},
                         [this](program &prog) { return parse_and(prog); });
   }
 
-  // logic_and → equality ( "and" equality )*
-  expression_index parse_and(program &prog) {
+  // logic_and: equality ( "and" equality )*
+  expression_id parse_and(program &prog) {
     return parse_binary(prog, {token::k_and},
                         [this](program &prog) { return parse_equality(prog); });
   }
 
-  // primary → NUMBER | STRING | "false" | "true" | "nil" | "(" expression ")" |
+  // primary: NUMBER | STRING | "false" | "true" | "nil" | "(" expression ")" |
   //           IDENTIFIER
-  expression_index parse_primary(program &prog) {
+  expression_id parse_primary(program &prog) {
     const auto first = prog.expressions.size();
     if (match(token::k_false)) {
       return prog.expressions.add(
@@ -336,9 +338,9 @@ class parser {
                                   prog.string_literals.add(previous().lexeme));
     }
     if (match(token::left_paren)) {
-      parse_expression(prog);
+      const auto expr = parse_expression(prog);
       consume(token::right_paren, "Expect ')' after expression.");
-      return prog.expressions.add(first, std::in_place_type<expression::group>);
+      return prog.expressions.add(first, std::in_place_type<expression::group>, expr);
     }
     throw parse_error{"Expect expression."};
   }

@@ -27,39 +27,52 @@ struct expression {
     logic_and
   };
 
-  // layout in expressions: [value, assignment]
   struct assignment {
-    assignment(string_id v) noexcept : variable{v} {}
+    assignment(string_id var, expression_id v) noexcept
+        : variable{var}, value{v} {}
 
     string_id variable;
+    expression_id value;
   };
 
-  // layout in expressions: [left, right, binary]
   struct binary {
-    binary(operator_t op) noexcept : oper{op} {}
+    binary(expression_id l, operator_t op, expression_id r) noexcept
+        : left{l}, oper{op}, right{r} {}
 
+    expression_id left;
     operator_t oper;
+    expression_id right;
   };
 
-  // layout in expressions: [callee, argument*, call]
-  struct call {};
+  struct call {
+    call(expression_id c, parameter_id first, parameter_id last) noexcept
+        : callee{c}, first_parameter{first}, last_parameter{last} {}
 
-  struct group {};
+    expression_id callee;
+    parameter_id first_parameter;
+    parameter_id last_parameter;
+  };
+
+  struct group {
+    explicit group(expression_id e) noexcept : expr{e} {}
+
+    expression_id expr;
+  };
 
   struct literal {
-    explicit literal() noexcept : value{null{}} {}
-    literal(bool b) noexcept : value{b} {}
+    explicit literal() noexcept : value{false} {}
     literal(int i) noexcept : value{i} {}
     literal(double_id d) noexcept : value{d} {}
     literal(string_id id) noexcept : value{id} {}
 
-    std::variant<null, bool, int, double_id, string_id> value;
+    std::variant<int, double_id, string_id> value;
   };
 
   struct unary {
-    unary(operator_t op) noexcept : oper{op} {}
+    unary(operator_t op, expression_id e) noexcept : oper{op}, expr{e} {}
 
     operator_t oper;
+    expression_id expr;
   };
 
   struct variable {

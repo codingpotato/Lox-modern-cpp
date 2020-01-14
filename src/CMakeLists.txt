@@ -1,4 +1,4 @@
-set(SOURCES scanner.cpp)
+set(SOURCES scanner.cpp to_string.cpp)
 
 add_library(lox-interpreter ${SOURCES})
 target_include_directories(lox-interpreter PUBLIC ../include)
