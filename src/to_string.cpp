@@ -7,7 +7,7 @@ string to_string(const program& prog) noexcept {
 }
 
 string to_string(const program& prog, const statement& stat) noexcept {
-  return stat.visit(overloaded{
+  return stat.storage.visit(overloaded{
       [&prog](const auto& element) { return to_string(prog, element); }});
 }
 
@@ -21,7 +21,7 @@ string to_string(const program& prog, const statement::block& block) noexcept {
 
 string to_string(const program& prog,
                  const statement::expression_s& expr) noexcept {
-  return "(" + to_string(prog, prog.expressions.get(expr.expr)) + ")";
+  return to_string(prog, prog.expressions.get(expr.expr));
 }
 
 string to_string(const program&, const statement::for_s&) noexcept {
@@ -49,7 +49,7 @@ string to_string(const program&, const statement::while_s&) noexcept {
 }
 
 string to_string(const program& prog, const expression& expr) noexcept {
-  return expr.visit(overloaded{
+  return expr.storage.visit(overloaded{
       [&prog](const auto& element) { return to_string(prog, element); }});
 }
 
@@ -104,19 +104,20 @@ string to_string(const program&, const expression::group&) noexcept {
 
 string to_string(const program& prog,
                  const expression::literal& literal) noexcept {
-  return std::visit(
-      overloaded{
-          [](int i) { return std::to_string(i); },
-          [&prog](double_id id) {
-            return std::to_string(prog.double_literals.get(id));
-          },
-          [&prog](string_id id) { return prog.string_literals.get(id); },
+  return literal.storage.visit(overloaded{
+      [](null) { return string{"null"}; },
+      [](bool b) { return b ? string{"true"} : string{"false"}; },
+      [](int i) { return std::to_string(i); },
+      [&prog](double_id id) {
+        return std::to_string(prog.double_literals.get(id));
       },
-      literal.value);
+      [&prog](string_id id) { return prog.string_literals.get(id); },
+  });
 }
 
-string to_string(const program&, const expression::unary&) noexcept {
-  return "";
+string to_string(const program& prog, const expression::unary& unary) noexcept {
+  return to_string(unary.oper) +
+         to_string(prog, prog.expressions.get(unary.expr));
 }
 
 string to_string(const program&, const expression::variable&) noexcept {

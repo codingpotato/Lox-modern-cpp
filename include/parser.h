@@ -124,9 +124,7 @@ class parser {
     if (!check(token::semicolon)) {
       condition = parse_expression(prog);
     } else {
-      condition =
-          prog.expressions.add(prog.expressions.size(),
-                               std::in_place_type<expression::literal>, true);
+      condition = prog.expressions.add(true);
     }
     consume(token::semicolon, "Expect ';' after loop condition.");
     expression_id increament{};
@@ -192,15 +190,14 @@ class parser {
   // assignment is an expression!
   // assignment: IDENTIFIER "=" assignment | logic_or
   expression_id parse_assignment(program &prog) {
-    const auto first = prog.expressions.size();
     const auto index = parse_or(prog);
     if (match(token::equal)) {
       const auto value = parse_assignment(prog);
       if (const auto &expr = prog.expressions.get(index);
-          expr.is_type<expression::variable>()) {
+          expr.storage.is_type<expression::variable>()) {
         return prog.expressions.add(
-            first, std::in_place_type<expression::assignment>,
-            expr.get<expression::variable>().name, value);
+            std::in_place_type<expression::assignment>,
+            expr.storage.get<expression::variable>().name, value);
       }
       throw parse_error{"Invalid assignment target."};
     }
@@ -211,13 +208,12 @@ class parser {
   expression_id parse_binary(program &prog,
                              const std::initializer_list<token::type_t> &types,
                              Fun parse_sub_expression) noexcept {
-    const auto first = prog.expressions.size();
     auto left = parse_sub_expression(prog);
     while (match(types)) {
       const auto op = expression::from_token_type(previous().type);
       const auto right = parse_sub_expression(prog);
-      left = prog.expressions.add(first, std::in_place_type<expression::binary>,
-                                  left, op, right);
+      left = prog.expressions.add(std::in_place_type<expression::binary>, left,
+                                  op, right);
     }
     return left;
   }
@@ -252,12 +248,11 @@ class parser {
 
   // unary: ( "!" | "-" ) unary | call
   expression_id parse_unary(program &prog) {
-    const auto first = prog.expressions.size();
     if (match({token::bang, token::minus})) {
       const auto op = expression::from_token_type(previous().type);
       const auto expr = parse_unary(prog);
-      return prog.expressions.add(first, std::in_place_type<expression::unary>,
-                                  op, expr);
+      return prog.expressions.add(std::in_place_type<expression::unary>, op,
+                                  expr);
     }
     return parse_call(prog);
   }
@@ -281,7 +276,7 @@ class parser {
     }
     const auto last = prog.parameters.size();
     const auto index = prog.expressions.add(
-        callee, std::in_place_type<expression::call>, callee, first, last);
+        std::in_place_type<expression::call>, callee, first, last);
     consume(token::right_paren, "Expect ')' after arguments.");
     return index;
   }
@@ -301,46 +296,41 @@ class parser {
   // primary: NUMBER | STRING | "false" | "true" | "nil" | "(" expression ")" |
   //           IDENTIFIER
   expression_id parse_primary(program &prog) {
-    const auto first = prog.expressions.size();
     if (match(token::k_false)) {
-      return prog.expressions.add(
-          first, std::in_place_type<expression::literal>, false);
+      return prog.expressions.add(false);
     }
     if (match(token::k_true)) {
-      return prog.expressions.add(
-          first, std::in_place_type<expression::literal>, true);
+      return prog.expressions.add(std::in_place_type<expression::literal>,
+                                  true);
     }
     if (match(token::k_nil)) {
-      return prog.expressions.add(first,
-                                  std::in_place_type<expression::literal>);
+      return prog.expressions.add(std::in_place_type<expression::literal>);
     }
     if (match(token::l_number)) {
       const auto &literal = previous().value;
       if (std::holds_alternative<int>(literal.value)) {
-        return prog.expressions.add(first,
-                                    std::in_place_type<expression::literal>,
+        return prog.expressions.add(std::in_place_type<expression::literal>,
                                     std::get<int>(literal.value));
       }
       if (std::holds_alternative<double>(literal.value)) {
         return prog.expressions.add(
-            first, std::in_place_type<expression::literal>,
+            std::in_place_type<expression::literal>,
             prog.double_literals.add(std::get<double>(literal.value)));
       }
     }
     if (match(token::l_string)) {
       return prog.expressions.add(
-          first, std::in_place_type<expression::literal>,
+          std::in_place_type<expression::literal>,
           prog.string_literals.add(std::get<string>(previous().value.value)));
     }
     if (match(token::l_identifier)) {
-      return prog.expressions.add(first,
-                                  std::in_place_type<expression::variable>,
+      return prog.expressions.add(std::in_place_type<expression::variable>,
                                   prog.string_literals.add(previous().lexeme));
     }
     if (match(token::left_paren)) {
       const auto expr = parse_expression(prog);
       consume(token::right_paren, "Expect ')' after expression.");
-      return prog.expressions.add(first, std::in_place_type<expression::group>, expr);
+      return prog.expressions.add(std::in_place_type<expression::group>, expr);
     }
     throw parse_error{"Expect expression."};
   }

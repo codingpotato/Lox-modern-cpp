@@ -8,6 +8,7 @@
 #include "program.h"
 #include "token.h"
 #include "types.h"
+#include "variant_storage.h"
 
 namespace lox {
 
@@ -60,12 +61,15 @@ struct expression {
   };
 
   struct literal {
-    explicit literal() noexcept : value{false} {}
-    literal(int i) noexcept : value{i} {}
-    literal(double_id d) noexcept : value{d} {}
-    literal(string_id id) noexcept : value{id} {}
+    using value_type = std::variant<null, bool, int, double_id, string_id>;
 
-    std::variant<int, double_id, string_id> value;
+    literal() noexcept : storage{null{}} {}
+    literal(bool b) noexcept : storage{b} {}
+    literal(int i) noexcept : storage{i} {}
+    literal(double_id d) noexcept : storage{d} {}
+    literal(string_id id) noexcept : storage{id} {}
+
+    variant_storage<value_type> storage;
   };
 
   struct unary {
@@ -104,28 +108,11 @@ struct expression {
     return token_map.at(type);
   }
 
-  template <typename T, typename... Args>
-  constexpr expression(expression_id f, std::in_place_type_t<T> t,
-                       Args &&... args) noexcept
-      : first{f}, element{t, std::forward<Args>(args)...} {}
+  template <typename... Args>
+  constexpr expression(Args &&... args) noexcept
+      : storage{std::forward<Args>(args)...} {}
 
-  template <typename T>
-  constexpr bool is_type() const noexcept {
-    return std::holds_alternative<T>(element);
-  }
-
-  template <typename T>
-  const auto &get() const noexcept {
-    return std::get<T>(element);
-  }
-
-  template <typename... Ts>
-  auto visit(overloaded<Ts...> visitor) const {
-    return std::visit(visitor, element);
-  }
-
-  expression_id first;
-  element_t element;
+  variant_storage<element_t> storage;
 };
 
 }  // namespace lox

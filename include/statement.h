@@ -7,6 +7,7 @@
 #include "expression.h"
 #include "program.h"
 #include "types.h"
+#include "variant_storage.h"
 
 namespace lox {
 
@@ -70,29 +71,14 @@ struct statement {
     expression_id condition;
   };
 
-  template <typename T, typename... Args>
-  constexpr statement(std::in_place_type_t<T> t, Args &&... args) noexcept
-      : element{t, std::forward<Args>(args)...} {}
-
-  template <typename T>
-  constexpr bool is_type() const noexcept {
-    return std::holds_alternative<T>(element);
-  }
-
-  template <typename T>
-  const auto &get() const noexcept {
-    return std::get<T>(element);
-  }
-
-  template <typename... Ts>
-  auto visit(overloaded<Ts...> &&visitor) const {
-    return std::visit(visitor, element);
-  }
-
   using element_t = std::variant<block, expression_s, for_s, function, if_else,
                                  return_s, variable_s, while_s>;
 
-  element_t element;
+  template <typename... Args>
+  constexpr statement(Args &&... args) noexcept
+      : storage{std::forward<Args>(args)...} {}
+
+  variant_storage<element_t> storage;
 };
 
 using statement_vector = std::vector<statement>;
