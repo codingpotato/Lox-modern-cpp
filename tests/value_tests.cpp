@@ -3,4 +3,10 @@
 
 #include "value.h"
 
-TEST_CASE("value", "[value]") { REQUIRE(1 == 1); }
+TEST_CASE("value", "[value]") {
+  lox::value v1{1};
+  lox::value v2{1};
+  lox::value v = v1 + v2;
+  CHECK(v.is_type<int>());
+  CHECK(v.as<int>() == 2);
+}

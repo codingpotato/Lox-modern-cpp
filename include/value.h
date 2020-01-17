@@ -29,7 +29,21 @@ struct value {
 
   template <typename T>
   const T& as() const {
-    throw runtime_error{"Unknown value type."};
+    if (type == id<T>) {
+      if constexpr (std::is_same_v<T, null>) {
+        return null_value;
+      }
+      if constexpr (std::is_same_v<T, bool>) {
+        return bool_value;
+      }
+      if constexpr (std::is_same_v<T, int>) {
+        return int_value;
+      }
+      if constexpr (std::is_same_v<T, double>) {
+        return double_value;
+      }
+    }
+    throw runtime_error{"Unknown value type (as)."};
   }
 
   friend bool operator==(const value& lhs, const value& rhs) {
@@ -50,7 +64,7 @@ struct value {
       case value::id<double>:
         return lhs.double_value == rhs.double_value;
     }
-    throw runtime_error{"Unknown value type."};
+    throw runtime_error{"Unknown value type (operator==)."};
   }
 
  private:
@@ -69,7 +83,7 @@ struct value {
         double_value = v.double_value;
         break;
       default:
-        throw runtime_error{"Unknow value type."};
+        throw runtime_error{"Unknow value type (copy)."};
     }
   }
 
@@ -88,7 +102,7 @@ struct value {
         double_value = v.double_value;
         break;
       default:
-        throw runtime_error{"Unknow value type."};
+        throw runtime_error{"Unknow value type (move)."};
     }
   }
 
@@ -123,7 +137,8 @@ inline value arithmetic(const value& lhs, const value& rhs, Oper op) {
 }
 
 inline value operator+(const value& lhs, const value& rhs) {
-  return arithmetic(lhs, rhs, [](auto&& v1, auto&& v2) { return v1 + v2; });
+  return arithmetic(lhs, rhs,
+                    [](const auto& v1, const auto& v2) { return v1 + v2; });
 }
 
 }  // namespace lox
