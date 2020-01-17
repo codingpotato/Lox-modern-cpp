@@ -21,6 +21,11 @@ add_test_executable(NAME
                     cache_tests.cpp)
 
 add_test_executable(NAME
+                    interpreter_tests
+                    SOURCES
+                    interpreter_tests.cpp)
+
+add_test_executable(NAME
                     parser_tests
                     SOURCES
                     parser_tests.cpp)
