@@ -57,7 +57,8 @@ class parser {
   // parameters: IDENTIFIER ( "," IDENTIFIER )*
   void parse_function(program &prog, statement_vector &block_statements) {
     const auto name_id = prog.string_literals.add(
-        consume(token::l_identifier, "Expect function name.").lexeme);
+        consume(token::l_identifier, "Expect function name.")
+            .value.storage.as<string>());
     const auto first_parameter = prog.string_literals.size();
     consume(token::left_paren, "Expect '(' after function name.");
     if (!check(token::right_paren)) {
@@ -66,7 +67,7 @@ class parser {
             consume(token::l_identifier,
                     "Expect parameter name for function '" +
                         string{prog.string_literals.get(name_id)} + "'.")
-                .lexeme);
+                .value.storage.as<string>());
       } while (match(token::comma));
     }
     consume(token::right_paren, "Expect ')' after parameters.");
@@ -82,7 +83,8 @@ class parser {
   void parse_variable_declaration(program &prog,
                                   statement_vector &block_statements) {
     const auto name_id = prog.string_literals.add(
-        consume(token::l_identifier, "Expect variable name").lexeme);
+        consume(token::l_identifier, "Expect variable name")
+            .value.storage.as<string>());
     consume(token::equal, "Expect initializer");
     const auto expr = parse_expression(prog);
     consume(token::semicolon, "Expect ';' after value.");
@@ -104,7 +106,7 @@ class parser {
       block_statements.emplace_back(std::in_place_type<statement::block>,
                                     parse_block(prog));
     } else {
-      parse_expr_statement(prog, block_statements);
+      parse_expression_s(prog, block_statements);
     }
   }
 
@@ -117,7 +119,7 @@ class parser {
       parse_variable_declaration(prog, block_statements);
       has_initializer = true;
     } else if (!match(token::semicolon)) {
-      parse_expr_statement(prog, block_statements);
+      parse_expression_s(prog, block_statements);
       has_initializer = true;
     }
     expression_id condition{};
@@ -145,11 +147,14 @@ class parser {
     const auto condition = parse_expression(prog);
     consume(token::right_paren, "Expect ')' after if condition.");
     parse_statement(prog, block_statements);
+    const auto then_block = prog.statements.size() - 1;
+    auto else_block = statement_id{};
     if (match(token::k_else)) {
       parse_statement(prog, block_statements);
+      else_block = prog.statements.size() - 1;
     }
     block_statements.emplace_back(std::in_place_type<statement::if_else>,
-                                  condition);
+                                  condition, then_block, else_block);
   }
 
   // returnStmt: "return" expression? ";"
@@ -175,7 +180,7 @@ class parser {
   }
 
   // exprStmt: expression ";"
-  void parse_expr_statement(program &prog, statement_vector &block_statements) {
+  void parse_expression_s(program &prog, statement_vector &block_statements) {
     const auto expr = parse_expression(prog);
     consume(token::semicolon, "Expect ';' after value.");
     block_statements.emplace_back(std::in_place_type<statement::expression_s>,
@@ -197,7 +202,7 @@ class parser {
           expr.storage.is_type<expression::variable>()) {
         return prog.expressions.add(
             std::in_place_type<expression::assignment>,
-            expr.storage.get<expression::variable>().name, value);
+            expr.storage.as<expression::variable>().name, value);
       }
       throw parse_error{"Invalid assignment target."};
     }
@@ -308,24 +313,25 @@ class parser {
     }
     if (match(token::l_number)) {
       const auto &literal = previous().value;
-      if (std::holds_alternative<int>(literal.value)) {
+      if (literal.storage.is_type<int>()) {
         return prog.expressions.add(std::in_place_type<expression::literal>,
-                                    std::get<int>(literal.value));
+                                    literal.storage.as<int>());
       }
-      if (std::holds_alternative<double>(literal.value)) {
+      if (literal.storage.is_type<double>()) {
         return prog.expressions.add(
             std::in_place_type<expression::literal>,
-            prog.double_literals.add(std::get<double>(literal.value)));
+            prog.double_literals.add(literal.storage.as<double>()));
       }
     }
     if (match(token::l_string)) {
       return prog.expressions.add(
           std::in_place_type<expression::literal>,
-          prog.string_literals.add(std::get<string>(previous().value.value)));
+          prog.string_literals.add(previous().value.storage.as<string>()));
     }
     if (match(token::l_identifier)) {
-      return prog.expressions.add(std::in_place_type<expression::variable>,
-                                  prog.string_literals.add(previous().lexeme));
+      return prog.expressions.add(
+          std::in_place_type<expression::variable>,
+          prog.string_literals.add(previous().value.storage.as<string>()));
     }
     if (match(token::left_paren)) {
       const auto expr = parse_expression(prog);
@@ -367,7 +373,9 @@ class parser {
   }
 
   const token &consume(token::type_t t, const string &message) {
-    if (check(t)) return advance();
+    if (check(t)) {
+      return advance();
+    }
     throw parse_error{message};
   }
 
@@ -385,7 +393,7 @@ class parser {
         case token::k_return:
           return;
         default:
-          throw parse_error{""};
+          throw parse_error{"Unknow keyword."};
       }
       advance();
     }

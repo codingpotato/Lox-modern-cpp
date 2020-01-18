@@ -22,46 +22,47 @@ void scanner::scan_token(token_vector &tokens) {
   ++current;
   switch (c) {
     case '(':
-      tokens.emplace_back(token::left_paren);
+      tokens.emplace_back(token::left_paren, line);
       break;
     case ')':
-      tokens.emplace_back(token::right_paren);
+      tokens.emplace_back(token::right_paren, line);
       break;
     case '{':
-      tokens.emplace_back(token::left_brace);
+      tokens.emplace_back(token::left_brace, line);
       break;
     case '}':
-      tokens.emplace_back(token::right_brace);
+      tokens.emplace_back(token::right_brace, line);
       break;
     case ',':
-      tokens.emplace_back(token::comma);
+      tokens.emplace_back(token::comma, line);
       break;
     case '.':
-      tokens.emplace_back(token::dot);
+      tokens.emplace_back(token::dot, line);
       break;
     case '-':
-      tokens.emplace_back(token::minus);
+      tokens.emplace_back(token::minus, line);
       break;
     case '+':
-      tokens.emplace_back(token::plus);
+      tokens.emplace_back(token::plus, line);
       break;
     case ';':
-      tokens.emplace_back(token::semicolon);
+      tokens.emplace_back(token::semicolon, line);
       break;
     case '*':
-      tokens.emplace_back(token::star);
+      tokens.emplace_back(token::star, line);
       break;
     case '!':
-      tokens.emplace_back(match('=') ? token::bang_equal : token::bang);
+      tokens.emplace_back(match('=') ? token::bang_equal : token::bang, line);
       break;
     case '=':
-      tokens.emplace_back(match('=') ? token::equal_equal : token::equal);
+      tokens.emplace_back(match('=') ? token::equal_equal : token::equal, line);
       break;
     case '<':
-      tokens.emplace_back(match('=') ? token::less_equal : token::less);
+      tokens.emplace_back(match('=') ? token::less_equal : token::less, line);
       break;
     case '>':
-      tokens.emplace_back(match('=') ? token::greater_equal : token::greater);
+      tokens.emplace_back(match('=') ? token::greater_equal : token::greater,
+                          line);
       break;
     case '/':
       if (match('/')) {
@@ -69,7 +70,7 @@ void scanner::scan_token(token_vector &tokens) {
           ++current;
         }
       } else {
-        tokens.emplace_back(token::slash);
+        tokens.emplace_back(token::slash, line);
       }
       break;
     case ' ':
@@ -104,10 +105,10 @@ void scanner::scan_number(token_vector &tokens) {
       ++current;
     }
     tokens.emplace_back(token::l_number,
-                        std::stod(string{token_start, current}));
+                        std::stod(string{token_start, current}), line);
   } else {
     tokens.emplace_back(token::l_number,
-                        std::stoi(string{token_start, current}));
+                        std::stoi(string{token_start, current}), line);
   }
 }
 
@@ -126,9 +127,10 @@ void scanner::scan_identifier(token_vector &tokens) {
   }
   auto text = string(token_start, current);
   if (keywords.find(text) != keywords.cend()) {
-    tokens.emplace_back(keywords.at(text));
+    tokens.emplace_back(keywords.at(text), line);
   } else {
-    tokens.emplace_back(token::l_identifier);
+    tokens.emplace_back(token::l_identifier, string{token_start, current},
+                        line);
   }
 }
 
@@ -144,7 +146,8 @@ void scanner::scan_string(token_vector &tokens) {
     return;
   }
   ++current;
-  tokens.emplace_back(token::l_string, string{token_start + 1, current - 2});
+  tokens.emplace_back(token::l_string, string{token_start + 1, current - 2},
+                      line);
 }
 
 }  // namespace lox

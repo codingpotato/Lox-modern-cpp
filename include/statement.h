@@ -23,7 +23,6 @@ struct statement {
     expression_id expr;
   };
 
-  // layout in statements: [initializer?, body, for]
   struct for_s {
     for_s(bool h_i, expression_id c, expression_id i) noexcept
         : has_initializer{h_i}, condition{c}, increament{i} {}
@@ -33,7 +32,6 @@ struct statement {
     expression_id increament;
   };
 
-  // layout in statements: [body, function]
   struct function {
     function(string_id n, string_id first, string_id last) noexcept
         : name{n}, first_parameter{first}, last_parameter{last} {}
@@ -43,11 +41,14 @@ struct statement {
     string_id last_parameter;
   };
 
-  // layout in statements: [then block, else block, if_else]
   struct if_else {
-    explicit if_else(expression_id c) noexcept : condition{c} {}
+    explicit if_else(expression_id c, statement_id then_b,
+                     statement_id else_b) noexcept
+        : condition{c}, then_block{then_b}, else_block{else_b} {}
 
     expression_id condition;
+    statement_id then_block;
+    statement_id else_block;
   };
 
   struct return_s {

@@ -2,49 +2,76 @@
 
 namespace lox {
 
-string to_string(const program& prog) noexcept {
-  return to_string(prog, prog.statements.get(prog.start_block));
-}
-
-string to_string(const program& prog, const statement& stat) noexcept {
-  return stat.storage.visit(overloaded{
-      [&prog](const auto& element) { return to_string(prog, element); }});
-}
-
-string to_string(const program& prog, const statement::block& block) noexcept {
+static string indent_of_level(int level) noexcept {
   string result;
-  for (auto index = block.first; index < block.last; ++index) {
-    result += to_string(prog, prog.statements.get(index));
+  for (auto i = 0; i < level; ++i) {
+    result += "  ";
   }
   return result;
 }
 
-string to_string(const program& prog,
-                 const statement::expression_s& expr) noexcept {
-  return to_string(prog, prog.expressions.get(expr.expr));
+string to_string(const program& prog) noexcept {
+  return to_string(prog, prog.statements.get(prog.start_block), 0);
 }
 
-string to_string(const program&, const statement::for_s&) noexcept {
+string to_string(const program& prog, const statement& stat,
+                 int level) noexcept {
+  return stat.storage.visit(overloaded{[&prog, level](const auto& element) {
+    return to_string(prog, element, level);
+  }});
+}
+
+string to_string(const program& prog, const statement::block& block,
+                 int level) noexcept {
+  string result;
+  result += indent_of_level(level) + "{\n";
+  for (auto index = block.first; index < block.last; ++index) {
+    result += to_string(prog, prog.statements.get(index), level + 1);
+  }
+  result += indent_of_level(level) + "}\n";
+  return result;
+}
+
+string to_string(const program& prog, const statement::expression_s& expr,
+                 int level) noexcept {
+  return indent_of_level(level) +
+         to_string(prog, prog.expressions.get(expr.expr)) + ";\n";
+}
+
+string to_string(const program&, const statement::for_s&, int) noexcept {
   return "";
 }
 
-string to_string(const program&, const statement::function&) noexcept {
+string to_string(const program&, const statement::function&, int) noexcept {
   return "";
 }
 
-string to_string(const program&, const statement::if_else&) noexcept {
+string to_string(const program& prog, const statement::if_else& if_else,
+                 int level) noexcept {
+  return indent_of_level(level) + "if (" +
+         to_string(prog, prog.expressions.get(if_else.condition)) + ") {\n" +
+         to_string(prog, prog.statements.get(if_else.then_block), level + 1) +
+         indent_of_level(level) + "}" +
+         (if_else.else_block == statement_id{}
+              ? "\n"
+              : " else {\n" + to_string(prog,
+                                        prog.statements.get(if_else.else_block),
+                                        level + 1)) +
+         indent_of_level(level) + "}\n";
+}
+
+string to_string(const program&, const statement::return_s&, int) noexcept {
   return "";
 }
 
-string to_string(const program&, const statement::return_s&) noexcept {
-  return "";
+string to_string(const program& prog, const statement::variable_s& variable,
+                 int level) noexcept {
+  return indent_of_level(level) + "var " +
+         prog.string_literals.get(variable.name) + " = " +
+         to_string(prog, prog.expressions.get(variable.initializer)) + ";\n";
 }
 
-string to_string(const program&, const statement::variable_s&) noexcept {
-  return "";
-}
-
-string to_string(const program&, const statement::while_s&) noexcept {
+string to_string(const program&, const statement::while_s&, int) noexcept {
   return "";
 }
 
@@ -83,23 +110,25 @@ string to_string(expression::operator_t oper) {
   throw internal_error{"Unknow operator."};
 }
 
-string to_string(const program&, const expression::assignment&) noexcept {
-  return "";
+string to_string(const program& prog,
+                 const expression::assignment& assignment) noexcept {
+  return prog.string_literals.get(assignment.variable) + " = " +
+         to_string(prog, prog.expressions.get(assignment.value));
 }
 
 string to_string(const program& prog,
                  const expression::binary& binary) noexcept {
-  return "(" + to_string(prog, prog.expressions.get(binary.left)) +
+  return to_string(prog, prog.expressions.get(binary.left)) +
          to_string(binary.oper) +
-         to_string(prog, prog.expressions.get(binary.right)) + ")";
+         to_string(prog, prog.expressions.get(binary.right));
 }
 
 string to_string(const program&, const expression::call&) noexcept {
   return "";
 }
 
-string to_string(const program&, const expression::group&) noexcept {
-  return "";
+string to_string(const program& prog, const expression::group& group) noexcept {
+  return "(" + to_string(prog, prog.expressions.get(group.expr)) + ")";
 }
 
 string to_string(const program& prog,

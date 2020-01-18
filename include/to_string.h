@@ -10,16 +10,18 @@ namespace lox {
 
 string to_string(const program& prog) noexcept;
 
-string to_string(const program& prog, const statement& stat) noexcept;
+string to_string(const program& prog, const statement& stat,
+                 int level) noexcept;
 
-string to_string(const program& prog, const statement::block& block) noexcept;
-string to_string(const program&, const statement::expression_s&) noexcept;
-string to_string(const program&, const statement::for_s&) noexcept;
-string to_string(const program&, const statement::function&) noexcept;
-string to_string(const program&, const statement::if_else&) noexcept;
-string to_string(const program&, const statement::return_s&) noexcept;
-string to_string(const program&, const statement::variable_s&) noexcept;
-string to_string(const program&, const statement::while_s&) noexcept;
+string to_string(const program& prog, const statement::block& block,
+                 int level) noexcept;
+string to_string(const program&, const statement::expression_s&, int) noexcept;
+string to_string(const program&, const statement::for_s&, int) noexcept;
+string to_string(const program&, const statement::function&, int) noexcept;
+string to_string(const program&, const statement::if_else&, int) noexcept;
+string to_string(const program&, const statement::return_s&, int) noexcept;
+string to_string(const program&, const statement::variable_s&, int) noexcept;
+string to_string(const program&, const statement::while_s&, int) noexcept;
 
 string to_string(const program& prog, const expression& expr) noexcept;
 

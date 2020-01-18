@@ -46,11 +46,6 @@ add_test_executable(NAME
                     statement_tests.cpp)
 
 add_test_executable(NAME
-                    to_string_tests
-                    SOURCES
-                    to_string_tests.cpp)
-
-add_test_executable(NAME
                     value_tests
                     SOURCES
                     value_tests.cpp)

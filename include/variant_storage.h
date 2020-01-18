@@ -1,6 +1,8 @@
 #ifndef LOX_VARIANT_STORAGE_H
 #define LOX_VARIANT_STORAGE_H
 
+#include "exception.h"
+
 namespace lox {
 
 template <typename Variant_element>
@@ -15,8 +17,12 @@ struct variant_storage {
   }
 
   template <typename T>
-  const auto &get() const noexcept {
-    return std::get<T>(element);
+  const auto &as() const {
+    try {
+      return std::get<T>(element);
+    } catch (const std::exception &) {
+      throw internal_error{"Wrong variant type."};
+    }
   }
 
   template <typename... Ts>
