@@ -25,16 +25,6 @@ struct statement {
     expression_id expr;
   };
 
-  struct for_s {
-    for_s(bool has_i, expression_id c, expression_id i, statement_id b) noexcept
-        : has_initializer{has_i}, condition{c}, increament{i}, body{b} {}
-
-    bool has_initializer;
-    expression_id condition;
-    expression_id increament;
-    statement_id body;
-  };
-
   struct function {
     function(string_id n, string_id first, string_id last,
              statement_id b) noexcept
@@ -79,7 +69,7 @@ struct statement {
     statement_id body;
   };
 
-  using element_t = std::variant<block, expression_s, for_s, function, if_else,
+  using element_t = std::variant<block, expression_s, function, if_else,
                                  return_s, variable_s, while_s>;
 
   template <typename... Args>

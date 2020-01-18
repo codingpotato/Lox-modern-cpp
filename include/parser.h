@@ -1,6 +1,8 @@
 #ifndef LOX_PARSER_H
 #define LOX_PARSER_H
 
+#include <optional>
+
 #include "exception.h"
 #include "expression.h"
 #include "program.h"
@@ -26,10 +28,14 @@ class parser {
   }
 
   // block: "{" declaration* "}"
-  statement parse_block(program &prog) {
+  statement parse_block(program &prog,
+                        std::optional<statement> post_stat_for_block = {}) {
     statement_vector block_statements;
     while (!is_end() && !check(token::right_brace)) {
       block_statements.emplace_back(parse_declaration(prog));
+    }
+    if (post_stat_for_block) {
+      block_statements.push_back(*post_stat_for_block);
     }
     if (!is_end()) {
       consume(token::right_brace, "Expect '}' after block.");
@@ -84,7 +90,8 @@ class parser {
   }
 
   // statement: forStmt | ifStmt | returnStmt | whileStmt | block | exprStmt
-  statement parse_statement(program &prog) {
+  statement parse_statement(
+      program &prog, std::optional<statement> post_statement_for_block = {}) {
     if (match(token::k_for)) {
       return parse_for(prog);
     } else if (match(token::k_if)) {
@@ -94,7 +101,7 @@ class parser {
     } else if (match(token::k_while)) {
       return parse_while(prog);
     } else if (match(token::left_brace)) {
-      return parse_block(prog);
+      return parse_block(prog, post_statement_for_block);
     } else {
       return parse_expression_s(prog);
     }
@@ -104,30 +111,40 @@ class parser {
   //           expression ? ")" statement
   statement parse_for(program &prog) {
     consume(token::left_paren, "Expect '(' after 'for'.");
-    auto has_initializer = false;
+    std::optional<statement> initializer;
     if (match(token::k_var)) {
-      parse_variable_declaration(prog);
-      has_initializer = true;
+      initializer = parse_variable_declaration(prog);
     } else if (!match(token::semicolon)) {
-      parse_expression_s(prog);
-      has_initializer = true;
+      initializer = parse_expression_s(prog);
     }
-    expression_id condition{};
+    expression_id condition;
     if (!check(token::semicolon)) {
       condition = parse_expression(prog);
     } else {
       condition = prog.expressions.add(true);
     }
     consume(token::semicolon, "Expect ';' after loop condition.");
-    expression_id increament{};
+    expression_id increament_expr;
     if (!check(token::right_paren)) {
-      increament = parse_expression(prog);
+      increament_expr = parse_expression(prog);
     }
     consume(token::right_paren, "Expect ')' after for clauses.");
 
-    const auto body = prog.statements.add(parse_block(prog));
-    return {std::in_place_type<statement::for_s>, has_initializer, condition,
-            increament, body};
+    std::optional<statement> increament;
+    if (increament_expr != expression_id{}) {
+      increament.emplace(std::in_place_type<statement::expression_s>,
+                         increament_expr);
+    }
+    const auto body = prog.statements.add(parse_statement(prog, increament));
+    statement while_stat{std::in_place_type<statement::while_s>, condition,
+                         body};
+    if (initializer) {
+      const auto first = prog.statements.add(*initializer);
+      const auto last = prog.statements.add(while_stat);
+      return {std::in_place_type<statement::block>, first, last + 1};
+    } else {
+      return while_stat;
+    }
   }
 
   // ifStmt: "if" "(" expression ")" statement ( "else" statement )?

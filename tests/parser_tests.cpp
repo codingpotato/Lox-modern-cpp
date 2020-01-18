@@ -21,10 +21,13 @@ TEST_CASE("parse block statement", "[parser]") {
   REQUIRE(lox::to_string(parse(source)) == expected);
 }
 
-TEST_CASE("parse variable declearation statement", "[parser]") {
-  lox::string source{"var name = 1;"};
+TEST_CASE("parse for statement", "[parser]") {
+  lox::string source{R"(
+for (var i = 0; i < 100; i = i + 1) {
+  a = 1;
+}
+)"};
   lox::string expected = R"({
-  var name = 1;
 }
 )";
   REQUIRE(lox::to_string(parse(source)) == expected);
@@ -75,6 +78,15 @@ else
   REQUIRE(lox::to_string(parse(source)) == expected);
 }
 
+TEST_CASE("parse variable declearation statement", "[parser]") {
+  lox::string source{"var name = 1;"};
+  lox::string expected = R"({
+  var name = 1;
+}
+)";
+  REQUIRE(lox::to_string(parse(source)) == expected);
+}
+
 TEST_CASE("parse while statement", "[parser]") {
   lox::string source{
       R"(while (1 == 1) {
@@ -100,6 +112,15 @@ while (1 == 1) a = 1;
   lox::string expected = R"({
   while (1 == 1)
     a = 1;
+}
+)";
+  REQUIRE(lox::to_string(parse(source)) == expected);
+}
+
+TEST_CASE("parse assignment expression", "[parser]") {
+  lox::string source{"i = i + 1;"};
+  lox::string expected = R"({
+  i = i + 1;
 }
 )";
   REQUIRE(lox::to_string(parse(source)) == expected);

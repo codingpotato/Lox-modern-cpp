@@ -38,10 +38,6 @@ string to_string(const program& prog, const statement::expression_s& expr,
          to_string(prog, prog.expressions.get(expr.expr)) + ";\n";
 }
 
-string to_string(const program&, const statement::for_s&, int) noexcept {
-  return "";
-}
-
 string to_string(const program&, const statement::function&, int) noexcept {
   return "";
 }

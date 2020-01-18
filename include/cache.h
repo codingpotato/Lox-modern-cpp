@@ -29,6 +29,16 @@ class cache {
   using vector = std::vector<T>;
   using const_iterator = typename vector::const_iterator;
 
+  index add(const T& t) noexcept {
+    elements.push_back(t);
+    return elements.size() - 1;
+  }
+
+  index add(T&& t) noexcept {
+    elements.emplace_back(std::move(t));
+    return elements.size() - 1;
+  }
+
   template <typename... Args>
   index add(Args... args) noexcept {
     elements.emplace_back(std::move(args)...);
