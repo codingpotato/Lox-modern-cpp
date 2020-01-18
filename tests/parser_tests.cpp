@@ -38,9 +38,12 @@ TEST_CASE("parse if else statement", "[parser]") {
   a = 2;
 })"};
   lox::string expected = R"({
-  if (1 == 1) {
+  if (1 == 1)
+  {
     a = 1;
-  } else {
+  }
+  else
+  {
     a = 2;
   }
 }

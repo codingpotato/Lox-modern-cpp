@@ -49,15 +49,14 @@ string to_string(const program&, const statement::function&, int) noexcept {
 string to_string(const program& prog, const statement::if_else& if_else,
                  int level) noexcept {
   return indent_of_level(level) + "if (" +
-         to_string(prog, prog.expressions.get(if_else.condition)) + ") {\n" +
-         to_string(prog, prog.statements.get(if_else.then_block), level + 1) +
-         indent_of_level(level) + "}" +
+         to_string(prog, prog.expressions.get(if_else.condition)) + ")\n" +
+         to_string(prog, prog.statements.get(if_else.then_block), level) +
+         indent_of_level(level) +
          (if_else.else_block == statement_id{}
               ? "\n"
-              : " else {\n" + to_string(prog,
-                                        prog.statements.get(if_else.else_block),
-                                        level + 1)) +
-         indent_of_level(level) + "}\n";
+              : "else\n" + to_string(prog,
+                                     prog.statements.get(if_else.else_block),
+                                     level));
 }
 
 string to_string(const program&, const statement::return_s&, int) noexcept {

@@ -13,6 +13,8 @@ namespace lox {
 
 struct statement {
   struct block {
+    block(statement_id f, statement_id l) noexcept : first{f}, last{l} {}
+
     statement_id first;
     statement_id last;
   };
@@ -24,21 +26,24 @@ struct statement {
   };
 
   struct for_s {
-    for_s(bool h_i, expression_id c, expression_id i) noexcept
-        : has_initializer{h_i}, condition{c}, increament{i} {}
+    for_s(bool has_i, expression_id c, expression_id i, statement_id b) noexcept
+        : has_initializer{has_i}, condition{c}, increament{i}, body{b} {}
 
     bool has_initializer;
     expression_id condition;
     expression_id increament;
+    statement_id body;
   };
 
   struct function {
-    function(string_id n, string_id first, string_id last) noexcept
-        : name{n}, first_parameter{first}, last_parameter{last} {}
+    function(string_id n, string_id first, string_id last,
+             statement_id b) noexcept
+        : name{n}, first_parameter{first}, last_parameter{last}, body{b} {}
 
     string_id name;
     string_id first_parameter;
     string_id last_parameter;
+    statement_id body;
   };
 
   struct if_else {
@@ -67,9 +72,11 @@ struct statement {
 
   // layout in statements: [block, while]
   struct while_s {
-    explicit while_s(expression_id c) noexcept : condition{c} {}
+    explicit while_s(expression_id c, statement_id b) noexcept
+        : condition{c}, body{b} {}
 
     expression_id condition;
+    statement_id body;
   };
 
   using element_t = std::variant<block, expression_s, for_s, function, if_else,

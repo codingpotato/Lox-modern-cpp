@@ -17,9 +17,7 @@ class parser {
       tokens = std::move(ts);
       current = tokens.cbegin();
       program prog;
-      prog.statements.add(std::in_place_type<statement::block>,
-                          parse_block(prog));
-      prog.start_block = prog.statements.size() - 1;
+      prog.start_block = prog.statements.add(parse_block(prog));
       return prog;
     } catch (const std::exception &e) {
       synchronize();
@@ -28,10 +26,10 @@ class parser {
   }
 
   // block: "{" declaration* "}"
-  statement::block parse_block(program &prog) {
+  statement parse_block(program &prog) {
     statement_vector block_statements;
     while (!is_end() && !check(token::right_brace)) {
-      parse_declaration(prog, block_statements);
+      block_statements.emplace_back(parse_declaration(prog));
     }
     if (!is_end()) {
       consume(token::right_brace, "Expect '}' after block.");
@@ -39,23 +37,30 @@ class parser {
     const auto first = prog.statements.size();
     prog.statements.add(block_statements.cbegin(), block_statements.cend());
     const auto last = prog.statements.size();
-    return {first, last};
+    return {std::in_place_type<statement::block>, first, last};
   }
 
   // declaration: function declaration | variable declaration | statement
-  void parse_declaration(program &prog, statement_vector &block_statements) {
+  statement parse_declaration(program &prog) {
     if (match(token::k_fun)) {
-      parse_function(prog, block_statements);
+      return parse_function(prog);
     } else if (match(token::k_var)) {
-      parse_variable_declaration(prog, block_statements);
+      return parse_variable_declaration(prog);
     } else {
-      parse_statement(prog, block_statements);
+      return parse_statement(prog);
     }
+  }
+
+  // exprStmt: expression ";"
+  statement parse_expression_s(program &prog) {
+    const auto expr = parse_expression(prog);
+    consume(token::semicolon, "Expect ';' after value.");
+    return {std::in_place_type<statement::expression_s>, expr};
   }
 
   // function declaration: IDENTIFIER "(" parameters? ")" block
   // parameters: IDENTIFIER ( "," IDENTIFIER )*
-  void parse_function(program &prog, statement_vector &block_statements) {
+  statement parse_function(program &prog) {
     const auto name_id = prog.string_literals.add(
         consume(token::l_identifier, "Expect function name.")
             .value.storage.as<string>());
@@ -73,53 +78,38 @@ class parser {
     consume(token::right_paren, "Expect ')' after parameters.");
     consume(token::left_brace, "Expect '{' before function body.");
     const auto last_parameter = prog.string_literals.size();
-    block_statements.emplace_back(std::in_place_type<statement::block>,
-                                  parse_block(prog));
-    block_statements.emplace_back(std::in_place_type<statement::function>,
-                                  name_id, first_parameter, last_parameter);
-  }
-
-  // varDecl: "var" IDENTIFIER ( "=" expression ) ";"
-  void parse_variable_declaration(program &prog,
-                                  statement_vector &block_statements) {
-    const auto name_id = prog.string_literals.add(
-        consume(token::l_identifier, "Expect variable name")
-            .value.storage.as<string>());
-    consume(token::equal, "Expect initializer");
-    const auto expr = parse_expression(prog);
-    consume(token::semicolon, "Expect ';' after value.");
-    block_statements.emplace_back(std::in_place_type<statement::variable_s>,
-                                  name_id, expr);
+    const auto body = prog.statements.add(parse_block(prog));
+    return {std::in_place_type<statement::function>, name_id, first_parameter,
+            last_parameter, body};
   }
 
   // statement: forStmt | ifStmt | returnStmt | whileStmt | block | exprStmt
-  void parse_statement(program &prog, statement_vector &block_statements) {
+  statement parse_statement(program &prog) {
     if (match(token::k_for)) {
-      parse_for(prog, block_statements);
+      return parse_for(prog);
     } else if (match(token::k_if)) {
-      parse_if_else(prog, block_statements);
+      return parse_if_else(prog);
     } else if (match(token::k_return)) {
-      parse_return(prog, block_statements);
+      return parse_return(prog);
     } else if (match(token::k_while)) {
-      parse_while(prog, block_statements);
+      return parse_while(prog);
     } else if (match(token::left_brace)) {
-      block_statements.emplace_back(std::in_place_type<statement::block>,
-                                    parse_block(prog));
+      return parse_block(prog);
     } else {
-      parse_expression_s(prog, block_statements);
+      return parse_expression_s(prog);
     }
   }
 
   // forStmt: "for" "(" ( varDecl | exprStmt | ";" ) expression ? ";"
   //           expression ? ")" statement
-  void parse_for(program &prog, statement_vector &block_statements) {
+  statement parse_for(program &prog) {
     consume(token::left_paren, "Expect '(' after 'for'.");
     auto has_initializer = false;
     if (match(token::k_var)) {
-      parse_variable_declaration(prog, block_statements);
+      parse_variable_declaration(prog);
       has_initializer = true;
     } else if (!match(token::semicolon)) {
-      parse_expression_s(prog, block_statements);
+      parse_expression_s(prog);
       has_initializer = true;
     }
     expression_id condition{};
@@ -135,56 +125,53 @@ class parser {
     }
     consume(token::right_paren, "Expect ')' after for clauses.");
 
-    block_statements.emplace_back(std::in_place_type<statement::block>,
-                                  parse_block(prog));
-    block_statements.emplace_back(std::in_place_type<statement::for_s>,
-                                  has_initializer, condition, increament);
+    const auto body = prog.statements.add(parse_block(prog));
+    return {std::in_place_type<statement::for_s>, has_initializer, condition,
+            increament, body};
   }
 
   // ifStmt: "if" "(" expression ")" statement ( "else" statement )?
-  void parse_if_else(program &prog, statement_vector &block_statements) {
+  statement parse_if_else(program &prog) {
     consume(token::left_paren, "Expect '(' after 'if'.");
     const auto condition = parse_expression(prog);
     consume(token::right_paren, "Expect ')' after if condition.");
-    parse_statement(prog, block_statements);
-    const auto then_block = prog.statements.size() - 1;
+    const auto then_block = prog.statements.add(parse_statement(prog));
     auto else_block = statement_id{};
     if (match(token::k_else)) {
-      parse_statement(prog, block_statements);
-      else_block = prog.statements.size() - 1;
+      else_block = prog.statements.add(parse_statement(prog));
     }
-    block_statements.emplace_back(std::in_place_type<statement::if_else>,
-                                  condition, then_block, else_block);
+    return {std::in_place_type<statement::if_else>, condition, then_block,
+            else_block};
   }
 
   // returnStmt: "return" expression? ";"
-  void parse_return(program &prog, statement_vector &block_statements) {
+  statement parse_return(program &prog) {
     expression_id value{};
     if (!check(token::semicolon)) {
       value = parse_expression(prog);
     }
     consume(token::semicolon, "Expect ';' after return value.");
-    block_statements.emplace_back(std::in_place_type<statement::return_s>,
-                                  value);
+    return {std::in_place_type<statement::return_s>, value};
+  }
+
+  // varDecl: "var" IDENTIFIER ( "=" expression ) ";"
+  statement parse_variable_declaration(program &prog) {
+    const auto name_id = prog.string_literals.add(
+        consume(token::l_identifier, "Expect variable name")
+            .value.storage.as<string>());
+    consume(token::equal, "Expect initializer");
+    const auto initializer = parse_expression(prog);
+    consume(token::semicolon, "Expect ';' after value.");
+    return {std::in_place_type<statement::variable_s>, name_id, initializer};
   }
 
   // whileStmt: "while" "(" expression ")" statement
-  void parse_while(program &prog, statement_vector &block_statements) {
+  statement parse_while(program &prog) {
     consume(token::left_paren, "Expect '(' after 'while'.");
     const auto condition = parse_expression(prog);
     consume(token::right_paren, "Expect ')' after if condition.");
-    block_statements.emplace_back(std::in_place_type<statement::block>,
-                                  parse_block(prog));
-    block_statements.emplace_back(std::in_place_type<statement::while_s>,
-                                  condition);
-  }
-
-  // exprStmt: expression ";"
-  void parse_expression_s(program &prog, statement_vector &block_statements) {
-    const auto expr = parse_expression(prog);
-    consume(token::semicolon, "Expect ';' after value.");
-    block_statements.emplace_back(std::in_place_type<statement::expression_s>,
-                                  expr);
+    const auto body = prog.statements.add(parse_block(prog));
+    return {std::in_place_type<statement::while_s>, condition, body};
   }
 
   // expression: assignment
@@ -298,7 +285,8 @@ class parser {
                         [this](program &prog) { return parse_equality(prog); });
   }
 
-  // primary: NUMBER | STRING | "false" | "true" | "nil" | "(" expression ")" |
+  // primary: NUMBER | STRING | "false" | "true" | "nil" | "(" expression ")"
+  // |
   //           IDENTIFIER
   expression_id parse_primary(program &prog) {
     if (match(token::k_false)) {
