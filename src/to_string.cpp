@@ -147,8 +147,9 @@ string to_string(const program& prog, const expression::unary& unary) noexcept {
          to_string(prog, prog.expressions.get(unary.expr));
 }
 
-string to_string(const program&, const expression::variable&) noexcept {
-  return "";
+string to_string(const program& prog,
+                 const expression::variable& variable) noexcept {
+  return prog.string_literals.get(variable.name);
 }
 
 }  // namespace lox

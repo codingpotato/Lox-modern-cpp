@@ -28,6 +28,14 @@ for (var i = 0; i < 100; i = i + 1) {
 }
 )"};
   lox::string expected = R"({
+  {
+    var i = 0;
+    while (i < 100)
+      {
+        a = 1;
+        i = i + 1;
+      }
+  }
 }
 )";
   REQUIRE(lox::to_string(parse(source)) == expected);
