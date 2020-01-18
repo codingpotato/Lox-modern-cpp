@@ -32,20 +32,83 @@ TEST_CASE("parse variable declearation statement", "[parser]") {
 
 TEST_CASE("parse if else statement", "[parser]") {
   lox::string source{
-      R"(if (1 == 1) {
+      R"(
+if (1 == 1) {
   a = 1;
+  b = 2;
 } else {
-  a = 2;
-})"};
+  c = 3;
+  d = 4;
+}
+)"};
   lox::string expected = R"({
   if (1 == 1)
-  {
-    a = 1;
-  }
+    {
+      a = 1;
+      b = 2;
+    }
   else
-  {
-    a = 2;
-  }
+    {
+      c = 3;
+      d = 4;
+    }
+}
+)";
+  REQUIRE(lox::to_string(parse(source)) == expected);
+}
+
+TEST_CASE("parse if else with single statement", "[parser]") {
+  lox::string source{
+      R"(
+if (1 == 1)
+  a = 1;
+else 
+  c = 3;
+)"};
+  lox::string expected = R"({
+  if (1 == 1)
+    a = 1;
+  else
+    c = 3;
+}
+)";
+  REQUIRE(lox::to_string(parse(source)) == expected);
+}
+
+TEST_CASE("parse while statement", "[parser]") {
+  lox::string source{
+      R"(while (1 == 1) {
+  a = 1;
+  b = 2;
+})"};
+  lox::string expected = R"({
+  while (1 == 1)
+    {
+      a = 1;
+      b = 2;
+    }
+}
+)";
+  REQUIRE(lox::to_string(parse(source)) == expected);
+}
+
+TEST_CASE("parse while with single statement", "[parser]") {
+  lox::string source{
+      R"(
+while (1 == 1) a = 1;
+)"};
+  lox::string expected = R"({
+  while (1 == 1)
+    a = 1;
+}
+)";
+  REQUIRE(lox::to_string(parse(source)) == expected);
+}
+
+TEST_CASE("parse binary expression", "[parser]") {
+  lox::string source{"1 + 2 * 3 - 4;"};
+  lox::string expected = R"({
+  1 + 2 * 3 - 4;
 }
 )";
   REQUIRE(lox::to_string(parse(source)) == expected);

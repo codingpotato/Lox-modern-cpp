@@ -50,13 +50,13 @@ string to_string(const program& prog, const statement::if_else& if_else,
                  int level) noexcept {
   return indent_of_level(level) + "if (" +
          to_string(prog, prog.expressions.get(if_else.condition)) + ")\n" +
-         to_string(prog, prog.statements.get(if_else.then_block), level) +
+         to_string(prog, prog.statements.get(if_else.then_block), level + 1) +
          indent_of_level(level) +
          (if_else.else_block == statement_id{}
               ? "\n"
               : "else\n" + to_string(prog,
                                      prog.statements.get(if_else.else_block),
-                                     level));
+                                     level + 1));
 }
 
 string to_string(const program&, const statement::return_s&, int) noexcept {
@@ -70,8 +70,11 @@ string to_string(const program& prog, const statement::variable_s& variable,
          to_string(prog, prog.expressions.get(variable.initializer)) + ";\n";
 }
 
-string to_string(const program&, const statement::while_s&, int) noexcept {
-  return "";
+string to_string(const program& prog, const statement::while_s& while_s,
+                 int level) noexcept {
+  return indent_of_level(level) + "while (" +
+         to_string(prog, prog.expressions.get(while_s.condition)) + ")\n" +
+         to_string(prog, prog.statements.get(while_s.body), level + 1);
 }
 
 string to_string(const program& prog, const expression& expr) noexcept {

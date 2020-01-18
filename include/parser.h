@@ -170,7 +170,7 @@ class parser {
     consume(token::left_paren, "Expect '(' after 'while'.");
     const auto condition = parse_expression(prog);
     consume(token::right_paren, "Expect ')' after if condition.");
-    const auto body = prog.statements.add(parse_block(prog));
+    const auto body = prog.statements.add(parse_statement(prog));
     return {std::in_place_type<statement::while_s>, condition, body};
   }
 
