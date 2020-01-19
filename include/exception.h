@@ -1,7 +1,7 @@
 #ifndef LOX_EXCEPTION_H
 #define LOX_EXCEPTION_H
 
-#include <exception>
+#include <stdexcept>
 
 namespace lox {
 
