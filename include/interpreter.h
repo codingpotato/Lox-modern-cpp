@@ -1,82 +1,82 @@
 #ifndef LOX_INTERPRETER_H
 #define LOX_INTERPRETER_H
 
-#include <iostream>
-#include <stack>
-
 #include "exception.h"
 #include "expression.h"
 #include "program.h"
 #include "statement.h"
 #include "types.h"
 #include "value.h"
+#include "virtual_machine.h"
 
 namespace lox {
 
 class interpreter {
  public:
-  struct block_info {
-    block_info(statement_id c, statement_id l) noexcept : current{c}, last{l} {}
-    statement_id current;
-    statement_id last;
-  };
-  using block_stack = std::stack<block_info>;
-
-  void execute(const program& prog) const {
-    block_stack stack;
-    if (const auto& start_statement = prog.statements.get(prog.start_block);
-        start_statement.storage.is_type<statement::block>()) {
-      const auto& block = start_statement.storage.get<statement::block>();
-      stack.emplace(block.first, block.last);
-
-      while (!stack.empty()) {
-        auto info = stack.top();
-        auto current = info.current;
-        auto last = info.last;
-        stack.pop();
-        while (current < last) {
-          const auto& statement = prog.statements.get(current);
-          statement.storage.visit(overloaded{
-              [&stack, &current, &last](const statement::block& block) {
-                stack.emplace(current, last);
-                current = block.first;
-                last = block.last;
-              },
-              [this, &prog](const statement::expression_s& expr) {
-                evaluate(prog, prog.expressions.get(expr.expr));
-              },
-              [](const statement::for_s&) {},
-              [](const statement::function&) {},
-              [](const statement::if_else&) {},
-              [](const statement::return_s&) {},
-              [](const statement::variable_s&) {},
-              [](const statement::while_s&) {},
-          });
-        }
+  void execute(const program& prog) noexcept {
+    execute(prog, prog.statements.get(prog.start_block));
+    while (true) {
+      while (vm.ip.current < vm.ip.last) {
+        execute(prog, prog.statements.get(vm.ip.current));
+        ++vm.ip.current;
       }
-    } else {
-      throw internal_error{"Start statement shall be a block."};
+      if (vm.stack_frame.empty()) {
+        break;
+      }
+      vm.ip = vm.stack_frame.top();
+      vm.stack_frame.pop();
     }
   }
 
+  void execute(const program& prog, const statement& stat) noexcept {
+    stat.storage.visit(overloaded{
+        [this, &prog](const auto& s) { execute(prog, s); },
+    });
+  }
+
+  void execute(const program& prog, const statement::block& block) noexcept {
+    if (vm.ip.current != statement_id{}) {
+      if (const auto& current = prog.statements.get(vm.ip.current);
+          !current.storage.is_type<statement::while_s>()) {
+        ++vm.ip.current;
+      }
+      vm.stack_frame.push(vm.ip);
+    }
+    vm.ip = {block.first, block.last};
+  }
+
+  void execute(const program& prog,
+               const statement::expression_s& expr) noexcept {
+    evaluate(prog, prog.expressions.get(expr.expr));
+  }
+
+  void execute(const program&, const statement::function&) noexcept {}
+
+  void execute(const program&, const statement::if_else&) noexcept {}
+
+  void execute(const program&, const statement::return_s&) noexcept {}
+
+  void execute(const program&, const statement::variable_s&) noexcept {}
+
+  void execute(const program&, const statement::while_s&) noexcept {}
+
   value evaluate(const program& prog, const expression& expr) const noexcept {
-    std::cout << "evaluate expr\n";
     return expr.storage.visit(
         overloaded{[this, &prog](const auto& e) { return evaluate(prog, e); }});
   }
 
   value evaluate(const program& prog, const expression::binary& binary) const
       noexcept {
-    std::cout << "evaluate binary\n";
     return evaluate(prog, prog.expressions.get(binary.left)) +
            evaluate(prog, prog.expressions.get(binary.right));
-    std::cout << "after evaluate binary\n";
   }
 
   value evaluate(const program&, const expression::literal&) const noexcept {
-    std::cout << "evaluate literal\n";
     return 1;
   }
+
+ private:
+  virtual_machine vm;
 };
 
 }  // namespace lox

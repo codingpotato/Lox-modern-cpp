@@ -8,7 +8,13 @@
 namespace lox {
 
 struct virtual_machine {
-  statement_id ip;
+  struct instruction_pointer {
+    statement_id current;
+    statement_id last;
+  };
+
+  instruction_pointer ip;
+  std::stack<instruction_pointer> stack_frame;
 };
 
 }  // namespace lox
