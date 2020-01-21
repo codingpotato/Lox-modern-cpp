@@ -6,6 +6,7 @@
 
 #include "exception.h"
 #include "program.h"
+#include "resolver.h"
 #include "token.h"
 #include "types.h"
 #include "variant_storage.h"
@@ -29,10 +30,10 @@ struct expression {
   };
 
   struct assignment {
-    assignment(string_id var, expression_id v) noexcept
+    assignment(expression_id var, expression_id v) noexcept
         : variable{var}, value{v} {}
 
-    string_id variable;
+    expression_id variable;
     expression_id value;
   };
 
@@ -80,9 +81,9 @@ struct expression {
   };
 
   struct variable {
-    variable(string_id n) noexcept : name{n} {}
+    variable(resolve_info i) noexcept : info{i} {}
 
-    string_id name;
+    resolve_info info;
   };
 
   using element_t =

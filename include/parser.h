@@ -6,6 +6,7 @@
 #include "exception.h"
 #include "expression.h"
 #include "program.h"
+#include "resolver.h"
 #include "statement.h"
 #include "token.h"
 #include "types.h"
@@ -30,6 +31,7 @@ class parser {
   // block: "{" declaration* "}"
   statement parse_block(program &prog,
                         std::optional<statement> post_stat_for_block = {}) {
+    resolver.begin_scope();
     statement_vector block_statements;
     while (!is_end() && !check(token::right_brace)) {
       block_statements.emplace_back(parse_declaration(prog));
@@ -43,6 +45,7 @@ class parser {
     const auto first = prog.statements.size();
     prog.statements.add(block_statements.cbegin(), block_statements.cend());
     const auto last = prog.statements.size();
+    resolver.end_scope();
     return {std::in_place_type<statement::block>, first, last};
   }
 
@@ -67,24 +70,35 @@ class parser {
   // function declaration: IDENTIFIER "(" parameters? ")" block
   // parameters: IDENTIFIER ( "," IDENTIFIER )*
   statement parse_function(program &prog) {
-    const auto name_id = prog.string_literals.add(
-        consume(token::l_identifier, "Expect function name.")
-            .value.storage.as<string>());
-    const auto first_parameter = prog.string_literals.size();
+    const auto &name = consume(token::l_identifier, "Expect function name.")
+                           .value.storage.as<string>();
+    const auto name_id = prog.string_literals.add(name);
+
+    resolver.declear(name);
+    resolver.define(name);
+
+    resolver.begin_scope();
     consume(token::left_paren, "Expect '(' after function name.");
+    const auto first_parameter = prog.string_literals.size();
     if (!check(token::right_paren)) {
       do {
-        prog.string_literals.add(
+        const auto &parameter =
             consume(token::l_identifier,
                     "Expect parameter name for function '" +
                         string{prog.string_literals.get(name_id)} + "'.")
-                .value.storage.as<string>());
+                .value.storage.as<string>();
+        prog.string_literals.add(parameter);
+
+        resolver.declear(parameter);
+        resolver.define(parameter);
       } while (match(token::comma));
     }
     consume(token::right_paren, "Expect ')' after parameters.");
+
     consume(token::left_brace, "Expect '{' before function body.");
     const auto last_parameter = prog.string_literals.size();
     const auto body = prog.statements.add(parse_block(prog));
+    resolver.end_scope();
     return {std::in_place_type<statement::function>, name_id, first_parameter,
             last_parameter, body};
   }
@@ -173,12 +187,18 @@ class parser {
 
   // varDecl: "var" IDENTIFIER ( "=" expression ) ";"
   statement parse_variable_declaration(program &prog) {
-    const auto name_id = prog.string_literals.add(
-        consume(token::l_identifier, "Expect variable name")
-            .value.storage.as<string>());
+    const auto &name = consume(token::l_identifier, "Expect variable name")
+                           .value.storage.as<string>();
+    const auto name_id = prog.string_literals.add(name);
+
+    resolver.declear(name);
+
     consume(token::equal, "Expect initializer");
     const auto initializer = parse_expression(prog);
     consume(token::semicolon, "Expect ';' after value.");
+
+    resolver.define(name);
+
     return {std::in_place_type<statement::variable_s>, name_id, initializer};
   }
 
@@ -199,18 +219,17 @@ class parser {
   // assignment is an expression!
   // assignment: IDENTIFIER "=" assignment | logic_or
   expression_id parse_assignment(program &prog) {
-    const auto index = parse_or(prog);
+    const auto expr_id = parse_or(prog);
     if (match(token::equal)) {
       const auto value = parse_assignment(prog);
-      if (const auto &expr = prog.expressions.get(index);
+      if (const auto &expr = prog.expressions.get(expr_id);
           expr.storage.is_type<expression::variable>()) {
-        return prog.expressions.add(
-            std::in_place_type<expression::assignment>,
-            expr.storage.as<expression::variable>().name, value);
+        return prog.expressions.add(std::in_place_type<expression::assignment>,
+                                    expr_id, value);
       }
       throw parse_error{"Invalid assignment target."};
     }
-    return index;
+    return expr_id;
   }
 
   template <typename Fun>
@@ -334,9 +353,9 @@ class parser {
           prog.string_literals.add(previous().value.storage.as<string>()));
     }
     if (match(token::l_identifier)) {
-      return prog.expressions.add(
-          std::in_place_type<expression::variable>,
-          prog.string_literals.add(previous().value.storage.as<string>()));
+      const auto &name = previous().value.storage.as<string>();
+      return prog.expressions.add(std::in_place_type<expression::variable>,
+                                  resolver.resolve(name));
     }
     if (match(token::left_paren)) {
       const auto expr = parse_expression(prog);
@@ -411,6 +430,7 @@ class parser {
 
   token_vector tokens;
   token_vector::const_iterator current;
+  resolver_t resolver;
 };
 
 }  // namespace lox
