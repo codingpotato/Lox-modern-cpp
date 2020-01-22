@@ -114,14 +114,14 @@ void scanner::scan_number(token_vector &tokens) {
 
 void scanner::scan_identifier(token_vector &tokens) {
   static const std::map<string, token::type_t> keywords = {
-      {"and", token::k_and},     {"class", token::k_class},
-      {"else", token::k_else},   {"false", token::k_false},
-      {"for", token::k_for},     {"fun", token::k_fun},
-      {"if", token::k_if},       {"nil", token::k_nil},
-      {"or", token::k_or},       {"return", token::k_return},
-      {"super", token::k_super}, {"this", token::k_this},
-      {"true", token::k_true},   {"var", token::k_var},
-      {"while", token::k_while}};
+      {"and", token::k_and},       {"class", token::k_class},
+      {"else", token::k_else},     {"false", token::k_false},
+      {"for", token::k_for},       {"fun", token::k_fun},
+      {"if", token::k_if},         {"nil", token::k_nil},
+      {"or", token::k_or},         {"print", token::k_print},
+      {"return", token::k_return}, {"super", token::k_super},
+      {"this", token::k_this},     {"true", token::k_true},
+      {"var", token::k_var},       {"while", token::k_while}};
   while (is_alpha_numeric(peek())) {
     ++current;
   }

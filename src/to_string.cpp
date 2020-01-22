@@ -55,15 +55,25 @@ string to_string(const program& prog, const statement::if_else& if_else,
                                      level + 1));
 }
 
+string to_string(const program& prog, const statement::print& print,
+                 int level) noexcept {
+  return indent_of_level(level) + "print " +
+         to_string(prog, prog.expressions.get(print.value)) + ";\n";
+}
+
 string to_string(const program&, const statement::return_s&, int) noexcept {
   return "";
 }
 
 string to_string(const program& prog, const statement::variable_s& variable,
                  int level) noexcept {
+  string initializer;
+  if (variable.initializer != expression_id{}) {
+    initializer =
+        " = " + to_string(prog, prog.expressions.get(variable.initializer));
+  }
   return indent_of_level(level) + "var " +
-         prog.string_literals.get(variable.name) + " = " +
-         to_string(prog, prog.expressions.get(variable.initializer)) + ";\n";
+         prog.string_literals.get(variable.name) + initializer + ";\n";
 }
 
 string to_string(const program& prog, const statement::while_s& while_s,
@@ -110,7 +120,7 @@ string to_string(expression::operator_t oper) {
 
 string to_string(const program& prog,
                  const expression::assignment& assignment) noexcept {
-  return prog.string_literals.get(assignment.variable) + " = " +
+  return to_string(prog, prog.expressions.get(assignment.variable)) + " = " +
          to_string(prog, prog.expressions.get(assignment.value));
 }
 
@@ -147,9 +157,10 @@ string to_string(const program& prog, const expression::unary& unary) noexcept {
          to_string(prog, prog.expressions.get(unary.expr));
 }
 
-string to_string(const program& prog,
+string to_string(const program&,
                  const expression::variable& variable) noexcept {
-  return prog.string_literals.get(variable.name);
+  return "v_" + std::to_string(variable.info.distance) + "_" +
+         std::to_string(variable.info.index);
 }
 
 }  // namespace lox

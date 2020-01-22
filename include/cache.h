@@ -30,7 +30,7 @@ class cache {
   using const_iterator = typename vector::const_iterator;
 
   index add(const T& t) noexcept {
-    elements.emplace_back(std::move(t));
+    elements.emplace_back(t);
     return elements.size() - 1;
   }
 

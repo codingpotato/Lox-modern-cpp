@@ -17,9 +17,11 @@ struct resolve_info {
 
 class resolver_t {
  public:
+  enum status { none, decleared, defined };
+
   struct scope_t {
     void declear(const string& name) noexcept {
-      variables.push_back(false);
+      variables.push_back(decleared);
       id_map.emplace(name, variables.size() - 1);
     }
 
@@ -28,7 +30,17 @@ class resolver_t {
       Expect(id_map[name] >= 0 &&
                  id_map[name] < static_cast<int>(variables.size()),
              "Id map is not correct.");
-      variables[id_map[name]] = true;
+      variables[id_map[name]] = defined;
+    }
+
+    status variable_status(const string& name) const noexcept {
+      if (id_map.find(name) != id_map.cend()) {
+        Expect(id_map.at(name) >= 0 &&
+                   id_map.at(name) < static_cast<int>(variables.size()),
+               "Id map is not correct.");
+        return variables[id_map.at(name)];
+      }
+      return none;
     }
 
     int resolve(const string& name) {
@@ -39,7 +51,7 @@ class resolver_t {
     }
 
    private:
-    using variable_vector = std::vector<bool>;
+    using variable_vector = std::vector<status>;
 
     std::map<string, int> id_map;
     variable_vector variables;
@@ -51,15 +63,18 @@ class resolver_t {
   void end_scope() { scopes.pop_back(); }
 
   void declear(const string& name) {
-    if (!scopes.empty()) {
-      scopes.back().declear(name);
-    }
+    Expect(!scopes.empty(), "No scope to declear variable.");
+    scopes.back().declear(name);
   }
 
   void define(const string& name) noexcept {
-    if (!scopes.empty()) {
-      scopes.back().define(name);
-    }
+    Expect(!scopes.empty(), "No scope to declear variable.");
+    scopes.back().define(name);
+  }
+
+  bool is_in_variable_declearation(const string& name) const noexcept {
+    Expect(!scopes.empty(), "No scope to declear variable.");
+    return scopes.back().variable_status(name) == decleared;
   }
 
   resolve_info resolve(const string& name) {
@@ -68,7 +83,7 @@ class resolver_t {
         return {static_cast<int>(scopes.size()) - 1 - i, index};
       }
     }
-    throw parse_error{"Variable " + name + "not defined."};
+    throw parse_error{"Variable \"" + name + "\" not defined."};
   }
 
   scope_vector scopes;

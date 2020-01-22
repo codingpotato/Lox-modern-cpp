@@ -28,6 +28,27 @@ class parser {
     }
   }
 
+  // statement: forStmt | ifStmt | printStmt | returnStmt | whileStmt | block |
+  // exprStmt
+  statement parse_statement(
+      program &prog, std::optional<statement> post_statement_for_block = {}) {
+    if (match(token::k_for)) {
+      return parse_for(prog);
+    } else if (match(token::k_if)) {
+      return parse_if_else(prog);
+    } else if (match(token::k_print)) {
+      return parse_print(prog);
+    } else if (match(token::k_return)) {
+      return parse_return(prog);
+    } else if (match(token::k_while)) {
+      return parse_while(prog);
+    } else if (match(token::left_brace)) {
+      return parse_block(prog, post_statement_for_block);
+    } else {
+      return parse_expression_s(prog);
+    }
+  }
+
   // block: "{" declaration* "}"
   statement parse_block(program &prog,
                         std::optional<statement> post_stat_for_block = {}) {
@@ -103,24 +124,6 @@ class parser {
             last_parameter, body};
   }
 
-  // statement: forStmt | ifStmt | returnStmt | whileStmt | block | exprStmt
-  statement parse_statement(
-      program &prog, std::optional<statement> post_statement_for_block = {}) {
-    if (match(token::k_for)) {
-      return parse_for(prog);
-    } else if (match(token::k_if)) {
-      return parse_if_else(prog);
-    } else if (match(token::k_return)) {
-      return parse_return(prog);
-    } else if (match(token::k_while)) {
-      return parse_while(prog);
-    } else if (match(token::left_brace)) {
-      return parse_block(prog, post_statement_for_block);
-    } else {
-      return parse_expression_s(prog);
-    }
-  }
-
   // forStmt: "for" "(" ( varDecl | exprStmt | ";" ) expression ? ";"
   //           expression ? ")" statement
   statement parse_for(program &prog) {
@@ -175,6 +178,13 @@ class parser {
             else_block};
   }
 
+  // printStmt: "print" expression ";"
+  statement parse_print(program &prog) {
+    expression_id value = parse_expression(prog);
+    consume(token::semicolon, "Expect ';' after print value.");
+    return {std::in_place_type<statement::return_s>, value};
+  }
+
   // returnStmt: "return" expression? ";"
   statement parse_return(program &prog) {
     expression_id value{};
@@ -189,16 +199,18 @@ class parser {
   statement parse_variable_declaration(program &prog) {
     const auto &name = consume(token::l_identifier, "Expect variable name")
                            .value.storage.as<string>();
+    if (resolver.is_in_variable_declearation(name)) {
+      throw parse_error{"Cannot read local variable in its own initializer."};
+    }
+    resolver.declear(name);
     const auto name_id = prog.string_literals.add(name);
 
-    resolver.declear(name);
-
-    consume(token::equal, "Expect initializer");
-    const auto initializer = parse_expression(prog);
+    expression_id initializer;
+    if (match(token::equal)) {
+      initializer = parse_expression(prog);
+    }
     consume(token::semicolon, "Expect ';' after value.");
-
     resolver.define(name);
-
     return {std::in_place_type<statement::variable_s>, name_id, initializer};
   }
 
@@ -321,9 +333,8 @@ class parser {
                         [this](program &prog) { return parse_equality(prog); });
   }
 
-  // primary: NUMBER | STRING | "false" | "true" | "nil" | "(" expression ")"
-  // |
-  //           IDENTIFIER
+  // primary: NUMBER | STRING | "false" | "true" | "nil" | "(" expression ")" |
+  // IDENTIFIER
   expression_id parse_primary(program &prog) {
     if (match(token::k_false)) {
       return prog.expressions.add(false);
@@ -362,7 +373,7 @@ class parser {
       consume(token::right_paren, "Expect ')' after expression.");
       return prog.expressions.add(std::in_place_type<expression::group>, expr);
     }
-    throw parse_error{"Expect expression."};
+    throw parse_error{"Expect primary."};
   }
 
   bool match(const std::initializer_list<token::type_t> &types) noexcept {
