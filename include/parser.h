@@ -52,7 +52,10 @@ class parser {
   // block: "{" declaration* "}"
   statement parse_block(program &prog,
                         std::optional<statement> post_stat_for_block = {}) {
-    resolver.begin_scope();
+    if (!post_stat_for_block) {
+      resolver.begin_scope();
+    }
+
     statement_vector block_statements;
     while (!is_end() && !check(token::right_brace)) {
       block_statements.emplace_back(parse_declaration(prog));
@@ -66,7 +69,10 @@ class parser {
     const auto first = prog.statements.size();
     prog.statements.add(block_statements.cbegin(), block_statements.cend());
     const auto last = prog.statements.size();
-    resolver.end_scope();
+
+    if (!post_stat_for_block) {
+      resolver.end_scope();
+    }
     return {std::in_place_type<statement::block>, first, last};
   }
 
@@ -127,6 +133,7 @@ class parser {
   // forStmt: "for" "(" ( varDecl | exprStmt | ";" ) expression ? ";"
   //           expression ? ")" statement
   statement parse_for(program &prog) {
+    resolver.begin_scope();
     consume(token::left_paren, "Expect '(' after 'for'.");
     std::optional<statement> initializer;
     if (match(token::k_var)) {
@@ -141,27 +148,26 @@ class parser {
       condition = prog.expressions.add(true);
     }
     consume(token::semicolon, "Expect ';' after loop condition.");
-    expression_id increament_expr;
+
+    resolver.begin_scope();
+    std::optional<statement> increament;
     if (!check(token::right_paren)) {
-      increament_expr = parse_expression(prog);
+      const auto expr = parse_expression(prog);
+      increament.emplace(std::in_place_type<statement::expression_s>, expr);
     }
     consume(token::right_paren, "Expect ')' after for clauses.");
 
-    std::optional<statement> increament;
-    if (increament_expr != expression_id{}) {
-      increament.emplace(std::in_place_type<statement::expression_s>,
-                         increament_expr);
-    }
     const auto body = prog.statements.add(parse_statement(prog, increament));
     statement while_stat{std::in_place_type<statement::while_s>, condition,
                          body};
+    resolver.end_scope();
+    auto first = prog.statements.size();
     if (initializer) {
-      const auto first = prog.statements.add(*initializer);
-      const auto last = prog.statements.add(while_stat);
-      return {std::in_place_type<statement::block>, first, last + 1};
-    } else {
-      return while_stat;
+      prog.statements.add(*initializer);
     }
+    const auto last = prog.statements.add(while_stat);
+    resolver.end_scope();
+    return {std::in_place_type<statement::block>, first, last + 1};
   }
 
   // ifStmt: "if" "(" expression ")" statement ( "else" statement )?

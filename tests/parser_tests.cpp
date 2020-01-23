@@ -45,17 +45,19 @@ var a = 0;
 
 TEST_CASE("parse for statement", "[parser]") {
   lox::string source{R"(
+var a = 1;
 for (var i = 0; i < 100; i = i + 1) {
-  var a = 1;
+  print a;
 }
 )"};
   lox::string expected = R"({
+  var a = 1;
   {
     var i = 0;
-    while (i < 100)
+    while (v_0_0 < 100)
       {
-        var a = 1;
-        i = i + 1;
+        print v_2_0;
+        v_1_0 = v_1_0 + 1;
       }
   }
 }
@@ -104,9 +106,9 @@ else
   var a;
   var b;
   if (1 == 1)
-    a = 1;
+    v_0_0 = 1;
   else
-    b = 3;
+    v_0_1 = 3;
 }
 )";
   REQUIRE(lox::to_string(parse(source)) == expected);
@@ -164,7 +166,7 @@ TEST_CASE("parse assignment expression", "[parser]") {
   lox::string source{"var i; i = i + 1;"};
   lox::string expected = R"({
   var i;
-  i = i + 1;
+  v_0_0 = v_0_0 + 1;
 }
 )";
   REQUIRE(lox::to_string(parse(source)) == expected);
