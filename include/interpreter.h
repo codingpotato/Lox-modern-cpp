@@ -1,6 +1,8 @@
 #ifndef LOX_INTERPRETER_H
 #define LOX_INTERPRETER_H
 
+#include <ostream>
+
 #include "exception.h"
 #include "expression.h"
 #include "program.h"
@@ -13,18 +15,16 @@ namespace lox {
 
 class interpreter {
  public:
+  explicit interpreter(std::ostream& o) noexcept : out{o} {}
+
   void execute(const program& prog) noexcept {
     execute(prog, prog.statements.get(prog.start_block));
-    while (true) {
-      while (vm.ip.current < vm.ip.last) {
-        execute(prog, prog.statements.get(vm.ip.current));
-        ++vm.ip.current;
+    while (!vm.done()) {
+      while (vm.is_in_current_block()) {
+        execute(prog, prog.statements.get(vm.current_statement()));
+        vm.next_statement();
       }
-      if (vm.stack_frame.empty()) {
-        break;
-      }
-      vm.ip = vm.stack_frame.top();
-      vm.stack_frame.pop();
+      vm.pop_block();
     }
   }
 
@@ -35,14 +35,10 @@ class interpreter {
   }
 
   void execute(const program& prog, const statement::block& block) noexcept {
-    if (vm.ip.current != statement_id{}) {
-      if (const auto& current = prog.statements.get(vm.ip.current);
-          !current.storage.is_type<statement::while_s>()) {
-        ++vm.ip.current;
-      }
-      vm.stack_frame.push(vm.ip);
-    }
-    vm.ip = {block.first, block.last};
+    const auto advance_current =
+        !vm.done() && !prog.statements.get(vm.current_statement())
+                           .storage.is_type<statement::while_s>();
+    vm.excute_block(block.first, block.last, advance_current);
   }
 
   void execute(const program& prog,
@@ -53,6 +49,11 @@ class interpreter {
   void execute(const program&, const statement::function&) noexcept {}
 
   void execute(const program&, const statement::if_else&) noexcept {}
+
+  void execute(const program& prog,
+               const statement::print_s& print_s) noexcept {
+    out << evaluate(prog, prog.expressions.get(print_s.value)).as<int>();
+  }
 
   void execute(const program&, const statement::return_s&) noexcept {}
 
@@ -71,12 +72,22 @@ class interpreter {
            evaluate(prog, prog.expressions.get(binary.right));
   }
 
-  value evaluate(const program&, const expression::literal&) const noexcept {
-    return 1;
+  value evaluate(const program& prog, const expression::literal& literal) const
+      noexcept {
+    return literal.storage.visit(overloaded{
+        [](null) { return value{}; },
+        [](bool b) { return value{b}; },
+        [](int i) { return value{i}; },
+        [&prog](double_id d) { return value{prog.double_literals.get(d)}; },
+        [](string_id) {
+          return value{}; /* todo*/
+        },
+    });
   }
 
  private:
   virtual_machine vm;
+  std::ostream& out;
 };
 
 }  // namespace lox

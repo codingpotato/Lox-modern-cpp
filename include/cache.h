@@ -51,7 +51,10 @@ class cache {
 
   index size() const noexcept { return elements.size(); }
 
-  const T& get(index i) const noexcept { return elements.at(i); }
+  const T& get(index i) const noexcept {
+    Expect(i >= 0 && i < static_cast<int>(elements.size()), "Out of range.");
+    return elements.at(i);
+  }
 
  private:
   std::vector<T> elements;
