@@ -46,8 +46,8 @@ struct statement {
     statement_id else_block;
   };
 
-  struct print {
-    explicit print(expression_id v) noexcept : value{v} {}
+  struct print_s {
+    explicit print_s(expression_id v) noexcept : value{v} {}
 
     expression_id value;
   };
@@ -75,8 +75,8 @@ struct statement {
     statement_id body;
   };
 
-  using element_t = std::variant<block, expression_s, function, if_else, print,
-                                 return_s, variable_s, while_s>;
+  using element_t = std::variant<block, expression_s, function, if_else,
+                                 print_s, return_s, variable_s, while_s>;
 
   template <typename... Args>
   constexpr statement(Args &&... args) noexcept

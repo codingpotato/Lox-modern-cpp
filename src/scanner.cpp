@@ -122,6 +122,7 @@ void scanner::scan_identifier(token_vector &tokens) {
       {"return", token::k_return}, {"super", token::k_super},
       {"this", token::k_this},     {"true", token::k_true},
       {"var", token::k_var},       {"while", token::k_while}};
+
   while (is_alpha_numeric(peek())) {
     ++current;
   }
@@ -142,8 +143,7 @@ void scanner::scan_string(token_vector &tokens) {
     ++current;
   }
   if (is_end()) {
-    throw parse_error{"Unterminated string."};
-    return;
+    throw scan_error{"Unterminated string."};
   }
   ++current;
   tokens.emplace_back(token::l_string, string{token_start + 1, current - 2},

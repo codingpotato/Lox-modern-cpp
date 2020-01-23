@@ -150,19 +150,20 @@ TEST_CASE("parse while statement", "[parser]") {
 TEST_CASE("parse while with single statement", "[parser]") {
   lox::string source{
       R"(
-while (1 == 1) var a = 1;
+while (1 == 1) print 1;
 )"};
   lox::string expected = R"({
   while (1 == 1)
-    var a = 1;
+    print 1;
 }
 )";
   REQUIRE(lox::to_string(parse(source)) == expected);
 }
 
 TEST_CASE("parse assignment expression", "[parser]") {
-  lox::string source{"i = i + 1;"};
+  lox::string source{"var i; i = i + 1;"};
   lox::string expected = R"({
+  var i;
   i = i + 1;
 }
 )";

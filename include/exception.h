@@ -23,7 +23,7 @@ struct runtime_error : std::runtime_error {
   using std::runtime_error::runtime_error;
 };
 
-struct assert_exception : std::runtime_error {
+struct expect_failure : std::runtime_error {
   using std::runtime_error::runtime_error;
 };
 
@@ -34,8 +34,8 @@ struct assert_exception : std::runtime_error {
 #else
 
 inline void on_expect_fail(const string& message, const char* file, int line) {
-  throw assert_exception{"Expect: " + string{file} + " (" +
-                         std::to_string(line) + ") " + message};
+  throw expect_failure{"Expect: " + string{file} + " (" + std::to_string(line) +
+                       ") " + message};
 }
 
 #define Expect(condition, message) \

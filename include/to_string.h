@@ -18,6 +18,7 @@ string to_string(const program& prog, const statement::block& block,
 string to_string(const program&, const statement::expression_s&, int) noexcept;
 string to_string(const program&, const statement::function&, int) noexcept;
 string to_string(const program&, const statement::if_else&, int) noexcept;
+string to_string(const program&, const statement::print_s&, int) noexcept;
 string to_string(const program&, const statement::return_s&, int) noexcept;
 string to_string(const program&, const statement::variable_s&, int) noexcept;
 string to_string(const program&, const statement::while_s&, int) noexcept;

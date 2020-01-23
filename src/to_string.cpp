@@ -55,14 +55,16 @@ string to_string(const program& prog, const statement::if_else& if_else,
                                      level + 1));
 }
 
-string to_string(const program& prog, const statement::print& print,
+string to_string(const program& prog, const statement::print_s& print_s,
                  int level) noexcept {
   return indent_of_level(level) + "print " +
-         to_string(prog, prog.expressions.get(print.value)) + ";\n";
+         to_string(prog, prog.expressions.get(print_s.value)) + ";\n";
 }
 
-string to_string(const program&, const statement::return_s&, int) noexcept {
-  return "";
+string to_string(const program& prog, const statement::return_s& return_s,
+                 int level) noexcept {
+  return indent_of_level(level) + "return " +
+         to_string(prog, prog.expressions.get(return_s.value)) + ";\n";
 }
 
 string to_string(const program& prog, const statement::variable_s& variable,

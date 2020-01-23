@@ -182,7 +182,7 @@ class parser {
   statement parse_print(program &prog) {
     expression_id value = parse_expression(prog);
     consume(token::semicolon, "Expect ';' after print value.");
-    return {std::in_place_type<statement::return_s>, value};
+    return {std::in_place_type<statement::print_s>, value};
   }
 
   // returnStmt: "return" expression? ";"
@@ -200,7 +200,8 @@ class parser {
     const auto &name = consume(token::l_identifier, "Expect variable name")
                            .value.storage.as<string>();
     if (resolver.is_in_variable_declearation(name)) {
-      throw parse_error{"Cannot read local variable in its own initializer."};
+      throw parse_error_object(
+          "Cannot read local variable in its own initializer.");
     }
     resolver.declear(name);
     const auto name_id = prog.string_literals.add(name);
@@ -239,7 +240,7 @@ class parser {
         return prog.expressions.add(std::in_place_type<expression::assignment>,
                                     expr_id, value);
       }
-      throw parse_error{"Invalid assignment target."};
+      throw parse_error_object("Invalid assignment target.");
     }
     return expr_id;
   }
@@ -373,7 +374,7 @@ class parser {
       consume(token::right_paren, "Expect ')' after expression.");
       return prog.expressions.add(std::in_place_type<expression::group>, expr);
     }
-    throw parse_error{"Expect primary."};
+    throw parse_error_object("Expect primary.");
   }
 
   bool match(const std::initializer_list<token::type_t> &types) noexcept {
@@ -411,7 +412,7 @@ class parser {
     if (check(t)) {
       return advance();
     }
-    throw parse_error{message};
+    throw parse_error_object(message);
   }
 
   void synchronize() {
@@ -428,7 +429,7 @@ class parser {
         case token::k_return:
           return;
         default:
-          throw parse_error{"Unknow keyword."};
+          throw parse_error_object("Unknow keyword.");
       }
       advance();
     }
@@ -438,6 +439,10 @@ class parser {
   const token &previous() const noexcept { return *(current - 1); }
 
   bool is_end() const noexcept { return peek().type == token::eof; }
+
+  parse_error parse_error_object(const string &message) const {
+    return parse_error{"[" + to_string(*current) + "]: " + message};
+  }
 
   token_vector tokens;
   token_vector::const_iterator current;
