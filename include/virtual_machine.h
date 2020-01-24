@@ -4,6 +4,7 @@
 #include <stack>
 #include <vector>
 
+#include "resolver.h"
 #include "statement.h"
 
 namespace lox {
@@ -27,6 +28,18 @@ class virtual_machine {
       current = block_stack.top();
       block_stack.pop();
     }
+  }
+
+  void begin_scope() noexcept { value_stack.push_back({}); }
+  void end_scope() noexcept { value_stack.pop_back(); }
+
+  void define_value(value v) noexcept {
+    Expect(!value_stack.empty());
+    value_stack.back().emplace_back(std::move(v));
+  }
+
+  value get(resolve_info info) const noexcept {
+    return value_stack[value_stack.size() - 1 - info.distance][info.index];
   }
 
  private:

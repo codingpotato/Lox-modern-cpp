@@ -23,6 +23,7 @@ class interpreter {
       execute(prog, prog.statements.get(vm.current_statement()));
       vm.advance();
       if (vm.is_current_block_done()) {
+        vm.end_scope();
         vm.pop_block();
         if (!vm.is_current_block_done() &&
             !prog.statements.get(vm.current_statement())
@@ -40,6 +41,7 @@ class interpreter {
   }
 
   void execute(const program&, const statement::block& block) noexcept {
+    vm.begin_scope();
     vm.excute_block(block.first, block.last);
   }
 
@@ -59,7 +61,11 @@ class interpreter {
 
   void execute(const program&, const statement::return_s&) noexcept {}
 
-  void execute(const program&, const statement::variable_s&) noexcept {}
+  void execute(const program& prog,
+               const statement::variable_s& variable_s) noexcept {
+    vm.define_value(
+        evaluate(prog, prog.expressions.get(variable_s.initializer)));
+  }
 
   void execute(const program&, const statement::while_s&) noexcept {}
 
@@ -85,6 +91,11 @@ class interpreter {
           return value{}; /* todo*/
         },
     });
+  }
+
+  value evaluate(const program&, const expression::variable& variable) const
+      noexcept {
+    return vm.get(variable.info);
   }
 
  private:
