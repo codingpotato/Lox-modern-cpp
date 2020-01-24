@@ -3,10 +3,18 @@
 
 #include "value.h"
 
-TEST_CASE("value", "[value]") {
+TEST_CASE("arithmetic operator", "[value]") {
   lox::value v1{1};
-  lox::value v2{1};
+  lox::value v2{2};
   lox::value v = v1 + v2;
   CHECK(v.is_type<int>());
-  CHECK(v.as<int>() == 2);
+  CHECK(v.as<int>() == 3);
+}
+
+TEST_CASE("logic operator", "[value]") {
+  lox::value v1{1};
+  lox::value v2{2};
+  lox::value v = v1 < v2;
+  CHECK(v.is_type<bool>());
+  CHECK(v.as<bool>() == true);
 }

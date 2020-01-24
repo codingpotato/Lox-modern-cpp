@@ -20,6 +20,18 @@ struct value {
   value(const value& v) : type{v.type} { copy(v); }
   value(value&& v) : type{v.type} { move(std::move(v)); }
 
+  value& operator=(const value& v) noexcept {
+    type = v.type;
+    copy(v);
+    return *this;
+  }
+
+  value& operator=(value&& v) noexcept {
+    type = v.type;
+    move(std::move(v));
+    return *this;
+  }
+
   constexpr bool empty() const noexcept { return type == id<null>; }
 
   template <typename T>
@@ -43,7 +55,23 @@ struct value {
         return double_value;
       }
     }
-    throw runtime_error{"Unknown value type (as)."};
+    throw runtime_error{"Unknown value type (as): " + std::to_string(type)};
+  }
+
+  template <typename Visitor>
+  auto visit(Visitor visitor) const {
+    switch (type) {
+      case id<null>:
+        return visitor(null_value);
+      case id<bool>:
+        return visitor(bool_value);
+      case id<int>:
+        return visitor(int_value);
+      case id<double>:
+        return visitor(double_value);
+      default:
+        throw runtime_error{"Unexpected value type."};
+    }
   }
 
   friend bool operator==(const value& lhs, const value& rhs) {
@@ -115,6 +143,10 @@ struct value {
   };
 };
 
+inline bool operator!=(const value& lhs, const value& rhs) noexcept {
+  return !(lhs == rhs);
+}
+
 template <typename Oper>
 inline value arithmetic(const value& lhs, const value& rhs, Oper op) {
   if (lhs.is_type<int>()) {
@@ -139,6 +171,58 @@ inline value arithmetic(const value& lhs, const value& rhs, Oper op) {
 inline value operator+(const value& lhs, const value& rhs) {
   return arithmetic(lhs, rhs,
                     [](const auto& v1, const auto& v2) { return v1 + v2; });
+}
+inline value operator-(const value& lhs, const value& rhs) {
+  return arithmetic(lhs, rhs, [](auto&& v1, auto&& v2) { return v1 - v2; });
+}
+
+inline value operator*(const value& lhs, const value& rhs) {
+  return arithmetic(lhs, rhs, [](auto&& v1, auto&& v2) { return v1 * v2; });
+}
+
+inline value operator/(const value& lhs, const value& rhs) {
+  return arithmetic(lhs, rhs, [](auto&& v1, auto&& v2) { return v1 / v2; });
+}
+
+inline value operator>(const value& lhs, const value& rhs) {
+  return arithmetic(lhs, rhs, [](auto&& v1, auto&& v2) { return v1 > v2; });
+}
+
+inline value operator<(const value& lhs, const value& rhs) {
+  return arithmetic(lhs, rhs, [](auto&& v1, auto&& v2) { return v1 < v2; });
+}
+
+inline value operator>=(const value& lhs, const value& rhs) {
+  return arithmetic(lhs, rhs, [](auto&& v1, auto&& v2) { return v1 >= v2; });
+}
+
+inline value operator<=(const value& lhs, const value& rhs) {
+  return arithmetic(lhs, rhs, [](auto&& v1, auto&& v2) { return v1 <= v2; });
+}
+
+template <typename Oper>
+inline value logic(const value& lhs, const value& rhs, Oper op) {
+  if (lhs.is_type<bool>() && rhs.is_type<bool>()) {
+    return value{op(lhs.as<bool>(), rhs.as<bool>())};
+  }
+  throw runtime_error{"Expect logic value."};
+}
+
+inline value operator||(const value& lhs, const value& rhs) {
+  return logic(lhs, rhs, [](auto&& v1, auto&& v2) { return v1 || v2; });
+}
+
+inline value operator&&(const value& lhs, const value& rhs) {
+  return logic(lhs, rhs, [](auto&& v1, auto&& v2) { return v1 && v2; });
+}
+
+inline string to_string(const value& v) noexcept {
+  return v.visit(overloaded{
+      [](null) { return string{"null"}; },
+      [](bool b) { return b ? string{"true"} : string{"false"}; },
+      [](int i) { return std::to_string(i); },
+      [](double d) { return std::to_string(d); },
+  });
 }
 
 }  // namespace lox

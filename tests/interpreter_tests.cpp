@@ -18,7 +18,7 @@ static lox::string execute(lox::string source) noexcept {
   return stream.str();
 }
 
-/*TEST_CASE("execute block", "[interpreter]") {
+TEST_CASE("execute while statement", "[interpreter]") {
   lox::string source{R"(
   var sum = 0;
   var i = 0;
@@ -28,8 +28,8 @@ static lox::string execute(lox::string source) noexcept {
   }
   print sum;
 )"};
-  REQUIRE(execute(source) == "0");
-}*/
+  REQUIRE(execute(source) == "10");
+}
 
 TEST_CASE("execute varibale declearation", "[interpreter]") {
   lox::string source{R"(
@@ -39,7 +39,12 @@ TEST_CASE("execute varibale declearation", "[interpreter]") {
   REQUIRE(execute(source) == "100");
 }
 
-TEST_CASE("execute expression", "[interpreter]") {
+TEST_CASE("execute arithmetic binary expression", "[interpreter]") {
   lox::string source{"print 1 + 2;"};
   REQUIRE(execute(source) == "3");
+}
+
+TEST_CASE("execute logic binary expression", "[interpreter]") {
+  REQUIRE(execute("print 1 < 2;") == "true");
+  REQUIRE(execute("print 1 > 2;") == "false");
 }

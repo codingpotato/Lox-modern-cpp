@@ -56,7 +56,7 @@ class interpreter {
 
   void execute(const program& prog,
                const statement::print_s& print_s) noexcept {
-    out << evaluate(prog, prog.expressions.get(print_s.value)).as<int>();
+    out << to_string(evaluate(prog, prog.expressions.get(print_s.value)));
   }
 
   void execute(const program&, const statement::return_s&) noexcept {}
@@ -67,7 +67,14 @@ class interpreter {
         evaluate(prog, prog.expressions.get(variable_s.initializer)));
   }
 
-  void execute(const program&, const statement::while_s&) noexcept {}
+  void execute(const program& prog,
+               const statement::while_s& while_s) noexcept {
+    const auto condition =
+        evaluate(prog, prog.expressions.get(while_s.condition));
+    if (condition.as<bool>()) {
+      execute(prog, prog.statements.get(while_s.body));
+    }
+  }
 
   value evaluate(const program& prog, const expression& expr) const noexcept {
     return expr.storage.visit(
@@ -76,8 +83,36 @@ class interpreter {
 
   value evaluate(const program& prog, const expression::binary& binary) const
       noexcept {
-    return evaluate(prog, prog.expressions.get(binary.left)) +
-           evaluate(prog, prog.expressions.get(binary.right));
+    const auto left = evaluate(prog, prog.expressions.get(binary.left));
+    const auto right = evaluate(prog, prog.expressions.get(binary.right));
+    switch (binary.oper) {
+      case expression::operator_t::plus:
+        return left + right;
+      case expression::operator_t::minus:
+        return left - right;
+      case expression::operator_t::multiple:
+        return left * right;
+      case expression::operator_t::divide:
+        return left / right;
+      case expression::operator_t::equal:
+        return left == right;
+      case expression::operator_t::not_equal:
+        return left != right;
+      case expression::operator_t::great:
+        return left > right;
+      case expression::operator_t::great_equal:
+        return left >= right;
+      case expression::operator_t::less:
+        return left < right;
+      case expression::operator_t::less_equal:
+        return left <= right;
+      case expression::operator_t::logic_or:
+        return left || right;
+      case expression::operator_t::logic_and:
+        return left && right;
+      default:
+        throw runtime_error("Unknown operator.");
+    }
   }
 
   value evaluate(const program& prog, const expression::literal& literal) const
