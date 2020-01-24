@@ -1,6 +1,7 @@
 #ifndef LOX_EXCEPTION_H
 #define LOX_EXCEPTION_H
 
+#include <cassert>
 #include <stdexcept>
 
 #include "types.h"
@@ -23,25 +24,8 @@ struct runtime_error : std::runtime_error {
   using std::runtime_error::runtime_error;
 };
 
-struct expect_failure : std::runtime_error {
-  using std::runtime_error::runtime_error;
-};
-
-#ifdef NDEBUG
-
-#define Expect(condition, message) ((void)0)
-
-#else
-
-inline void on_expect_fail(const string& message, const char* file, int line) {
-  throw expect_failure{"Expect: " + string{file} + " (" + std::to_string(line) +
-                       ") " + message};
-}
-
-#define Expect(condition, message) \
-  ((condition) ? ((void)0) : lox::on_expect_fail(message, __FILE__, __LINE__))
-
-#endif
+#define Expect(condition) assert(condition)
+#define Exsure(condition) assert(condition)
 
 }  // namespace lox
 

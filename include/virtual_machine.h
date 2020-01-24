@@ -10,42 +10,37 @@ namespace lox {
 
 class virtual_machine {
  public:
-  bool done() const noexcept { return ip.current == statement_id{}; }
-  bool is_in_current_block() const noexcept { return ip.current < ip.last; }
+  bool is_current_block_done() const noexcept {
+    return current.first == current.last;
+  }
 
-  statement_id current_statement() const noexcept { return ip.current; }
-  void next_statement() noexcept { ++ip.current; }
+  statement_id current_statement() const noexcept { return current.first; }
+  void advance() noexcept { ++current.first; }
 
-  void excute_block(statement_id first, statement_id last,
-                    bool advance_current) noexcept {
-    if (advance_current && ip.current != statement_id{}) {
-      ++ip.current;
-      ip_stack.push(ip);
-    }
-    ip = {first, last};
+  void excute_block(statement_id first, statement_id last) noexcept {
+    block_stack.push(current);
+    current = {first, last};
   }
 
   void pop_block() noexcept {
-    if (!ip_stack.empty()) {
-      ip = ip_stack.top();
-      ip_stack.pop();
-    } else {
-      ip = instruction_pointer{};
+    if (!block_stack.empty()) {
+      current = block_stack.top();
+      block_stack.pop();
     }
   }
 
  private:
-  struct instruction_pointer {
-    statement_id current;
+  struct block_info {
+    statement_id first;
     statement_id last;
   };
 
   using value_frame = std::vector<value>;
 
-  instruction_pointer ip;
-  std::stack<instruction_pointer> ip_stack;
+  block_info current;
+  std::stack<block_info> block_stack;
   std::vector<value_frame> value_stack;
-};
+};  // namespace lox
 
 }  // namespace lox
 

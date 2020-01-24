@@ -52,7 +52,7 @@ class cache {
   index size() const noexcept { return elements.size(); }
 
   const T& get(index i) const noexcept {
-    Expect(i >= 0 && i < static_cast<int>(elements.size()), "Out of range.");
+    Expect(i >= 0 && i < static_cast<int>(elements.size()));
     return elements.at(i);
   }
 

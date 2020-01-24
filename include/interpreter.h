@@ -19,26 +19,28 @@ class interpreter {
 
   void execute(const program& prog) noexcept {
     execute(prog, prog.statements.get(prog.start_block));
-    while (!vm.done()) {
-      while (vm.is_in_current_block()) {
-        execute(prog, prog.statements.get(vm.current_statement()));
-        vm.next_statement();
+    while (!vm.is_current_block_done()) {
+      execute(prog, prog.statements.get(vm.current_statement()));
+      vm.advance();
+      if (vm.is_current_block_done()) {
+        vm.pop_block();
+        if (!vm.is_current_block_done() &&
+            !prog.statements.get(vm.current_statement())
+                 .storage.is_type<statement::while_s>()) {
+          vm.advance();
+        }
       }
-      vm.pop_block();
     }
   }
 
   void execute(const program& prog, const statement& stat) noexcept {
     stat.storage.visit(overloaded{
-        [this, &prog](const auto& s) { execute(prog, s); },
+        [this, &prog](const auto& element) { execute(prog, element); },
     });
   }
 
-  void execute(const program& prog, const statement::block& block) noexcept {
-    const auto advance_current =
-        !vm.done() && !prog.statements.get(vm.current_statement())
-                           .storage.is_type<statement::while_s>();
-    vm.excute_block(block.first, block.last, advance_current);
+  void execute(const program&, const statement::block& block) noexcept {
+    vm.excute_block(block.first, block.last);
   }
 
   void execute(const program& prog,

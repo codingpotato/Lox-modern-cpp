@@ -6,13 +6,19 @@
 #include "interpreter.h"
 #include "parser.h"
 #include "scanner.h"
+#include "types.h"
 
-TEST_CASE("execute expression", "[interpreter]") {
-  lox::scanner scanner{"print 1 + 2;"};
+static lox::string execute(lox::string source) noexcept {
+  lox::scanner scanner{std::move(source)};
   lox::parser parser{};
   auto program = parser.parse(scanner.scan());
-  std::stringstream str;
-  lox::interpreter interpreter{str};
+  std::stringstream stream;
+  lox::interpreter interpreter{stream};
   interpreter.execute(program);
-  REQUIRE(str.str() == "3");
+  return stream.str();
+}
+
+TEST_CASE("execute expression", "[interpreter]") {
+  lox::string source{"print 1 + 2;"};
+  REQUIRE(execute(source) == "3");
 }

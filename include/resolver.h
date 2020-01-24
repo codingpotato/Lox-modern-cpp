@@ -26,18 +26,16 @@ class resolver_t {
     }
 
     void define(const string& name) noexcept {
-      Expect(id_map.find(name) != id_map.cend(), name + "must be decleared.");
+      Expect(id_map.find(name) != id_map.cend());
       Expect(id_map[name] >= 0 &&
-                 id_map[name] < static_cast<int>(variables.size()),
-             "Id map is not correct.");
+             id_map[name] < static_cast<int>(variables.size()));
       variables[id_map[name]] = defined;
     }
 
     status variable_status(const string& name) const noexcept {
       if (id_map.find(name) != id_map.cend()) {
         Expect(id_map.at(name) >= 0 &&
-                   id_map.at(name) < static_cast<int>(variables.size()),
-               "Id map is not correct.");
+               id_map.at(name) < static_cast<int>(variables.size()));
         return variables[id_map.at(name)];
       }
       return none;
@@ -63,17 +61,17 @@ class resolver_t {
   void end_scope() { scopes.pop_back(); }
 
   void declear(const string& name) {
-    Expect(!scopes.empty(), "No scope to declear variable.");
+    Expect(!scopes.empty());
     scopes.back().declear(name);
   }
 
   void define(const string& name) noexcept {
-    Expect(!scopes.empty(), "No scope to declear variable.");
+    Expect(!scopes.empty());
     scopes.back().define(name);
   }
 
   bool is_in_variable_declearation(const string& name) const noexcept {
-    Expect(!scopes.empty(), "No scope to declear variable.");
+    Expect(!scopes.empty());
     return scopes.back().variable_status(name) == decleared;
   }
 
