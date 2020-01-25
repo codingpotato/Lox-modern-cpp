@@ -3,6 +3,7 @@
 
 #include <vector>
 
+#include "exception.h"
 #include "types.h"
 
 namespace lox {

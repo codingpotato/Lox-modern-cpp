@@ -53,7 +53,16 @@ class interpreter {
 
   void execute(const program&, const statement::function&) noexcept {}
 
-  void execute(const program&, const statement::if_else&) noexcept {}
+  void execute(const program& prog,
+               const statement::if_else& if_else) noexcept {
+    const auto condition =
+        evaluate(prog, prog.expressions.get(if_else.condition));
+    if (condition.as<bool>()) {
+      execute(prog, prog.statements.get(if_else.then_block), true);
+    } else {
+      execute(prog, prog.statements.get(if_else.else_block), true);
+    }
+  }
 
   void execute(const program& prog,
                const statement::print_s& print_s) noexcept {

@@ -18,6 +18,24 @@ static lox::string execute(lox::string source) noexcept {
   return stream.str();
 }
 
+TEST_CASE("execute if else statement", "[interpreter]") {
+  lox::string source{R"(
+  var a = 0;
+  if (a > 0) {
+    a = a + 1;
+  } else {
+    a = a - 1;
+  }
+  print a;
+)"};
+  REQUIRE(execute(source) == "-1");
+}
+
+TEST_CASE("execute if else with single statement", "[interpreter]") {
+  REQUIRE(execute("if (true) print 1; else print 2;") == "1");
+  REQUIRE(execute("if (false) print 1; else print 2;") == "2");
+}
+
 TEST_CASE("execute while statement", "[interpreter]") {
   lox::string source{R"(
   var sum = 0;
