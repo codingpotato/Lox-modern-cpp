@@ -18,8 +18,13 @@ class virtual_machine {
   statement_id current_statement() const noexcept { return current.first; }
   void advance() noexcept { ++current.first; }
 
-  void excute_block(statement_id first, statement_id last) noexcept {
-    block_stack.push(current);
+  void excute_block(statement_id first, statement_id last,
+                    bool current_statement_finished) noexcept {
+    if (current_statement_finished) {
+      block_stack.emplace(current.first + 1, current.last);
+    } else {
+      block_stack.emplace(current.first, current.last);
+    }
     current = {first, last};
   }
 
@@ -27,6 +32,8 @@ class virtual_machine {
     if (!block_stack.empty()) {
       current = block_stack.top();
       block_stack.pop();
+    } else {
+      current = block_info{};
     }
   }
 
@@ -38,12 +45,19 @@ class virtual_machine {
     value_stack.back().emplace_back(std::move(v));
   }
 
+  void assign(resolve_info info, const value& v) noexcept {
+    value_stack[value_stack.size() - 1 - info.distance][info.index] = v;
+  }
+
   value get(resolve_info info) const noexcept {
     return value_stack[value_stack.size() - 1 - info.distance][info.index];
   }
 
  private:
   struct block_info {
+    block_info() noexcept {}
+    block_info(statement_id f, statement_id l) noexcept : first{f}, last{l} {}
+
     statement_id first;
     statement_id last;
   };

@@ -25,7 +25,7 @@ struct runtime_error : std::runtime_error {
 };
 
 #define Expect(condition) assert(condition)
-#define Exsure(condition) assert(condition)
+#define Ensure(condition) assert(condition)
 
 }  // namespace lox
 

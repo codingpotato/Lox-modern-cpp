@@ -15,39 +15,40 @@ namespace lox {
 
 class interpreter {
  public:
-  explicit interpreter(std::ostream& o) noexcept : out{o} {}
+  explicit interpreter(std::ostream& os) noexcept : out{os} {}
 
   void execute(const program& prog) noexcept {
-    execute(prog, prog.statements.get(prog.start_block));
+    execute(prog, prog.statements.get(prog.start_block), false);
     while (!vm.is_current_block_done()) {
-      execute(prog, prog.statements.get(vm.current_statement()));
-      vm.advance();
+      execute(prog, prog.statements.get(vm.current_statement()), true);
       if (vm.is_current_block_done()) {
         vm.end_scope();
         vm.pop_block();
-        if (!vm.is_current_block_done() &&
-            !prog.statements.get(vm.current_statement())
-                 .storage.is_type<statement::while_s>()) {
-          vm.advance();
-        }
       }
     }
   }
 
-  void execute(const program& prog, const statement& stat) noexcept {
+  void execute(const program& prog, const statement& stat,
+               bool current_statement_finished) noexcept {
     stat.storage.visit(overloaded{
         [this, &prog](const auto& element) { execute(prog, element); },
+        [this, &prog,
+         current_statement_finished](const statement::block& block) {
+          execute(prog, block, current_statement_finished);
+        },
     });
   }
 
-  void execute(const program&, const statement::block& block) noexcept {
+  void execute(const program&, const statement::block& block,
+               bool current_statement_finished) noexcept {
     vm.begin_scope();
-    vm.excute_block(block.first, block.last);
+    vm.excute_block(block.first, block.last, current_statement_finished);
   }
 
   void execute(const program& prog,
                const statement::expression_s& expr) noexcept {
     evaluate(prog, prog.expressions.get(expr.expr));
+    vm.advance();
   }
 
   void execute(const program&, const statement::function&) noexcept {}
@@ -57,6 +58,7 @@ class interpreter {
   void execute(const program& prog,
                const statement::print_s& print_s) noexcept {
     out << to_string(evaluate(prog, prog.expressions.get(print_s.value)));
+    vm.advance();
   }
 
   void execute(const program&, const statement::return_s&) noexcept {}
@@ -65,6 +67,7 @@ class interpreter {
                const statement::variable_s& variable_s) noexcept {
     vm.define_value(
         evaluate(prog, prog.expressions.get(variable_s.initializer)));
+    vm.advance();
   }
 
   void execute(const program& prog,
@@ -72,17 +75,29 @@ class interpreter {
     const auto condition =
         evaluate(prog, prog.expressions.get(while_s.condition));
     if (condition.as<bool>()) {
-      execute(prog, prog.statements.get(while_s.body));
+      execute(prog, prog.statements.get(while_s.body), false);
+    } else {
+      vm.advance();
     }
   }
 
-  value evaluate(const program& prog, const expression& expr) const noexcept {
+  value evaluate(const program& prog, const expression& expr) noexcept {
     return expr.storage.visit(
         overloaded{[this, &prog](const auto& e) { return evaluate(prog, e); }});
   }
 
-  value evaluate(const program& prog, const expression::binary& binary) const
-      noexcept {
+  value evaluate(const program& prog,
+                 const expression::assignment& assignment) noexcept {
+    const auto variable = prog.expressions.get(assignment.variable);
+    Ensure(variable.storage.is_type<expression::variable>());
+    const auto info = variable.storage.as<expression::variable>().info;
+    const auto value = evaluate(prog, prog.expressions.get(assignment.value));
+    vm.assign(info, value);
+    return value;
+  }
+
+  value evaluate(const program& prog,
+                 const expression::binary& binary) noexcept {
     const auto left = evaluate(prog, prog.expressions.get(binary.left));
     const auto right = evaluate(prog, prog.expressions.get(binary.right));
     switch (binary.oper) {
@@ -115,8 +130,16 @@ class interpreter {
     }
   }
 
-  value evaluate(const program& prog, const expression::literal& literal) const
-      noexcept {
+  value evaluate(const program&, const expression::call&) noexcept {
+    return {};
+  }
+
+  value evaluate(const program&, const expression::group&) noexcept {
+    return {};
+  }
+
+  value evaluate(const program& prog,
+                 const expression::literal& literal) noexcept {
     return literal.storage.visit(overloaded{
         [](null) { return value{}; },
         [](bool b) { return value{b}; },
@@ -128,8 +151,12 @@ class interpreter {
     });
   }
 
-  value evaluate(const program&, const expression::variable& variable) const
-      noexcept {
+  value evaluate(const program&, const expression::unary&) noexcept {
+    return {};
+  }
+
+  value evaluate(const program&,
+                 const expression::variable& variable) noexcept {
     return vm.get(variable.info);
   }
 

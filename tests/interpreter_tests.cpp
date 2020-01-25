@@ -21,14 +21,14 @@ static lox::string execute(lox::string source) noexcept {
 TEST_CASE("execute while statement", "[interpreter]") {
   lox::string source{R"(
   var sum = 0;
-  var i = 0;
-  while (i < 100) {
+  var i = 1;
+  while (i <= 100) {
     sum = sum + i;
     i = i + 1;
   }
   print sum;
 )"};
-  REQUIRE(execute(source) == "10");
+  REQUIRE(execute(source) == "5050");
 }
 
 TEST_CASE("execute varibale declearation", "[interpreter]") {
