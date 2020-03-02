@@ -105,8 +105,7 @@ class interpreter {
     return value;
   }
 
-  value evaluate(const program& prog,
-                 const expression::binary& binary) noexcept {
+  value evaluate(const program& prog, const expression::binary& binary) {
     const auto left = evaluate(prog, prog.expressions.get(binary.left));
     const auto right = evaluate(prog, prog.expressions.get(binary.right));
     switch (binary.oper) {
