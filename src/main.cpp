@@ -1,3 +1,6 @@
+#define DOCTEST_CONFIG_IMPLEMENT
+#include <doctest.h>
+
 #include <fstream>
 #include <iostream>
 
@@ -26,7 +29,7 @@ void run_file(const lox::string &filename) {
 
 void run_prompt() {}
 
-int main(int argc, char *argv[]) {
+int real_main(int argc, char *argv[]) {
   if (argc == 1) {
     run_prompt();
   } else if (argc == 2) {
@@ -34,5 +37,22 @@ int main(int argc, char *argv[]) {
   } else {
     std::cout << "Usage: lox [script]\n";
   }
-  return 1;
+  return 0;
+}
+
+int main(int argc, char *argv[]) {
+  doctest::Context context;
+  context.addFilter("test-case-exclude", "*math*");
+  context.setOption("abort-after", 5);
+  context.setOption("order-by", "name");
+  context.applyCommandLine(argc, argv);
+  context.setOption("no-breaks", true);
+
+  int res = context.run();
+  if (context.shouldExit()) {
+    return res;
+  }
+
+  int client_stuff_return_code = real_main(argc, argv);
+  return res + client_stuff_return_code;
 }
