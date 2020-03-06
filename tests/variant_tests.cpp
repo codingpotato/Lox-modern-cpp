@@ -51,25 +51,11 @@ TEST_CASE("varianr visit performance") {
     }
   });
 
-  SUBCASE("visit by get_if") {
+  SUBCASE("visit") {
     volatile int result = 0;
-    measure("Variant visit by get_if", [&]() {
+    measure("Variant visit", [&]() {
       for (int i = 0; i < value_count; ++i) {
         values[i % values.size()].visit(lox::overloaded{
-            [&](const One& r) { result += r.get(); },
-            [&](const Two& r) { result += r.get(); },
-            [&](const Three& r) { result += r.get(); },
-            [&](const Four& r) { result += r.get(); },
-        });
-      }
-    });
-  }
-
-  SUBCASE("visit by get_if") {
-    volatile int result = 0;
-    measure("Variant visit by std visit", [&]() {
-      for (int i = 0; i < value_count; ++i) {
-        values[i % values.size()].std_visit(lox::overloaded{
             [&](const One& r) { result += r.get(); },
             [&](const Two& r) { result += r.get(); },
             [&](const Three& r) { result += r.get(); },

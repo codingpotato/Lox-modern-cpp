@@ -2,14 +2,13 @@
 #define LOX_EXPRESSION_H
 
 #include <unordered_map>
-#include <variant>
 
 #include "exception.h"
 #include "program.h"
 #include "resolver.h"
 #include "token.h"
 #include "types.h"
-#include "variant_storage.h"
+#include "variant.h"
 
 namespace lox {
 
@@ -62,7 +61,7 @@ struct expression {
   };
 
   struct literal {
-    using value_type = std::variant<null, bool, int, double_id, string_id>;
+    using storage_t = variant<null, bool, int, double_id, string_id>;
 
     literal() noexcept : storage{null{}} {}
     literal(bool b) noexcept : storage{b} {}
@@ -70,7 +69,7 @@ struct expression {
     literal(double_id d) noexcept : storage{d} {}
     literal(string_id id) noexcept : storage{id} {}
 
-    variant_storage<value_type> storage;
+    storage_t storage;
   };
 
   struct unary {
@@ -85,9 +84,6 @@ struct expression {
 
     resolve_info info;
   };
-
-  using element_t =
-      std::variant<assignment, binary, call, group, literal, unary, variable>;
 
   static operator_t from_token_type(token::type_t type) {
     static const std::unordered_map<token::type_t, operator_t> token_map = {
@@ -113,7 +109,10 @@ struct expression {
   constexpr expression(Args &&... args) noexcept
       : storage{std::forward<Args>(args)...} {}
 
-  variant_storage<element_t> storage;
+  using storage_t =
+      variant<assignment, binary, call, group, literal, unary, variable>;
+
+  storage_t storage;
 };
 
 }  // namespace lox

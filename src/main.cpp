@@ -30,10 +30,10 @@ void run_file(const lox::string &filename) {
 void run_prompt() {}
 
 int real_main(int argc, char *argv[]) {
-  if (argc == 1) {
+  if (argc < 3) {
     run_prompt();
-  } else if (argc == 2) {
-    run_file(argv[1]);
+  } else if (argc == 3) {
+    run_file(argv[2]);
   } else {
     std::cout << "Usage: lox [script]\n";
   }

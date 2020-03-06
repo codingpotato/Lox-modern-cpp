@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "types.h"
-#include "variant_storage.h"
+#include "variant.h"
 
 namespace lox {
 
@@ -62,7 +62,7 @@ struct token {
   };
 
   struct literal {
-    variant_storage<std::variant<int, double, string>> storage;
+    variant<int, double, string> storage;
   };
 
   explicit token(type_t t, int li) noexcept : type{t}, line{li} {}

@@ -16,9 +16,10 @@ string to_string(const program& prog) noexcept {
 
 string to_string(const program& prog, const statement& stat,
                  int level) noexcept {
-  return stat.storage.visit(overloaded{[&prog, level](const auto& element) {
-    return to_string(prog, element, level);
-  }});
+  string result;
+  stat.storage.visit(overloaded{
+      [&](const auto& element) { result = to_string(prog, element, level); }});
+  return result;
 }
 
 string to_string(const program& prog, const statement::block& block,
@@ -86,8 +87,10 @@ string to_string(const program& prog, const statement::while_s& while_s,
 }
 
 string to_string(const program& prog, const expression& expr) noexcept {
-  return expr.storage.visit(overloaded{
-      [&prog](const auto& element) { return to_string(prog, element); }});
+  string result;
+  expr.storage.visit(
+      [&](const auto& element) { result = to_string(prog, element); });
+  return result;
 }
 
 string to_string(expression::operator_t oper) {
@@ -143,15 +146,17 @@ string to_string(const program& prog, const expression::group& group) noexcept {
 
 string to_string(const program& prog,
                  const expression::literal& literal) noexcept {
-  return literal.storage.visit(overloaded{
-      [](null) { return string{"null"}; },
-      [](bool b) { return b ? string{"true"} : string{"false"}; },
-      [](int i) { return std::to_string(i); },
-      [&prog](double_id id) {
-        return std::to_string(prog.double_literals.get(id));
+  string result;
+  literal.storage.visit(overloaded{
+      [&](const null&) { result = "null"; },
+      [&](bool b) { result = b ? "true" : "false"; },
+      [&](int i) { result = std::to_string(i); },
+      [&](double_id id) {
+        result = std::to_string(prog.double_literals.get(id));
       },
-      [&prog](string_id id) { return prog.string_literals.get(id); },
+      [&](string_id id) { result = prog.string_literals.get(id); },
   });
+  return result;
 }
 
 string to_string(const program& prog, const expression::unary& unary) noexcept {

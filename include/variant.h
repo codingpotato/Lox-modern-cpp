@@ -25,28 +25,11 @@ struct variant {
   }
 
   template <typename Visitor>
-  void visit(Visitor&& visitor) const {
-    visit<Visitor, sizeof...(Ts) - 1>(std::forward<Visitor>(visitor));
-  }
-
-  /*
-   * std::visit implement is slower than std::get_if
-   */
-  template <typename Visitor>
-  void std_visit(Visitor&& visitor) const {
-    std::visit(std::forward<Visitor>(visitor), storage);
+  auto visit(Visitor&& visitor) const {
+    return std::visit(std::forward<Visitor>(visitor), storage);
   }
 
  private:
-  template <typename Visitor, std::size_t N>
-  void visit(Visitor&& visitor) const {
-    if (auto value = std::get_if<N>(&storage)) {
-      std::forward<Visitor>(visitor)(*value);
-    } else if constexpr (N > 0) {
-      visit<Visitor, N - 1>(std::forward<Visitor>(visitor));
-    }
-  }
-
   std::variant<Ts...> storage;
 };
 

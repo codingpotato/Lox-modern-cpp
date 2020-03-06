@@ -66,7 +66,8 @@ class interpreter {
 
   void execute(const program& prog,
                const statement::print_s& print_s) noexcept {
-    out << to_string(evaluate(prog, prog.expressions.get(print_s.value)));
+    out << to_string(evaluate(prog, prog.expressions.get(print_s.value)))
+        << "\n";
     vm.advance();
   }
 
@@ -92,20 +93,22 @@ class interpreter {
 
   value evaluate(const program& prog, const expression& expr) noexcept {
     return expr.storage.visit(
-        overloaded{[this, &prog](const auto& e) { return evaluate(prog, e); }});
+        overloaded{[&](const auto& e) { return evaluate(prog, e); }});
   }
 
   value evaluate(const program& prog,
                  const expression::assignment& assignment) noexcept {
     const auto variable = prog.expressions.get(assignment.variable);
     Ensure(variable.storage.is_type<expression::variable>());
-    const auto info = variable.storage.as<expression::variable>().info;
+    const auto& v = variable.storage.as<expression::variable>();
+    const auto info = v.info;
     const auto value = evaluate(prog, prog.expressions.get(assignment.value));
     vm.assign(info, value);
     return value;
   }
 
-  value evaluate(const program& prog, const expression::binary& binary) {
+  value evaluate(const program& prog,
+                 const expression::binary& binary) noexcept {
     const auto left = evaluate(prog, prog.expressions.get(binary.left));
     const auto right = evaluate(prog, prog.expressions.get(binary.right));
     switch (binary.oper) {
@@ -134,7 +137,7 @@ class interpreter {
       case expression::operator_t::logic_and:
         return left && right;
       default:
-        throw runtime_error("Unknown operator.");
+        return {};
     }
   }
 
@@ -150,10 +153,10 @@ class interpreter {
                  const expression::literal& literal) noexcept {
     return literal.storage.visit(overloaded{
         [](null) { return value{}; },
-        [](bool b) { return value{b}; },
-        [](int i) { return value{i}; },
-        [&prog](double_id d) { return value{prog.double_literals.get(d)}; },
-        [](string_id) {
+        [&](bool b) { return value{b}; },
+        [&](int i) { return value{i}; },
+        [&](double_id d) { return value{prog.double_literals.get(d)}; },
+        [&](string_id) {
           return value{}; /* todo*/
         },
     });

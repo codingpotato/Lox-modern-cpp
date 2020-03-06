@@ -1,13 +1,12 @@
 #ifndef LOX_STATEMENT_H
 #define LOX_STATEMENT_H
 
-#include <variant>
 #include <vector>
 
 #include "expression.h"
 #include "program.h"
 #include "types.h"
-#include "variant_storage.h"
+#include "variant.h"
 
 namespace lox {
 
@@ -75,14 +74,14 @@ struct statement {
     statement_id body;
   };
 
-  using element_t = std::variant<block, expression_s, function, if_else,
-                                 print_s, return_s, variable_s, while_s>;
+  using storage_t = variant<block, expression_s, function, if_else, print_s,
+                            return_s, variable_s, while_s>;
 
   template <typename... Args>
   constexpr statement(Args &&... args) noexcept
       : storage{std::forward<Args>(args)...} {}
 
-  variant_storage<element_t> storage;
+  storage_t storage;
 };
 
 using statement_vector = std::vector<statement>;
