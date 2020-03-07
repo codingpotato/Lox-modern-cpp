@@ -13,7 +13,7 @@ token_vector scanner::scan() {
     token_start = current;
     scan_token(tokens);
   }
-  tokens.emplace_back(token::eof, "", line);
+  tokens.emplace_back(token::eof, string{""}, line);
   return tokens;
 }
 

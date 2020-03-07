@@ -7,14 +7,14 @@
 namespace lox {
 
 struct value {
-  using types = type_list<null, bool, int, double>;
+  using types = type_list<null, bool, double>;
 
   template <typename T>
   static constexpr type_id id = type_wrapper<T, types>::id;
 
   constexpr value() noexcept : type{id<null>}, null_value{} {}
   constexpr value(bool b) noexcept : type{id<bool>}, bool_value{b} {}
-  constexpr value(int i) noexcept : type{id<int>}, int_value{i} {}
+  // constexpr value(int i) noexcept : type{id<int>}, int_value{i} {}
   constexpr value(double d) noexcept : type{id<double>}, double_value{d} {}
 
   value(const value& v) : type{v.type} { copy(v); }
@@ -48,9 +48,6 @@ struct value {
       if constexpr (std::is_same_v<T, bool>) {
         return bool_value;
       }
-      if constexpr (std::is_same_v<T, int>) {
-        return int_value;
-      }
       if constexpr (std::is_same_v<T, double>) {
         return double_value;
       }
@@ -65,8 +62,6 @@ struct value {
         return visitor(null_value);
       case id<bool>:
         return visitor(bool_value);
-      case id<int>:
-        return visitor(int_value);
       case id<double>:
         return visitor(double_value);
       default:
@@ -75,20 +70,12 @@ struct value {
   }
 
   friend bool operator==(const value& lhs, const value& rhs) {
-    if (lhs.type == value::id<int> && rhs.type == value::id<double>) {
-      return lhs.int_value == rhs.double_value;
-    }
-    if (lhs.type == value::id<double> && rhs.type == value::id<int>) {
-      return lhs.double_value == rhs.int_value;
-    }
     if (lhs.type != rhs.type) return false;
     switch (lhs.type) {
       case value::id<null>:
         return true;
       case value::id<bool>:
         return lhs.bool_value == rhs.bool_value;
-      case value::id<int>:
-        return lhs.int_value == rhs.int_value;
       case value::id<double>:
         return lhs.double_value == rhs.double_value;
     }
@@ -103,9 +90,6 @@ struct value {
         break;
       case id<bool>:
         bool_value = v.bool_value;
-        break;
-      case id<int>:
-        int_value = v.int_value;
         break;
       case id<double>:
         double_value = v.double_value;
@@ -123,9 +107,6 @@ struct value {
       case id<bool>:
         bool_value = v.bool_value;
         break;
-      case id<int>:
-        int_value = v.int_value;
-        break;
       case id<double>:
         double_value = v.double_value;
         break;
@@ -138,7 +119,6 @@ struct value {
   union {
     null null_value;
     bool bool_value;
-    int int_value;
     double double_value;
   };
 };
@@ -149,21 +129,8 @@ inline bool operator!=(const value& lhs, const value& rhs) noexcept {
 
 template <typename Oper>
 inline value arithmetic(const value& lhs, const value& rhs, Oper op) {
-  if (lhs.is_type<int>()) {
-    if (rhs.is_type<int>()) {
-      return value{op(lhs.as<int>(), rhs.as<int>())};
-    }
-    if (rhs.is_type<double>()) {
-      return value{op(lhs.as<int>(), rhs.as<double>())};
-    }
-  }
-  if (lhs.is_type<double>()) {
-    if (rhs.is_type<int>()) {
-      return value{op(lhs.as<double>(), rhs.as<int>())};
-    }
-    if (rhs.is_type<double>()) {
-      return value{op(lhs.as<double>(), rhs.as<double>())};
-    }
+  if (lhs.is_type<double>() && rhs.is_type<double>()) {
+    return value{op(lhs.as<double>(), rhs.as<double>())};
   }
   throw runtime_error{"Expect arithmetic value."};
 }

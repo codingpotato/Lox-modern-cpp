@@ -347,23 +347,16 @@ class parser {
       return prog.expressions.add(false);
     }
     if (match(token::k_true)) {
-      return prog.expressions.add(std::in_place_type<expression::literal>,
-                                  true);
+      return prog.expressions.add(true);
     }
     if (match(token::k_nil)) {
       return prog.expressions.add(std::in_place_type<expression::literal>);
     }
     if (match(token::l_number)) {
       const auto &literal = previous().value;
-      if (literal.storage.is_type<int>()) {
-        return prog.expressions.add(std::in_place_type<expression::literal>,
-                                    literal.storage.as<int>());
-      }
-      if (literal.storage.is_type<double>()) {
-        return prog.expressions.add(
-            std::in_place_type<expression::literal>,
-            prog.double_literals.add(literal.storage.as<double>()));
-      }
+      return prog.expressions.add(
+          std::in_place_type<expression::literal>,
+          prog.double_literals.add(literal.storage.as<double>()));
     }
     if (match(token::l_string)) {
       return prog.expressions.add(

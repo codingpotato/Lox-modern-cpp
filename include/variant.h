@@ -2,7 +2,6 @@
 #define LOX_VARIANT_H
 
 #include <variant>
-#include <iostream>
 
 namespace lox {
 

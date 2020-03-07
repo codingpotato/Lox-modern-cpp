@@ -61,11 +61,10 @@ struct expression {
   };
 
   struct literal {
-    using storage_t = variant<null, bool, int, double_id, string_id>;
+    using storage_t = variant<null, bool, double_id, string_id>;
 
     literal() noexcept : storage{null{}} {}
     literal(bool b) noexcept : storage{b} {}
-    literal(int i) noexcept : storage{i} {}
     literal(double_id d) noexcept : storage{d} {}
     literal(string_id id) noexcept : storage{id} {}
 
@@ -106,7 +105,7 @@ struct expression {
   }
 
   template <typename... Args>
-  constexpr expression(Args &&... args) noexcept
+  explicit constexpr expression(Args &&... args) noexcept
       : storage{std::forward<Args>(args)...} {}
 
   using storage_t =

@@ -87,10 +87,8 @@ string to_string(const program& prog, const statement::while_s& while_s,
 }
 
 string to_string(const program& prog, const expression& expr) noexcept {
-  string result;
-  expr.storage.visit(
-      [&](const auto& element) { result = to_string(prog, element); });
-  return result;
+  return expr.storage.visit(
+      [&](const auto& element) { return to_string(prog, element); });
 }
 
 string to_string(expression::operator_t oper) {

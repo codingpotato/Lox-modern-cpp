@@ -92,8 +92,7 @@ class interpreter {
   }
 
   value evaluate(const program& prog, const expression& expr) noexcept {
-    return expr.storage.visit(
-        overloaded{[&](const auto& e) { return evaluate(prog, e); }});
+    return expr.storage.visit([&](const auto& e) { return evaluate(prog, e); });
   }
 
   value evaluate(const program& prog,
@@ -107,8 +106,7 @@ class interpreter {
     return value;
   }
 
-  value evaluate(const program& prog,
-                 const expression::binary& binary) noexcept {
+  value evaluate(const program& prog, const expression::binary& binary) {
     const auto left = evaluate(prog, prog.expressions.get(binary.left));
     const auto right = evaluate(prog, prog.expressions.get(binary.right));
     switch (binary.oper) {
@@ -137,7 +135,7 @@ class interpreter {
       case expression::operator_t::logic_and:
         return left && right;
       default:
-        return {};
+        throw runtime_error("");
     }
   }
 
@@ -154,7 +152,6 @@ class interpreter {
     return literal.storage.visit(overloaded{
         [](null) { return value{}; },
         [&](bool b) { return value{b}; },
-        [&](int i) { return value{i}; },
         [&](double_id d) { return value{prog.double_literals.get(d)}; },
         [&](string_id) {
           return value{}; /* todo*/

@@ -62,14 +62,16 @@ struct token {
   };
 
   struct literal {
-    variant<int, double, string> storage;
+    template <typename... Args>
+    literal(Args&&... args) noexcept : storage{std::forward<Args>(args)...} {}
+
+    variant<double, string> storage;
   };
 
   explicit token(type_t t, int li) noexcept : type{t}, line{li} {}
 
   template <typename T>
-  token(type_t t, T v, int li) noexcept
-      : type{t}, value{std::move(v)}, line{li} {}
+  token(type_t t, const T& v, int li) noexcept : type{t}, value{v}, line{li} {}
 
   type_t type;
   literal value;
@@ -143,9 +145,7 @@ inline string to_string(const token& t) noexcept {
       output += t.value.storage.as<string>();
       break;
     case token::l_number:
-      output += std::to_string(t.value.storage.is_type<int>()
-                                   ? t.value.storage.as<int>()
-                                   : t.value.storage.as<double>());
+      output += std::to_string(t.value.storage.as<double>());
       break;
     case token::k_and:
       output += "and";

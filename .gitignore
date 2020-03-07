@@ -33,4 +33,4 @@
 
 # Poject
 .vscode
-build
+build*
