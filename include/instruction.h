@@ -11,7 +11,15 @@
 namespace lox {
 
 struct instruction {
-  enum opcode_t { op_constant = 0, op_negate, op_return };
+  enum opcode_t {
+    op_constant = 0,
+    op_add,
+    op_subtract,
+    op_multiply,
+    op_divide,
+    op_negate,
+    op_return
+  };
   using oprand_t = unsigned int;
 
   constexpr instruction(opcode_t opcode, oprand_t oprand = 0) noexcept
@@ -27,6 +35,14 @@ struct instruction {
     switch (opcode()) {
       case op_constant:
         return "OP_CONSTANT " + callback(oprand());
+      case op_add:
+        return "OP_ADD";
+      case op_subtract:
+        return "OP_SUBTRACT";
+      case op_multiply:
+        return "OP_MULTIPLY";
+      case op_divide:
+        return "OP_DIVIDE";
       case op_negate:
         return "OP_NEGATE";
       case op_return:

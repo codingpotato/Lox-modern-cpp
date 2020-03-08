@@ -32,6 +32,30 @@ struct virtual_machine {
         case instruction::op_constant:
           push(main_.constants()[instr.oprand()]);
           break;
+        case instruction::op_add: {
+          auto b = pop();
+          auto a = pop();
+          push(a + b);
+          break;
+        }
+        case instruction::op_subtract: {
+          auto b = pop();
+          auto a = pop();
+          push(a - b);
+          break;
+        }
+        case instruction::op_multiply: {
+          auto b = pop();
+          auto a = pop();
+          push(a * b);
+          break;
+        }
+        case instruction::op_divide: {
+          auto b = pop();
+          auto a = pop();
+          push(a / b);
+          break;
+        }
         case instruction::op_negate:
           push(-pop());
           break;
