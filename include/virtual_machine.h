@@ -21,13 +21,23 @@ struct virtual_machine {
     for (auto& instr : main_.code()) {
 #ifdef DEBUG_TRACE_EXECUTION
       std::cout << instr.repr([](const auto&) -> std::string { return ""; });
+      std::cout << "    ";
+      for (auto& v : stack_) {
+        std::cout << "[ " << v << " ]";
+      }
+      std::cout << "\n";
 #endif
 
       switch (instr.opcode()) {
         case instruction::op_constant:
-          std::cout << main_.constants()[instr.oprand()] << "\n";
+          push(main_.constants()[instr.oprand()]);
+          break;
+        case instruction::op_negate:
+          push(-pop());
           break;
         case instruction::op_return:
+          ENSURES(stack_.size() == 1);
+          std::cout << pop() << "\n";
           break;
         default:
           throw internal_error{"Unknown opcode."};
@@ -36,6 +46,13 @@ struct virtual_machine {
   }
 
  private:
+  void push(value v) noexcept { stack_.emplace_back(std::move(v)); }
+  value pop() noexcept {
+    auto v = stack_.back();
+    stack_.pop_back();
+    return v;
+  }
+
   chunk main_;
   std::vector<value> stack_;
 };

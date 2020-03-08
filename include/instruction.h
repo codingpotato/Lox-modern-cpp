@@ -11,7 +11,7 @@
 namespace lox {
 
 struct instruction {
-  enum opcode_t { op_constant = 0, op_return };
+  enum opcode_t { op_constant = 0, op_negate, op_return };
   using oprand_t = unsigned int;
 
   constexpr instruction(opcode_t opcode, oprand_t oprand = 0) noexcept
@@ -26,9 +26,11 @@ struct instruction {
   std::string repr(Func&& callback) const {
     switch (opcode()) {
       case op_constant:
-        return "OP_CONSTANT " + callback(oprand()) + "\n";
+        return "OP_CONSTANT " + callback(oprand());
+      case op_negate:
+        return "OP_NEGATE";
       case op_return:
-        return "OP_RETURN\n";
+        return "OP_RETURN";
       default:
         throw internal_error{"Uknown opcode."};
     }

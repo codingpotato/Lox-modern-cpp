@@ -52,7 +52,7 @@ struct chunk {
         std::ostringstream oss;
         oss << constants_[oprand];
         return oss.str();
-      });
+      }) + "\n";
     }
     return string;
   }
