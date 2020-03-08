@@ -15,7 +15,12 @@ struct instruction {
   using oprand_t = unsigned int;
 
   constexpr instruction(opcode_t opcode, oprand_t oprand = 0) noexcept
-      : raw_data{raw_data_from(opcode, oprand)} {}
+      : raw_data_{raw_data_from(opcode, oprand)} {}
+
+  constexpr opcode_t opcode() const noexcept {
+    return static_cast<opcode_t>(raw_data_ >> oprand_bits);
+  }
+  constexpr oprand_t oprand() const noexcept { return raw_data_ & oprand_mask; }
 
   template <typename Func>
   std::string repr(Func&& callback) const {
@@ -40,12 +45,7 @@ struct instruction {
     return opcode << oprand_bits | oprand;
   }
 
-  constexpr opcode_t opcode() const noexcept {
-    return static_cast<opcode_t>(raw_data >> oprand_bits);
-  }
-  constexpr oprand_t oprand() const noexcept { return raw_data & oprand_mask; }
-
-  raw_data_t raw_data;
+  raw_data_t raw_data_;
 };
 
 }  // namespace lox
