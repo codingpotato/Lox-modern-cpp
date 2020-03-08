@@ -5,7 +5,6 @@ ExternalProject_Add(
   doctest
   PREFIX ${CMAKE_BINARY_DIR}/doctest
   GIT_REPOSITORY https://github.com/onqtam/doctest.git
-  GIT_TAG 2.3.7
   UPDATE_COMMAND ${GIT_EXECUTABLE} pull
   CONFIGURE_COMMAND ""
   BUILD_COMMAND ""

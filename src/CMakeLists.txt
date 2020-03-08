@@ -1,7 +1,7 @@
 set(SOURCES main.cpp)
 
 set(TESTS_DIR ../tests)
-set(TESTS_SOURCES ${TESTS_DIR}/chunk_tests.cpp
+set(TESTS_SOURCES ${TESTS_DIR}/chunk_tests.cpp ${TESTS_DIR}/scanner_tests.cpp
                   ${TESTS_DIR}/virtual_machine_tests.cpp)
 
 add_executable(lox ${SOURCES} ${TESTS_SOURCES})
