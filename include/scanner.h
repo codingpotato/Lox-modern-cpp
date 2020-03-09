@@ -61,11 +61,11 @@ struct token {
   };
 
   explicit token(type_t t, int l) noexcept : type{t}, line{l} {}
-  token(type_t t, const char* string, std::size_t count, int l) noexcept
-      : type{t}, lexeme{string, count}, line{l} {}
+  token(type_t t, std::string lex, int l) noexcept
+      : type{t}, lexeme{std::move(lex)}, line{l} {}
 
   type_t type;
-  std::string_view lexeme;
+  std::string lexeme;
   int line;
 };
 
@@ -179,8 +179,7 @@ struct scanner {
   }
 
   token make_token(token::type_t type) const noexcept {
-    return {type, source_.c_str() + std::distance(source_.cbegin(), start_),
-            static_cast<std::size_t>(std::distance(start_, current_)), line_};
+    return {type, {start_, current_}, line_};
   }
 
   bool is_at_end() const noexcept { return current_ == source_.cend(); }
