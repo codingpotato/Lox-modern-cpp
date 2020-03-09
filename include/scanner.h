@@ -82,7 +82,7 @@ struct scanner {
 
   token_vector scan() noexcept {
     current_ = source_.cbegin();
-    line_ = 0;
+    line_ = 1;
     token_vector tokens;
     while (true) {
       tokens.emplace_back(scan_token());
@@ -95,6 +95,7 @@ struct scanner {
 
  private:
   token scan_token() {
+    skip_white_space();
     start_ = current_;
     if (is_at_end()) {
       return make_token(token::eof);

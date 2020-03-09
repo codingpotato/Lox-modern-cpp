@@ -29,7 +29,7 @@ inline constexpr void assures(bool condition, const char* rule,
   }
 }
 
-};  // namespace contract
+}  // namespace contract
 
 }  // namespace lox
 
