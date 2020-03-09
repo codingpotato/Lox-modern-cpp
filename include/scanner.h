@@ -185,8 +185,8 @@ struct scanner {
   bool is_at_end() const noexcept { return current_ == source_.cend(); }
 
   char advance() noexcept {
-    auto ch = *current_;
     ENSURES(!is_at_end());
+    auto ch = *current_;
     ++current_;
     return ch;
   }
@@ -213,7 +213,7 @@ struct scanner {
   }
 
   void skip_white_space() noexcept {
-    while (true) {
+    while (!is_at_end()) {
       auto ch = peek();
       switch (ch) {
         case ' ':
@@ -227,7 +227,7 @@ struct scanner {
           break;
         case '/':
           if (peek_next() == '/') {
-            while (peek() != '\n' && !is_at_end()) {
+            while (!is_at_end() && peek() != '\n') {
               advance();
             }
           } else {
