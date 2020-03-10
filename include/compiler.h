@@ -15,7 +15,6 @@ struct compiler {
     tokens_ = std::move(tokens);
     current_ = tokens_.cbegin();
     chunk ch;
-    advance();
     expression(ch);
     consume(token::eof, "Expect end of expression.");
     return ch;

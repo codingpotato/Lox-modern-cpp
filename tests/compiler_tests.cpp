@@ -3,12 +3,14 @@
 #include "compiler.h"
 
 TEST_CASE("compiler") {
-  lox::compiler c;
-  lox::token_vector tokens;
-  tokens.emplace_back(lox::token::number, "1", 1);
-  tokens.emplace_back(lox::token::plus, "+", 1);
-  tokens.emplace_back(lox::token::number, "2", 1);
-  tokens.emplace_back(lox::token::semicolon, ";", 1);
-  tokens.emplace_back(lox::token::eof, "", 1);
-  c.compile(tokens);
+  lox::token_vector tokens{
+      {lox::token::number, "1", 1},
+      {lox::token::plus, "+", 1},
+      {lox::token::number, "2", 1},
+      {lox::token::eof, "", 1},
+  };
+  lox::compiler compiler;
+  auto chunk = compiler.compile(tokens);
+  CHECK_EQ(chunk.code().size(), 3);
+  CHECK_EQ(chunk.constants().size(), 2);
 }
