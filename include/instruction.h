@@ -13,6 +13,9 @@ namespace lox {
 struct instruction {
   enum opcode_t {
     op_constant = 0,
+    op_nil,
+    op_true,
+    op_false,
     op_add,
     op_subtract,
     op_multiply,

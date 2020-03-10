@@ -35,7 +35,7 @@ struct compiler {
     p_primary
   };
 
-  using parse_func = void (compiler::*)(chunk&) noexcept;
+  using parse_func = void (compiler::*)(chunk&);
 
   struct rule {
     parse_func prefix;
@@ -45,12 +45,28 @@ struct compiler {
 
   void expression(chunk& ch) noexcept { parse_precedence(p_assignment, ch); }
 
-  void number(chunk& ch) noexcept {
+  void number(chunk& ch) {
     auto constant = ch.add_constant(std::stod(previous_->lexeme));
     ch.add_instruction(instruction::op_constant, constant, previous_->line);
   }
 
-  void binary(chunk& ch) noexcept {
+  void literal(chunk& ch) {
+    switch (previous_->type) {
+      case token::k_nil:
+        ch.add_instruction(instruction::op_nil, previous_->line);
+        break;
+      case token::k_false:
+        ch.add_instruction(instruction::op_false, previous_->line);
+        break;
+      case token::k_true:
+        ch.add_instruction(instruction::op_true, previous_->line);
+        break;
+      default:
+        throw internal_error{"Unknow literal."};
+    }
+  }
+
+  void binary(chunk& ch) {
     const auto op_type = previous_->type;
     parse_precedence(static_cast<precedence>(rules[op_type].prec + 1), ch);
     switch (op_type) {
@@ -71,12 +87,12 @@ struct compiler {
     }
   }
 
-  void grouping(chunk& ch) noexcept {
+  void grouping(chunk& ch) {
     expression(ch);
     consume(token::right_paren, "Expect ')' after expression.");
   }
 
-  void unary(chunk& ch) noexcept {
+  void unary(chunk& ch) {
     auto op_type = previous_->type;
     parse_precedence(p_unary, ch);
     switch (op_type) {
@@ -143,17 +159,17 @@ struct compiler {
       {nullptr, nullptr, p_none},                     // token::k_and
       {nullptr, nullptr, p_none},                     // token::k_class
       {nullptr, nullptr, p_none},                     // token::k_else
-      {nullptr, nullptr, p_none},                     // token::k_false
+      {&compiler::literal, nullptr, p_none},          // token::k_false
       {nullptr, nullptr, p_none},                     // token::k_for
       {nullptr, nullptr, p_none},                     // token::k_func
       {nullptr, nullptr, p_none},                     // token::k_if
-      {nullptr, nullptr, p_none},                     // token::k_nil
+      {&compiler::literal, nullptr, p_none},          // token::k_nil
       {nullptr, nullptr, p_none},                     // token::k_or
       {nullptr, nullptr, p_none},                     // token::k_print
       {nullptr, nullptr, p_none},                     // token::k_return
       {nullptr, nullptr, p_none},                     // token::k_super
       {nullptr, nullptr, p_none},                     // token::k_this
-      {nullptr, nullptr, p_none},                     // token::k_true
+      {&compiler::literal, nullptr, p_none},          // token::k_true
       {nullptr, nullptr, p_none},                     // token::k_var
       {nullptr, nullptr, p_none},                     // token::k_while
       {nullptr, nullptr, p_none},                     // token::eof

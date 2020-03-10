@@ -32,6 +32,15 @@ struct virtual_machine {
         case instruction::op_constant:
           push(main_.constants()[instr.oprand()]);
           break;
+        case instruction::op_nil:
+          push({});
+          break;
+        case instruction::op_false:
+          push({false});
+          break;
+        case instruction::op_true:
+          push({true});
+          break;
         case instruction::op_add: {
           auto b = pop();
           auto a = pop();
@@ -57,6 +66,9 @@ struct virtual_machine {
           break;
         }
         case instruction::op_negate:
+          if (!peek().is<double>()) {
+            throw runtime_error{"Operand must be a number."};
+          }
           push(-pop().as<double>());
           break;
         case instruction::op_return:
@@ -76,6 +88,7 @@ struct virtual_machine {
     stack_.pop_back();
     return v;
   }
+  const value& peek() const noexcept { return stack_.back(); }
 
   chunk main_;
   std::vector<value> stack_;
