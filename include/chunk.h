@@ -50,7 +50,7 @@ struct chunk {
       string += code_[offset].repr([this](const auto& oprand) {
         ENSURES(oprand < constants_.size());
         std::ostringstream oss;
-        oss << constants_[oprand];
+        oss << constants_[static_cast<std::size_t>(oprand)].as<double>();
         return oss.str();
       }) + "\n";
     }

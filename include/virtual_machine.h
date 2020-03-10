@@ -23,7 +23,7 @@ struct virtual_machine {
       std::cout << instr.repr([](const auto&) -> std::string { return ""; });
       std::cout << "    ";
       for (auto& v : stack_) {
-        std::cout << "[ " << v << " ]";
+        std::cout << "[ " << v.as<double>() << " ]";
       }
       std::cout << "\n";
 #endif
@@ -35,33 +35,33 @@ struct virtual_machine {
         case instruction::op_add: {
           auto b = pop();
           auto a = pop();
-          push(a + b);
+          push(a.as<double>() + b.as<double>());
           break;
         }
         case instruction::op_subtract: {
           auto b = pop();
           auto a = pop();
-          push(a - b);
+          push(a.as<double>() - b.as<double>());
           break;
         }
         case instruction::op_multiply: {
           auto b = pop();
           auto a = pop();
-          push(a * b);
+          push(a.as<double>() * b.as<double>());
           break;
         }
         case instruction::op_divide: {
           auto b = pop();
           auto a = pop();
-          push(a / b);
+          push(a.as<double>() / b.as<double>());
           break;
         }
         case instruction::op_negate:
-          push(-pop());
+          push(-pop().as<double>());
           break;
         case instruction::op_return:
           ENSURES(stack_.size() == 1);
-          std::cout << pop() << "\n";
+          std::cout << pop().as<double>() << "\n";
           break;
         default:
           throw internal_error{"Unknown opcode."};

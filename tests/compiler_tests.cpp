@@ -1,5 +1,7 @@
 #include <doctest.h>
 
+#include <string>
+
 #include "compiler.h"
 
 TEST_CASE("compiler") {
@@ -10,7 +12,11 @@ TEST_CASE("compiler") {
       {lox::token::eof, "", 1},
   };
   lox::compiler compiler;
-  auto chunk = compiler.compile(tokens);
-  CHECK_EQ(chunk.code().size(), 3);
-  CHECK_EQ(chunk.constants().size(), 2);
+  const auto chunk = compiler.compile(tokens);
+  const std::string expected = R"(== test expression ==
+0000    1 OP_CONSTANT 1
+0001    | OP_CONSTANT 2
+0002    | OP_ADD
+)";
+  CHECK_EQ(chunk.repr("test expression"), expected);
 }
