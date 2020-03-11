@@ -81,7 +81,6 @@ struct virtual_machine {
     }
   }
 
- private:
   void push(value v) noexcept { stack_.emplace_back(std::move(v)); }
   value pop() noexcept {
     auto v = stack_.back();
@@ -90,6 +89,7 @@ struct virtual_machine {
   }
   const value& peek() const noexcept { return stack_.back(); }
 
+ private:
   chunk main_;
   std::vector<value> stack_;
 };

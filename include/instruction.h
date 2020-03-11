@@ -11,18 +11,16 @@
 namespace lox {
 
 struct instruction {
-  enum opcode_t {
-    op_constant = 0,
-    op_nil,
-    op_true,
-    op_false,
-    op_add,
-    op_subtract,
-    op_multiply,
-    op_divide,
-    op_negate,
-    op_return
-  };
+#define INSTRUCTIONS                                                      \
+  GENERATOR(op_constant), GENERATOR(op_nil), GENERATOR(op_true),          \
+      GENERATOR(op_false), GENERATOR(op_add), GENERATOR(op_subtract),     \
+      GENERATOR(op_multiply), GENERATOR(op_divide), GENERATOR(op_negate), \
+      GENERATOR(op_return),
+
+#define GENERATOR(x) x
+
+  enum opcode_t { INSTRUCTIONS };
+
   using oprand_t = unsigned int;
 
   constexpr instruction(opcode_t opcode, oprand_t oprand = 0) noexcept
@@ -34,25 +32,8 @@ struct instruction {
   constexpr oprand_t oprand() const noexcept { return raw_data_ & oprand_mask; }
 
   template <typename Func>
-  std::string repr(Func&& callback) const {
-    switch (opcode()) {
-      case op_constant:
-        return "OP_CONSTANT " + callback(oprand());
-      case op_add:
-        return "OP_ADD";
-      case op_subtract:
-        return "OP_SUBTRACT";
-      case op_multiply:
-        return "OP_MULTIPLY";
-      case op_divide:
-        return "OP_DIVIDE";
-      case op_negate:
-        return "OP_NEGATE";
-      case op_return:
-        return "OP_RETURN";
-      default:
-        throw internal_error{"Uknown opcode."};
-    }
+  std::string repr(Func&& callback) const noexcept {
+    return std::string{instruction_names[opcode()]} + " " + callback(oprand());
   }
 
  private:
@@ -65,6 +46,11 @@ struct instruction {
     ENSURES(oprand <= 0xffff);
     return opcode << oprand_bits | oprand;
   }
+
+#undef GENERATOR
+#define GENERATOR(instruction) #instruction
+
+  static constexpr const char* instruction_names[] = {INSTRUCTIONS};
 
   raw_data_t raw_data_;
 };
