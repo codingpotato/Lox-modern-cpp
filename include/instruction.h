@@ -6,12 +6,30 @@
 #include <string>
 
 #include "contract.h"
-#include "exception.h"
+#include "type_list.h"
+
+#define INSTRUCTIONS(macro)                                                 \
+  macro(op_constant, true) macro(op_nil, false) macro(op_true, false)       \
+      macro(op_false, false) macro(op_add, false) macro(op_subtract, false) \
+          macro(op_multiply, false) macro(op_divide, false)                 \
+              macro(op_negate, false) macro(op_return, false)
+
+#define STRUCT(instr, has_oprand_value)                  \
+  struct instr {                                         \
+    static constexpr const char* name = #instr;          \
+    static constexpr bool has_oprand = has_oprand_value; \
+  };
+
+#define TYPE_LIST_ARGUMENT(instr, has_oprand_value) instr,
 
 namespace lox {
 
+INSTRUCTIONS(STRUCT);
+
+using types = type_list<INSTRUCTIONS(TYPE_LIST_ARGUMENT) void>;
+
 struct instruction {
-#define INSTRUCTIONS                                                      \
+#define INSTRUCTIONS1                                                     \
   GENERATOR(op_constant), GENERATOR(op_nil), GENERATOR(op_true),          \
       GENERATOR(op_false), GENERATOR(op_add), GENERATOR(op_subtract),     \
       GENERATOR(op_multiply), GENERATOR(op_divide), GENERATOR(op_negate), \
@@ -19,7 +37,7 @@ struct instruction {
 
 #define GENERATOR(x) x
 
-  enum opcode_t { INSTRUCTIONS };
+  enum opcode_t { INSTRUCTIONS1 };
 
   using oprand_t = unsigned int;
 
@@ -50,7 +68,7 @@ struct instruction {
 #undef GENERATOR
 #define GENERATOR(instruction) #instruction
 
-  static constexpr const char* instruction_names[] = {INSTRUCTIONS};
+  static constexpr const char* instruction_names[] = {INSTRUCTIONS1};
 
   raw_data_t raw_data_;
 };
