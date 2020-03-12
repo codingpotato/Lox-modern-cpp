@@ -96,11 +96,14 @@ struct compiler {
     auto op_type = previous_->type;
     parse_precedence(p_unary, ch);
     switch (op_type) {
+      case token::bang:
+        ch.add_instruction(op_not{}, previous_->line);
+        break;
       case token::minus:
         ch.add_instruction(op_negate{}, previous_->line);
         break;
       default:
-        return;
+        break;
     }
   }
 
@@ -145,7 +148,7 @@ struct compiler {
       {nullptr, nullptr, p_none},                     // token::demicolon
       {nullptr, &compiler::binary, p_factor},         // token::slash
       {nullptr, &compiler::binary, p_factor},         // token::star
-      {nullptr, nullptr, p_none},                     // token::bang
+      {&compiler::unary, nullptr, p_none},            // token::bang
       {nullptr, nullptr, p_none},                     // token::bang_equal
       {nullptr, nullptr, p_none},                     // token::equal
       {nullptr, nullptr, p_none},                     // token::equal_equal

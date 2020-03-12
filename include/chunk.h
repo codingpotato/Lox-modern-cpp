@@ -49,10 +49,10 @@ struct chunk {
       }
       string += oss.str();
       string += code_[offset].visit([this](auto opcode, auto oprand) {
-        ENSURES(oprand < constants_.size());
         std::ostringstream oss;
         oss << opcode.name;
         if (opcode.has_oprand) {
+          ENSURES(oprand < constants_.size());
           oss << " "
               << constants_[static_cast<std::size_t>(oprand)].as<double>();
         }

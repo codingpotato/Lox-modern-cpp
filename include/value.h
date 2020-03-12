@@ -5,6 +5,8 @@
 
 namespace lox {
 
+struct nil_t {};
+
 struct value {
   value() noexcept : type{nil} {}
   value(bool b) noexcept : type{boolean}, boolean_value{b} {}
@@ -12,7 +14,9 @@ struct value {
 
   template <typename T>
   bool is() const noexcept {
-    if constexpr (std::is_same_v<T, bool>) {
+    if constexpr (std::is_same_v<T, nil_t>) {
+      return type == nil;
+    } else if constexpr (std::is_same_v<T, bool>) {
       return type == boolean;
     } else if constexpr (std::is_same_v<T, double>) {
       return type == number_value;
@@ -43,6 +47,22 @@ struct value {
     double number_value;
   };
 };
+
+inline value operator+(const value& lhs, const value& rhs) {
+  return lhs.as<double>() + rhs.as<double>();
+}
+
+inline value operator-(const value& lhs, const value& rhs) {
+  return lhs.as<double>() - rhs.as<double>();
+}
+
+inline value operator*(const value& lhs, const value& rhs) {
+  return lhs.as<double>() * rhs.as<double>();
+}
+
+inline value operator/(const value& lhs, const value& rhs) {
+  return lhs.as<double>() / rhs.as<double>();
+}
 
 }  // namespace lox
 

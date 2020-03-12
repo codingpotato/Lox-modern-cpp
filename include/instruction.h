@@ -13,7 +13,8 @@
       generator(op_true, false) generator(op_false, false)              \
           generator(op_add, false) generator(op_subtract, false)        \
               generator(op_multiply, false) generator(op_divide, false) \
-                  generator(op_negate, false) generator(op_return, false)
+                  generator(op_not, false) generator(op_negate, false)  \
+                      generator(op_return, false)
 
 #define FORWARD_DECLARATION(opcode, has_oprand_value) struct opcode;
 

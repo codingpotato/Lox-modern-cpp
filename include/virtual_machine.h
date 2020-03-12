@@ -62,36 +62,48 @@ template <>
 inline void virtual_machine::handle<op_add>(oprand_t) {
   auto b = pop();
   auto a = pop();
-  push(a.as<double>() + b.as<double>());
+  push(a + b);
 }
 
 template <>
 inline void virtual_machine::handle<op_subtract>(oprand_t) {
   auto b = pop();
   auto a = pop();
-  push(a.as<double>() - b.as<double>());
+  push(a - b);
 }
 
 template <>
 inline void virtual_machine::handle<op_multiply>(oprand_t) {
   auto b = pop();
   auto a = pop();
-  push(a.as<double>() * b.as<double>());
+  push(a * b);
 }
 
 template <>
 inline void virtual_machine::handle<op_divide>(oprand_t) {
   auto b = pop();
   auto a = pop();
-  push(a.as<double>() / b.as<double>());
+  push(a / b);
+}
+
+template <>
+inline void virtual_machine::handle<op_not>(oprand_t) {
+  if (peek().is<bool>()) {
+    push(!pop().as<bool>());
+  } else {
+    throw runtime_error{"Operand must be a boolean."};
+  }
 }
 
 template <>
 inline void virtual_machine::handle<op_negate>(oprand_t) {
-  if (!peek().is<double>()) {
+  if (peek().is<double>()) {
+    const auto operand = pop();
+    const auto result = operand.is<nil_t>() || !operand.as<bool>();
+    push(result);
+  } else {
     throw runtime_error{"Operand must be a number."};
   }
-  push(-pop().as<double>());
 }
 
 template <>
