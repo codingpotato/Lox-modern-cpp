@@ -47,19 +47,19 @@ struct compiler {
 
   void number(chunk& ch) {
     auto constant = ch.add_constant(std::stod(previous_->lexeme));
-    ch.add_instruction(instruction::op_constant, constant, previous_->line);
+    ch.add_instruction(op_constant{}, constant, previous_->line);
   }
 
   void literal(chunk& ch) {
     switch (previous_->type) {
       case token::k_nil:
-        ch.add_instruction(instruction::op_nil, previous_->line);
+        ch.add_instruction(op_nil{}, previous_->line);
         break;
       case token::k_false:
-        ch.add_instruction(instruction::op_false, previous_->line);
+        ch.add_instruction(op_false{}, previous_->line);
         break;
       case token::k_true:
-        ch.add_instruction(instruction::op_true, previous_->line);
+        ch.add_instruction(op_true{}, previous_->line);
         break;
       default:
         throw internal_error{"Unknow literal."};
@@ -71,16 +71,16 @@ struct compiler {
     parse_precedence(static_cast<precedence>(rules[op_type].prec + 1), ch);
     switch (op_type) {
       case token::plus:
-        ch.add_instruction(instruction::op_add, previous_->line);
+        ch.add_instruction(op_add{}, previous_->line);
         break;
       case token::minus:
-        ch.add_instruction(instruction::op_subtract, previous_->line);
+        ch.add_instruction(op_subtract{}, previous_->line);
         break;
       case token::star:
-        ch.add_instruction(instruction::op_multiply, previous_->line);
+        ch.add_instruction(op_multiply{}, previous_->line);
         break;
       case token::slash:
-        ch.add_instruction(instruction::op_divide, previous_->line);
+        ch.add_instruction(op_divide{}, previous_->line);
         break;
       default:
         break;
@@ -97,7 +97,7 @@ struct compiler {
     parse_precedence(p_unary, ch);
     switch (op_type) {
       case token::minus:
-        ch.add_instruction(instruction::op_negate, previous_->line);
+        ch.add_instruction(op_negate{}, previous_->line);
         break;
       default:
         return;

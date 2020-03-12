@@ -15,73 +15,18 @@
 namespace lox {
 
 struct virtual_machine {
-  void interpret(chunk ch) {
-    main_ = std::move(ch);
-    stack_.clear();
-    for (auto& instr : main_.code()) {
-#ifdef DEBUG_TRACE_EXECUTION
-      std::cout << instr.repr([](const auto&) -> std::string { return ""; });
-      std::cout << "    ";
-      for (auto& v : stack_) {
-        std::cout << "[ " << v.as<double>() << " ]";
-      }
-      std::cout << "\n";
-#endif
+  inline void interpret(chunk ch);
 
-      switch (instr.opcode()) {
-        case instruction::op_constant:
-          push(main_.constants()[instr.oprand()]);
-          break;
-        case instruction::op_nil:
-          push({});
-          break;
-        case instruction::op_false:
-          push({false});
-          break;
-        case instruction::op_true:
-          push({true});
-          break;
-        case instruction::op_add: {
-          auto b = pop();
-          auto a = pop();
-          push(a.as<double>() + b.as<double>());
-          break;
-        }
-        case instruction::op_subtract: {
-          auto b = pop();
-          auto a = pop();
-          push(a.as<double>() - b.as<double>());
-          break;
-        }
-        case instruction::op_multiply: {
-          auto b = pop();
-          auto a = pop();
-          push(a.as<double>() * b.as<double>());
-          break;
-        }
-        case instruction::op_divide: {
-          auto b = pop();
-          auto a = pop();
-          push(a.as<double>() / b.as<double>());
-          break;
-        }
-        case instruction::op_negate:
-          if (!peek().is<double>()) {
-            throw runtime_error{"Operand must be a number."};
-          }
-          push(-pop().as<double>());
-          break;
-        case instruction::op_return:
-          ENSURES(stack_.size() == 1);
-          std::cout << pop().as<double>() << "\n";
-          break;
-        default:
-          throw internal_error{"Unknown opcode."};
-      }
-    }
+  template <typename Opcode>
+  void handle(oprand_t) {
+    throw internal_error{"Need implement for " + Opcode::name};
   }
 
-  void push(value v) noexcept { stack_.emplace_back(std::move(v)); }
+ private:
+  template <typename... Args>
+  void push(Args&&... args) noexcept {
+    stack_.emplace_back(std::forward<Args>(args)...);
+  }
   value pop() noexcept {
     auto v = stack_.back();
     stack_.pop_back();
@@ -89,10 +34,89 @@ struct virtual_machine {
   }
   const value& peek() const noexcept { return stack_.back(); }
 
- private:
   chunk main_;
   std::vector<value> stack_;
 };
+
+template <>
+inline void virtual_machine::handle<op_constant>(oprand_t oprand) {
+  push(main_.constants()[oprand]);
+}
+
+template <>
+inline void virtual_machine::handle<op_nil>(oprand_t) {
+  push();
+}
+
+template <>
+inline void virtual_machine::handle<op_false>(oprand_t) {
+  push(false);
+}
+
+template <>
+inline void virtual_machine::handle<op_true>(oprand_t) {
+  push(true);
+}
+
+template <>
+inline void virtual_machine::handle<op_add>(oprand_t) {
+  auto b = pop();
+  auto a = pop();
+  push(a.as<double>() + b.as<double>());
+}
+
+template <>
+inline void virtual_machine::handle<op_subtract>(oprand_t) {
+  auto b = pop();
+  auto a = pop();
+  push(a.as<double>() - b.as<double>());
+}
+
+template <>
+inline void virtual_machine::handle<op_multiply>(oprand_t) {
+  auto b = pop();
+  auto a = pop();
+  push(a.as<double>() * b.as<double>());
+}
+
+template <>
+inline void virtual_machine::handle<op_divide>(oprand_t) {
+  auto b = pop();
+  auto a = pop();
+  push(a.as<double>() / b.as<double>());
+}
+
+template <>
+inline void virtual_machine::handle<op_negate>(oprand_t) {
+  if (!peek().is<double>()) {
+    throw runtime_error{"Operand must be a number."};
+  }
+  push(-pop().as<double>());
+}
+
+template <>
+inline void virtual_machine::handle<op_return>(oprand_t) {
+  ENSURES(stack_.size() == 1);
+  std::cout << pop().as<double>() << "\n";
+}
+
+inline void virtual_machine::interpret(chunk ch) {
+  main_ = std::move(ch);
+  stack_.clear();
+  for (auto& instr : main_.code()) {
+#ifdef DEBUG_TRACE_EXECUTION
+    std::cout << instr.visit([](auto opcode, auto) { return opcode.name; });
+    std::cout << "    ";
+    for (auto& v : stack_) {
+      std::cout << "[ " << v.as<double>() << " ]";
+    }
+    std::cout << "\n";
+#endif
+
+    instr.visit(
+        [this](auto opcode, auto oprand) { handle<decltype(opcode)>(oprand); });
+  }
+}
 
 }  // namespace lox
 

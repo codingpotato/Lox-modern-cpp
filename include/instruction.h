@@ -8,67 +8,69 @@
 #include "contract.h"
 #include "type_list.h"
 
-#define INSTRUCTIONS(macro)                                                 \
-  macro(op_constant, true) macro(op_nil, false) macro(op_true, false)       \
-      macro(op_false, false) macro(op_add, false) macro(op_subtract, false) \
-          macro(op_multiply, false) macro(op_divide, false)                 \
-              macro(op_negate, false) macro(op_return, false)
+#define OPCODES(generator)                                              \
+  generator(op_constant, true) generator(op_nil, false)                 \
+      generator(op_true, false) generator(op_false, false)              \
+          generator(op_add, false) generator(op_subtract, false)        \
+              generator(op_multiply, false) generator(op_divide, false) \
+                  generator(op_negate, false) generator(op_return, false)
 
-#define STRUCT(instr, has_oprand_value)                  \
-  struct instr {                                         \
-    static constexpr const char* name = #instr;          \
-    static constexpr bool has_oprand = has_oprand_value; \
+#define FORWARD_DECLARATION(opcode, has_oprand_value) struct opcode;
+
+#define TYPE_LIST_ARGUMENT(opcode, has_oprand_value) opcode,
+
+#define STRUCT(opcode, has_oprand_value)                              \
+  struct opcode {                                                     \
+    static constexpr std::size_t id = index_of<opcode, types>::value; \
+    static constexpr const char* name = #opcode;                      \
+    static constexpr bool has_oprand = has_oprand_value;              \
   };
 
-#define TYPE_LIST_ARGUMENT(instr, has_oprand_value) instr,
+#define SWITCH_CASE(opcode, has_oprand_value) \
+  case opcode::id:                            \
+    return std::forward<Visitor>(visitor)(opcode{}, oprand());
 
 namespace lox {
 
-INSTRUCTIONS(STRUCT)
+OPCODES(FORWARD_DECLARATION)
 
-using types = type_list<INSTRUCTIONS(TYPE_LIST_ARGUMENT) void>;
+using types = type_list<OPCODES(TYPE_LIST_ARGUMENT) void>;
+
+OPCODES(STRUCT)
+
+using oprand_t = unsigned int;
 
 struct instruction {
-#define INSTRUCTIONS1                                                     \
-  GENERATOR(op_constant), GENERATOR(op_nil), GENERATOR(op_true),          \
-      GENERATOR(op_false), GENERATOR(op_add), GENERATOR(op_subtract),     \
-      GENERATOR(op_multiply), GENERATOR(op_divide), GENERATOR(op_negate), \
-      GENERATOR(op_return),
+  template <typename Opcode>
+  constexpr instruction(Opcode, oprand_t oprand = 0) noexcept
+      : raw_data_{raw_data_of<Opcode>(oprand)} {}
 
-#define GENERATOR(x) x
-
-  enum opcode_t { INSTRUCTIONS1 };
-
-  using oprand_t = unsigned int;
-
-  constexpr instruction(opcode_t opcode, oprand_t oprand = 0) noexcept
-      : raw_data_{raw_data_from(opcode, oprand)} {}
-
-  constexpr opcode_t opcode() const noexcept {
-    return static_cast<opcode_t>(raw_data_ >> oprand_bits);
+  template <typename Visitor>
+  auto visit(Visitor&& visitor) const {
+    switch (raw_opcode()) { OPCODES(SWITCH_CASE) }
+    throw internal_error("Unknow opcode.");
   }
+
   constexpr oprand_t oprand() const noexcept { return raw_data_ & oprand_mask; }
-
-  template <typename Func>
-  std::string repr(Func&& callback) const noexcept {
-    return std::string{instruction_names[opcode()]} + " " + callback(oprand());
-  }
 
  private:
   using raw_data_t = unsigned int;
-  constexpr static unsigned int oprand_bits = sizeof(raw_data_t) * 8 - 8;
+
+  constexpr static unsigned int char_bits = 8;
+  constexpr static unsigned int opcode_bits = 8;
+  constexpr static unsigned int oprand_bits =
+      sizeof(raw_data_t) * char_bits - opcode_bits;
   constexpr static unsigned int oprand_mask = 0xffff;
 
-  static constexpr raw_data_t raw_data_from(opcode_t opcode,
-                                            oprand_t oprand) noexcept {
-    ENSURES(oprand <= 0xffff);
-    return opcode << oprand_bits | oprand;
+  constexpr std::size_t raw_opcode() const noexcept {
+    return raw_data_ >> oprand_bits;
   }
 
-#undef GENERATOR
-#define GENERATOR(instruction) #instruction
-
-  static constexpr const char* instruction_names[] = {INSTRUCTIONS1};
+  template <typename Opcode>
+  static constexpr raw_data_t raw_data_of(oprand_t oprand) noexcept {
+    ENSURES(oprand <= 0xffff);
+    return Opcode::id << oprand_bits | oprand;
+  }
 
   raw_data_t raw_data_;
 };

@@ -7,11 +7,11 @@
 TEST_CASE("chunk emplace back") {
   lox::chunk chunk;
   auto constant = chunk.add_constant(1.2);
-  chunk.add_instruction(lox::instruction::op_constant, constant, 123);
-  chunk.add_instruction(lox::instruction::op_return, 123);
+  chunk.add_instruction(lox::op_constant{}, constant, 123);
+  chunk.add_instruction(lox::op_return{}, 123);
   std::string expected = R"(== test chunk ==
-0000  123 OP_CONSTANT 1.2
-0001    | OP_RETURN
+0000  123 op_constant 1.2
+0001    | op_return
 )";
   CHECK_EQ(chunk.repr("test chunk"), expected);
 }

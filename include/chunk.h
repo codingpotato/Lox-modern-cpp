@@ -15,14 +15,15 @@ struct chunk {
   using value_vector = std::vector<value>;
   using line_vector = std::vector<int>;
 
-  void add_instruction(instruction::opcode_t opcode, int line) noexcept {
-    code_.emplace_back(opcode);
+  template <typename Opcode>
+  void add_instruction(Opcode opcode, int line) noexcept {
+    code_.emplace_back(instruction{opcode});
     lines_.emplace_back(line);
     EXPECTS(lines_.size() == code_.size());
   }
-  void add_instruction(instruction::opcode_t opcode,
-                       instruction::oprand_t oprand, int line) noexcept {
-    code_.emplace_back(opcode, oprand);
+  template <typename Opcode>
+  void add_instruction(Opcode opcode, oprand_t oprand, int line) noexcept {
+    code_.emplace_back(instruction{opcode, oprand});
     lines_.emplace_back(line);
     EXPECTS(lines_.size() == code_.size());
   }
@@ -47,10 +48,14 @@ struct chunk {
         oss << "   | ";
       }
       string += oss.str();
-      string += code_[offset].repr([this](const auto& oprand) {
+      string += code_[offset].visit([this](auto opcode, auto oprand) {
         ENSURES(oprand < constants_.size());
         std::ostringstream oss;
-        oss << constants_[static_cast<std::size_t>(oprand)].as<double>();
+        oss << opcode.name;
+        if (opcode.has_oprand) {
+          oss << " "
+              << constants_[static_cast<std::size_t>(oprand)].as<double>();
+        }
         return oss.str();
       }) + "\n";
     }

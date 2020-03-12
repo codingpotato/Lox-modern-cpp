@@ -14,9 +14,9 @@ TEST_CASE("compiler") {
   lox::compiler compiler;
   const auto chunk = compiler.compile(tokens);
   const std::string expected = R"(== test expression ==
-0000    1 OP_CONSTANT 1
-0001    | OP_CONSTANT 2
-0002    | OP_ADD
+0000    1 op_constant 1
+0001    | op_constant 2
+0002    | op_add
 )";
   CHECK_EQ(chunk.repr("test expression"), expected);
 }
