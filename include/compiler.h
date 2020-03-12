@@ -70,6 +70,27 @@ struct compiler {
     const auto op_type = previous_->type;
     parse_precedence(static_cast<precedence>(rules[op_type].prec + 1), ch);
     switch (op_type) {
+      case token::bang_equal:
+        ch.add_instruction(op_equal{}, previous_->line);
+        ch.add_instruction(op_not{}, previous_->line);
+        break;
+      case token::equal_equal:
+        ch.add_instruction(op_equal{}, previous_->line);
+        break;
+      case token::greater:
+        ch.add_instruction(op_greater{}, previous_->line);
+        break;
+      case token::greater_equal:
+        ch.add_instruction(op_less{}, previous_->line);
+        ch.add_instruction(op_not{}, previous_->line);
+        break;
+      case token::less:
+        ch.add_instruction(op_less{}, previous_->line);
+        break;
+      case token::less_equal:
+        ch.add_instruction(op_greater{}, previous_->line);
+        ch.add_instruction(op_not{}, previous_->line);
+        break;
       case token::plus:
         ch.add_instruction(op_add{}, previous_->line);
         break;
@@ -149,13 +170,13 @@ struct compiler {
       {nullptr, &compiler::binary, p_factor},         // token::slash
       {nullptr, &compiler::binary, p_factor},         // token::star
       {&compiler::unary, nullptr, p_none},            // token::bang
-      {nullptr, nullptr, p_none},                     // token::bang_equal
-      {nullptr, nullptr, p_none},                     // token::equal
-      {nullptr, nullptr, p_none},                     // token::equal_equal
-      {nullptr, nullptr, p_none},                     // token::greater
-      {nullptr, nullptr, p_none},                     // token::greater_equal
-      {nullptr, nullptr, p_none},                     // token::less
-      {nullptr, nullptr, p_none},                     // token::less_equal
+      {nullptr, &compiler::binary, p_equality},       // token::bang_equal
+      {nullptr, &compiler::binary, p_comparison},     // token::equal
+      {nullptr, &compiler::binary, p_comparison},     // token::equal_equal
+      {nullptr, &compiler::binary, p_comparison},     // token::greater
+      {nullptr, &compiler::binary, p_comparison},     // token::greater_equal
+      {nullptr, &compiler::binary, p_comparison},     // token::less
+      {nullptr, &compiler::binary, p_comparison},     // token::less_equal
       {nullptr, nullptr, p_none},                     // token::identifier
       {&compiler::number, nullptr, p_none},           // token::number
       {nullptr, nullptr, p_none},                     // token::string

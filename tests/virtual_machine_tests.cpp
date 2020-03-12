@@ -1,6 +1,8 @@
 #include <doctest.h>
 
+#include "scanner.h"
 #include "virtual_machine.h"
+#include "compiler.h"
 
 TEST_CASE("") {
   lox::chunk main;
@@ -21,4 +23,11 @@ TEST_CASE("") {
 
   lox::virtual_machine vm;
   vm.interpret(main);
+}
+
+TEST_CASE("run") {
+  lox::scanner scanner{"1 == 2"};
+  auto chunk = lox::compiler{}.compile(scanner.scan());
+  chunk.add_instruction(lox::op_return{}, 2);
+  lox::virtual_machine{}.interpret(chunk);
 }

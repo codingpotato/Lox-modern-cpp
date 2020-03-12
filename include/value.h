@@ -38,6 +38,20 @@ struct value {
     }
   }
 
+  friend value operator==(const value& lhs, const value& rhs) {
+    if (lhs.type == rhs.type) {
+      switch (lhs.type) {
+        case nil:
+          return true;
+        case boolean:
+          return lhs.boolean_value == rhs.boolean_value;
+        case number:
+          return lhs.number_value == rhs.number_value;
+      }
+    }
+    return false;
+  }
+
  private:
   enum type_t { nil, boolean, number };
 
@@ -62,6 +76,14 @@ inline value operator*(const value& lhs, const value& rhs) {
 
 inline value operator/(const value& lhs, const value& rhs) {
   return lhs.as<double>() / rhs.as<double>();
+}
+
+inline value operator>(const value& lhs, const value& rhs) {
+  return lhs.as<double>() > rhs.as<double>();
+}
+
+inline value operator<(const value& lhs, const value& rhs) {
+  return lhs.as<double>() < rhs.as<double>();
 }
 
 }  // namespace lox

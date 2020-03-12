@@ -59,6 +59,27 @@ inline void virtual_machine::handle<op_true>(oprand_t) {
 }
 
 template <>
+inline void virtual_machine::handle<op_equal>(oprand_t) {
+  auto b = pop();
+  auto a = pop();
+  push(a == b);
+}
+
+template <>
+inline void virtual_machine::handle<op_greater>(oprand_t) {
+  auto b = pop();
+  auto a = pop();
+  push(a > b);
+}
+
+template <>
+inline void virtual_machine::handle<op_less>(oprand_t) {
+  auto b = pop();
+  auto a = pop();
+  push(a < b);
+}
+
+template <>
 inline void virtual_machine::handle<op_add>(oprand_t) {
   auto b = pop();
   auto a = pop();
