@@ -172,7 +172,12 @@ struct value {
 };
 
 inline value operator+(const value& lhs, const value& rhs) {
-  return lhs.as<double>() + rhs.as<double>();
+  if (lhs.is<double>() && rhs.as<double>()) {
+    return lhs.as<double>() + rhs.as<double>();
+  } else if (lhs.is<std::string>() && rhs.is<std::string>()) {
+    return lhs.as<std::string>() + rhs.as<std::string>();
+  }
+  throw runtime_error{"Operands must be two numbers or two strings."};
 }
 
 inline value operator-(const value& lhs, const value& rhs) {
