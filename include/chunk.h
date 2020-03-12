@@ -53,8 +53,7 @@ struct chunk {
         oss << opcode.name;
         if (opcode.has_oprand) {
           ENSURES(oprand < constants_.size());
-          oss << " "
-              << constants_[static_cast<std::size_t>(oprand)].as<double>();
+          oss << " " << constants_[static_cast<std::size_t>(oprand)].repr();
         }
         return oss.str();
       }) + "\n";

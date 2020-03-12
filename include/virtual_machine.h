@@ -130,7 +130,7 @@ inline void virtual_machine::handle<op_negate>(oprand_t) {
 template <>
 inline void virtual_machine::handle<op_return>(oprand_t) {
   ENSURES(stack_.size() == 1);
-  std::cout << pop().as<double>() << "\n";
+  std::cout << pop().repr() << "\n";
 }
 
 inline void virtual_machine::interpret(chunk ch) {
@@ -141,7 +141,7 @@ inline void virtual_machine::interpret(chunk ch) {
     std::cout << instr.visit([](auto opcode, auto) { return opcode.name; });
     std::cout << "    ";
     for (auto& v : stack_) {
-      std::cout << "[ " << v.as<double>() << " ]";
+      std::cout << "[ " << v.repr() << " ]";
     }
     std::cout << "\n";
 #endif

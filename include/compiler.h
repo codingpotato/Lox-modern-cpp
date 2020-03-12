@@ -50,6 +50,11 @@ struct compiler {
     ch.add_instruction(op_constant{}, constant, previous_->line);
   }
 
+  void string(chunk& ch) {
+    auto constant = ch.add_constant(previous_->lexeme);
+    ch.add_instruction(op_constant{}, constant, previous_->line);
+  }
+
   void literal(chunk& ch) {
     switch (previous_->type) {
       case token::k_nil:
@@ -179,7 +184,7 @@ struct compiler {
       {nullptr, &compiler::binary, p_comparison},     // token::less_equal
       {nullptr, nullptr, p_none},                     // token::identifier
       {&compiler::number, nullptr, p_none},           // token::number
-      {nullptr, nullptr, p_none},                     // token::string
+      {&compiler::string, nullptr, p_none},           // token::string
       {nullptr, nullptr, p_none},                     // token::k_and
       {nullptr, nullptr, p_none},                     // token::k_class
       {nullptr, nullptr, p_none},                     // token::k_else

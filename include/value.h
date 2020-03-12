@@ -2,6 +2,7 @@
 #define LOX_VALUE_H
 
 #include <memory>
+#include <sstream>
 #include <string>
 
 #include "exception.h"
@@ -141,6 +142,22 @@ struct value {
       }
     }
     return false;
+  }
+
+  std::string repr() const noexcept {
+    switch (type_) {
+      case type::nil:
+        return "nil";
+      case type::boolean:
+        return boolean_ ? "true" : "false";
+      case type::number: {
+        std::ostringstream oss;
+        oss << number_;
+        return oss.str();
+      }
+      case type::string:
+        return *string_;
+    }
   }
 
  private:
