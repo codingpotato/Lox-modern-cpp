@@ -120,7 +120,7 @@ template <>
 inline void virtual_machine::handle<op_negate>(oprand_t) {
   if (peek().is<double>()) {
     const auto operand = pop();
-    const auto result = operand.is<nil_t>() || !operand.as<bool>();
+    const auto result = operand.is<nil>() || !operand.as<bool>();
     push(result);
   } else {
     throw runtime_error{"Operand must be a number."};
