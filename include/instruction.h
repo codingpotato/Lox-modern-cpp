@@ -24,7 +24,7 @@
 
 namespace lox {
 
-INSTRUCTIONS(STRUCT);
+INSTRUCTIONS(STRUCT)
 
 using types = type_list<INSTRUCTIONS(TYPE_LIST_ARGUMENT) void>;
 
