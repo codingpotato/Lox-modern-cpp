@@ -128,10 +128,13 @@ inline void virtual_machine::handle<op_negate>(oprand_t) {
 }
 
 template <>
-inline void virtual_machine::handle<op_return>(oprand_t) {
-  ENSURES(stack_.size() == 1);
+inline void virtual_machine::handle<op_print>(oprand_t) {
+  ENSURES(stack_.size() > 0);
   std::cout << pop().repr() << "\n";
 }
+
+template <>
+inline void virtual_machine::handle<op_return>(oprand_t) {}
 
 inline void virtual_machine::interpret(chunk ch) {
   main_ = std::move(ch);

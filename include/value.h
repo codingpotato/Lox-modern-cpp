@@ -158,6 +158,7 @@ struct value {
       case type::string:
         return *string_;
     }
+    return "";
   }
 
  private:

@@ -16,9 +16,9 @@ TEST_CASE("scan") {
   lox::scanner scanner{"print 1 + 2;"};
   auto tokens = scanner.scan();
   std::vector<lox::token> expected = {
-      {lox::token::identifier, "print", 1}, {lox::token::number, "1", 1},
-      {lox::token::plus, "+", 1},           {lox::token::number, "2", 1},
-      {lox::token::semicolon, ";", 1},      {lox::token::eof, "", 1},
+      {lox::token::k_print, "print", 1}, {lox::token::number, "1", 1},
+      {lox::token::plus, "+", 1},        {lox::token::number, "2", 1},
+      {lox::token::semicolon, ";", 1},   {lox::token::eof, "", 1},
   };
   check_tokens(tokens, expected);
 }

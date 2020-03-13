@@ -15,12 +15,27 @@ struct compiler {
     tokens_ = std::move(tokens);
     current_ = tokens_.cbegin();
     chunk ch;
-    expression(ch);
-    consume(token::eof, "Expect end of expression.");
+    while (!match(token::eof)) {
+      declaration(ch);
+    }
     return ch;
   }
 
  private:
+  void declaration(chunk& ch) { statement(ch); }
+
+  void statement(chunk& ch) {
+    if (match(token::k_print)) {
+      print_statement(ch);
+    }
+  }
+
+  void print_statement(chunk& ch) {
+    expression(ch);
+    consume(token::semicolon, "Expect ';' after value.");
+    ch.add_instruction(op_print{}, previous_->line);
+  }
+
   enum precedence {
     p_none,
     p_assignment,  // =
@@ -160,6 +175,14 @@ struct compiler {
     } else {
       throw compile_error{message};
     }
+  }
+
+  bool match(token::type_t type) noexcept {
+    if (current_->type == type) {
+      advance();
+      return true;
+    }
+    return false;
   }
 
   constexpr static rule rules[] = {

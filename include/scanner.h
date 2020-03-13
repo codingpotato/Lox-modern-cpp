@@ -148,7 +148,7 @@ struct scanner {
     while (!is_at_end() && (is_alpha(peek()) || is_digit(peek()))) {
       advance();
     }
-    return make_token(token::identifier);
+    return make_token(identifier_type());
   }
 
   token number() noexcept {
@@ -242,7 +242,9 @@ struct scanner {
 
   token::type_t check_keyword(const std::string& rest, token::type_t type) const
       noexcept {
-    if (std::equal(start_, source_.cend(), rest.cbegin(), rest.cend())) {
+    auto first = start_ + 1;
+    auto last = start_ + 1 + rest.size();
+    if (std::equal(first, last, rest.cbegin(), rest.cend())) {
       return type;
     }
     return token::identifier;
