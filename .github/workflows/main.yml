@@ -16,7 +16,7 @@ jobs:
     - name: build
       run: cmake --build build -j 2
     - name: test
-      run: ctest
+      run: cd build && ctest
       
   linux-clang:
     runs-on: ubuntu-latest
@@ -30,4 +30,4 @@ jobs:
     - name: build
       run: cmake --build build -j 2
     - name: test
-      run: ctest
+      run: cd build && ctest
