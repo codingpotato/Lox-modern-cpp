@@ -3,11 +3,11 @@ name: CI
 on: push
 
 jobs:
-  linux-gcc:
+  CI:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, ubuntu-latest]
         include: 
         - os: ubuntu-latest
           COMPILER: gcc
