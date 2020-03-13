@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <map>
 
 #include "chunk.h"
 #include "exception.h"
@@ -36,6 +37,7 @@ struct virtual_machine {
 
   chunk main_;
   std::vector<value> stack_;
+  std::map<std::string, value> globals;
 };
 
 template <>
@@ -56,6 +58,17 @@ inline void virtual_machine::handle<op_false>(oprand_t) {
 template <>
 inline void virtual_machine::handle<op_true>(oprand_t) {
   push(true);
+}
+
+template <>
+inline void virtual_machine::handle<op_pop>(oprand_t) {
+  pop();
+}
+
+template <>
+inline void virtual_machine::handle<op_define_global>(oprand_t oprand) {
+  const auto& name = main_.constants()[oprand];
+  globals.emplace(name.as<std::string>(), std::move(pop()));
 }
 
 template <>

@@ -22,11 +22,39 @@ struct compiler {
   }
 
  private:
-  void declaration(chunk& ch) { statement(ch); }
+  void declaration(chunk& ch) {
+    if (match(token::k_var)) {
+      var_declaration(ch);
+    } else {
+      statement(ch);
+    }
+  }
+
+  void var_declaration(chunk& ch) {
+    auto global = parse_variable(ch, "Expect variable name.");
+    if (match(token::equal)) {
+      expression(ch);
+    } else {
+      ch.add_instruction(op_nil{}, previous_->line);
+    }
+    consume(token::semicolon, "Expect ';' after variable declaration.");
+    define_variable(ch, global);
+  }
+
+  std::size_t parse_variable(chunk& ch, const std::string& message) {
+    consume(token::identifier, message);
+    return ch.add_constant(previous_->lexeme);
+  }
+
+  void define_variable(chunk& ch, std::size_t global) {
+    ch.add_instruction(op_define_global{}, global, previous_->line);
+  }
 
   void statement(chunk& ch) {
     if (match(token::k_print)) {
       print_statement(ch);
+    } else {
+      expression_statement(ch);
     }
   }
 
@@ -34,6 +62,12 @@ struct compiler {
     expression(ch);
     consume(token::semicolon, "Expect ';' after value.");
     ch.add_instruction(op_print{}, previous_->line);
+  }
+
+  void expression_statement(chunk& ch) {
+    expression(ch);
+    consume(token::semicolon, "Expect ';' after value.");
+    ch.add_instruction(op_pop{}, previous_->line);
   }
 
   enum precedence {
