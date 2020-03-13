@@ -2,26 +2,16 @@ name: CI
 
 on: push
 
+strategy:
+  matrix:
+    compiler: [gcc, clang]
+
 jobs:
   linux-gcc:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@master
     - name: configure
-      run: mkdir build && cd build && cmake ..
-    - name: build
-      run: cmake --build build -j 2
-    - name: test
-      run: cd build && ctest
-      
-  linux-clang:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v1
-    - name: configure
-      env:
-        CC: clang
-        CXX: clang++
       run: mkdir build && cd build && cmake ..
     - name: build
       run: cmake --build build -j 2
