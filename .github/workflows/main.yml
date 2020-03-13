@@ -2,13 +2,17 @@ name: CI
 
 on: push
 
-strategy:
-  matrix:
-    compiler: [gcc, clang]
-
 jobs:
   linux-gcc:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        include: 
+        - os: ubuntu-latest
+          COMPILER: gcc
+        - os: ubuntu-latest
+          COMPILER: clang
     steps:
     - uses: actions/checkout@master
     - name: configure
