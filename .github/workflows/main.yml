@@ -1,10 +1,6 @@
 name: CI
 
-on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+on: push
 
 jobs:
   linux-gcc:
@@ -16,7 +12,7 @@ jobs:
     - name: build
       run: cmake --build build -j 2
     - name: test
-      run: ./build/src/lox
+      run: cd build && ctest
       
   linux-clang:
     runs-on: ubuntu-latest
@@ -30,4 +26,4 @@ jobs:
     - name: build
       run: cmake --build build -j 2
     - name: test
-      run: ./build/src/lox
+      run: cd build && ctest

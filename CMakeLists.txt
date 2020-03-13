@@ -6,6 +6,8 @@ project(
   DESCRIPTION "Lox modern cpp implement"
   LANGUAGES CXX)
 
+enable_testing()
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 include(doctest)
 
