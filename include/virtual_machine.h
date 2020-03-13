@@ -2,9 +2,9 @@
 #define LOX_VIRTUAL_MACHINE_H
 
 #include <iostream>
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
 
 #include "chunk.h"
 #include "exception.h"
@@ -68,7 +68,7 @@ inline void virtual_machine::handle<op_pop>(oprand_t) {
 template <>
 inline void virtual_machine::handle<op_define_global>(oprand_t oprand) {
   const auto& name = main_.constants()[oprand];
-  globals.emplace(name.as<std::string>(), std::move(pop()));
+  globals.emplace(name.as<std::string>(), pop());
 }
 
 template <>
