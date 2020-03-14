@@ -8,13 +8,25 @@ jobs:
     strategy:
       max-parallel: 2
       matrix:
-        cc: [gcc, clang]
+        compiler: [gcc, clang]
     steps:
       - uses: actions/checkout@master
-          cc: ${{ matrix.cc }}
+
+      - name: install
+        run: |
+          if [ "${{ matrix.compiler }}" = "gcc" ]; then
+            echo "::set-env name=CC::gcc"
+            echo "::set-env name=CXX::g++"
+          else
+            echo "::set-env name=CC::clang"
+            echo "::set-env name=CXX::clang++"
+          fi
+
       - name: configure
-         run: mkdir build && cd build && cmake ..
+        run: mkdir build && cd build && cmake ..
+
       - name: build
-         run: cmake --build build -j 2
+        run: cmake --build build -j 2
+
       - name: test
-         run: cd build && ctest
+        run: cd build && ctest
