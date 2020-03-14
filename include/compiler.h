@@ -10,7 +10,75 @@
 
 namespace lox {
 
-struct compiler {
+namespace {
+
+enum precedence {
+  p_none,
+  p_assignment,  // =
+  p_or,          // or
+  p_and,         // and
+  p_equality,    // == !=
+  p_comparison,  // < > <= >=
+  p_term,        // + -
+  p_factor,      // * /
+  p_unary,       // ! -
+  p_call,        // . ()
+  p_primary
+};
+
+template <typename Compiler>
+using parse_func = void (Compiler::*)(chunk&);
+
+template <typename Compiler>
+struct precedence_rule {
+  parse_func<Compiler> prefix;
+  parse_func<Compiler> infix;
+  precedence prec;
+};
+
+template <typename Compiler>
+using precedence_rules = std::array<precedence_rule<Compiler>,
+                                    static_cast<std::size_t>(token::eof) + 1>;
+
+template <typename Compiler>
+struct rules_generator {
+  static constexpr precedence_rules<Compiler> make_rules() noexcept {
+    struct element {
+      token::type_t type;
+      precedence_rule<Compiler> rule;
+    };
+    constexpr element elements[] = {
+        {token::left_paren, {&Compiler::grouping, nullptr, p_none}},
+        {token::minus, {&Compiler::unary, &Compiler::binary, p_term}},
+        {token::plus, {nullptr, &Compiler::binary, p_term}},
+        {token::slash, {nullptr, &Compiler::binary, p_factor}},
+        {token::star, {nullptr, &Compiler::binary, p_factor}},
+        {token::bang, {&Compiler::unary, nullptr, p_none}},
+        {token::bang_equal, {nullptr, &Compiler::binary, p_equality}},
+        {token::equal, {nullptr, &Compiler::binary, p_comparison}},
+        {token::equal_equal, {nullptr, &Compiler::binary, p_comparison}},
+        {token::greater, {nullptr, &Compiler::binary, p_comparison}},
+        {token::greater_equal, {nullptr, &Compiler::binary, p_comparison}},
+        {token::less, {nullptr, &Compiler::binary, p_comparison}},
+        {token::less_equal, {nullptr, &Compiler::binary, p_comparison}},
+        {token::number, {&Compiler::number, nullptr, p_none}},
+        {token::string, {&Compiler::string, nullptr, p_none}},
+        {token::k_false, {&Compiler::literal, nullptr, p_none}},
+        {token::k_nil, {&Compiler::literal, nullptr, p_none}},
+        {token::k_true, {&Compiler::literal, nullptr, p_none}},
+    };
+    precedence_rules<Compiler> rules{};
+    for (auto it = std::cbegin(elements); it != std::end(elements); ++it) {
+      rules[static_cast<std::size_t>(it->type)] = it->rule;
+    }
+    return rules;
+  };
+};
+
+}  // namespace
+
+class compiler {
+ public:
   chunk compile(token_vector tokens) noexcept {
     tokens_ = std::move(tokens);
     current_ = tokens_.cbegin();
@@ -70,59 +138,11 @@ struct compiler {
     ch.add_instruction(op_pop{}, previous_->line);
   }
 
-  enum precedence {
-    p_none,
-    p_assignment,  // =
-    p_or,          // or
-    p_and,         // and
-    p_equality,    // == !=
-    p_comparison,  // < > <= >=
-    p_term,        // + -
-    p_factor,      // * /
-    p_unary,       // ! -
-    p_call,        // . ()
-    p_primary
-  };
-
-  using parse_func = void (compiler::*)(chunk&);
-
-  struct rule {
-    parse_func prefix;
-    parse_func infix;
-    precedence prec;
-  };
-
-  void expression(chunk& ch) noexcept { parse_precedence(p_assignment, ch); }
-
-  void number(chunk& ch) {
-    auto constant = ch.add_constant(std::stod(previous_->lexeme));
-    ch.add_instruction(op_constant{}, constant, previous_->line);
-  }
-
-  void string(chunk& ch) {
-    auto constant = ch.add_constant(previous_->lexeme);
-    ch.add_instruction(op_constant{}, constant, previous_->line);
-  }
-
-  void literal(chunk& ch) {
-    switch (previous_->type) {
-      case token::k_nil:
-        ch.add_instruction(op_nil{}, previous_->line);
-        break;
-      case token::k_false:
-        ch.add_instruction(op_false{}, previous_->line);
-        break;
-      case token::k_true:
-        ch.add_instruction(op_true{}, previous_->line);
-        break;
-      default:
-        throw internal_error{"Unknow literal."};
-    }
-  }
+  void expression(chunk& ch) { parse_precedence(p_assignment, ch); }
 
   void binary(chunk& ch) {
     const auto op_type = previous_->type;
-    parse_precedence(static_cast<precedence>(rules[op_type].prec + 1), ch);
+    parse_precedence(static_cast<precedence>(p_rules_[op_type].prec + 1), ch);
     switch (op_type) {
       case token::bang_equal:
         ch.add_instruction(op_equal{}, previous_->line);
@@ -182,18 +202,44 @@ struct compiler {
     }
   }
 
+  void number(chunk& ch) {
+    auto constant = ch.add_constant(std::stod(previous_->lexeme));
+    ch.add_instruction(op_constant{}, constant, previous_->line);
+  }
+
+  void string(chunk& ch) {
+    auto constant = ch.add_constant(previous_->lexeme);
+    ch.add_instruction(op_constant{}, constant, previous_->line);
+  }
+
+  void literal(chunk& ch) {
+    switch (previous_->type) {
+      case token::k_nil:
+        ch.add_instruction(op_nil{}, previous_->line);
+        break;
+      case token::k_false:
+        ch.add_instruction(op_false{}, previous_->line);
+        break;
+      case token::k_true:
+        ch.add_instruction(op_true{}, previous_->line);
+        break;
+      default:
+        throw internal_error{"Unknow literal."};
+    }
+  }
+
   void parse_precedence(precedence prec, chunk& ch) {
     advance();
-    const auto& prefix = rules[previous_->type].prefix;
+    const auto& prefix = p_rules_[previous_->type].prefix;
     if (prefix == nullptr) {
       throw compile_error{"Expect expression."};
       return;
     }
     (this->*prefix)(ch);
     while (static_cast<int>(prec) <
-           static_cast<int>(rules[current_->type].prec)) {
+           static_cast<int>(p_rules_[current_->type].prec)) {
       advance();
-      auto infix = rules[previous_->type].infix;
+      auto infix = p_rules_[previous_->type].infix;
       (this->*infix)(ch);
     }
   }
@@ -219,47 +265,9 @@ struct compiler {
     return false;
   }
 
-  constexpr static rule rules[] = {
-      {&compiler::grouping, nullptr, p_none},         // token::left_paren
-      {nullptr, nullptr, p_none},                     // token::right_paren
-      {nullptr, nullptr, p_none},                     // token::left_brace
-      {nullptr, nullptr, p_none},                     // token::right_brace
-      {nullptr, nullptr, p_none},                     // token::comma
-      {nullptr, nullptr, p_none},                     // token::dot
-      {&compiler::unary, &compiler::binary, p_term},  // token::minus
-      {nullptr, &compiler::binary, p_term},           // token::plus
-      {nullptr, nullptr, p_none},                     // token::demicolon
-      {nullptr, &compiler::binary, p_factor},         // token::slash
-      {nullptr, &compiler::binary, p_factor},         // token::star
-      {&compiler::unary, nullptr, p_none},            // token::bang
-      {nullptr, &compiler::binary, p_equality},       // token::bang_equal
-      {nullptr, &compiler::binary, p_comparison},     // token::equal
-      {nullptr, &compiler::binary, p_comparison},     // token::equal_equal
-      {nullptr, &compiler::binary, p_comparison},     // token::greater
-      {nullptr, &compiler::binary, p_comparison},     // token::greater_equal
-      {nullptr, &compiler::binary, p_comparison},     // token::less
-      {nullptr, &compiler::binary, p_comparison},     // token::less_equal
-      {nullptr, nullptr, p_none},                     // token::identifier
-      {&compiler::number, nullptr, p_none},           // token::number
-      {&compiler::string, nullptr, p_none},           // token::string
-      {nullptr, nullptr, p_none},                     // token::k_and
-      {nullptr, nullptr, p_none},                     // token::k_class
-      {nullptr, nullptr, p_none},                     // token::k_else
-      {&compiler::literal, nullptr, p_none},          // token::k_false
-      {nullptr, nullptr, p_none},                     // token::k_for
-      {nullptr, nullptr, p_none},                     // token::k_func
-      {nullptr, nullptr, p_none},                     // token::k_if
-      {&compiler::literal, nullptr, p_none},          // token::k_nil
-      {nullptr, nullptr, p_none},                     // token::k_or
-      {nullptr, nullptr, p_none},                     // token::k_print
-      {nullptr, nullptr, p_none},                     // token::k_return
-      {nullptr, nullptr, p_none},                     // token::k_super
-      {nullptr, nullptr, p_none},                     // token::k_this
-      {&compiler::literal, nullptr, p_none},          // token::k_true
-      {nullptr, nullptr, p_none},                     // token::k_var
-      {nullptr, nullptr, p_none},                     // token::k_while
-      {nullptr, nullptr, p_none},                     // token::eof
-  };
+  friend rules_generator<compiler>;
+  static constexpr precedence_rules<compiler> p_rules_ =
+      rules_generator<compiler>::make_rules();
 
   token_vector tokens_;
   token_vector::const_iterator current_;
