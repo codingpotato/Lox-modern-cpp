@@ -61,11 +61,12 @@ struct rules_generator {
         {token::greater_equal, {nullptr, &Compiler::binary, p_comparison}},
         {token::less, {nullptr, &Compiler::binary, p_comparison}},
         {token::less_equal, {nullptr, &Compiler::binary, p_comparison}},
-        {token::number, {&Compiler::number, nullptr, p_none}},
-        {token::string, {&Compiler::string, nullptr, p_none}},
-        {token::k_false, {&Compiler::literal, nullptr, p_none}},
-        {token::k_nil, {&Compiler::literal, nullptr, p_none}},
-        {token::k_true, {&Compiler::literal, nullptr, p_none}},
+        {token::identifier, {&Compiler::parse_variable, nullptr, p_none}},
+        {token::number, {&Compiler::parse_number, nullptr, p_none}},
+        {token::string, {&Compiler::parse_string, nullptr, p_none}},
+        {token::k_false, {&Compiler::parse_literal, nullptr, p_none}},
+        {token::k_nil, {&Compiler::parse_literal, nullptr, p_none}},
+        {token::k_true, {&Compiler::parse_literal, nullptr, p_none}},
     };
     precedence_rules<Compiler> rules{};
     for (auto it = std::cbegin(elements); it != std::end(elements); ++it) {
@@ -202,17 +203,22 @@ class compiler {
     }
   }
 
-  void number(chunk& ch) {
-    auto constant = ch.add_constant(std::stod(previous_->lexeme));
+  void parse_variable(chunk& ch) {
+    const auto constant = ch.add_constant(previous_->lexeme);
+    ch.add_instruction(op_get_global{}, constant, previous_->line);
+  }
+
+  void parse_number(chunk& ch) {
+    const auto constant = ch.add_constant(std::stod(previous_->lexeme));
     ch.add_instruction(op_constant{}, constant, previous_->line);
   }
 
-  void string(chunk& ch) {
-    auto constant = ch.add_constant(previous_->lexeme);
+  void parse_string(chunk& ch) {
+    const auto constant = ch.add_constant(previous_->lexeme);
     ch.add_instruction(op_constant{}, constant, previous_->line);
   }
 
-  void literal(chunk& ch) {
+  void parse_literal(chunk& ch) {
     switch (previous_->type) {
       case token::k_nil:
         ch.add_instruction(op_nil{}, previous_->line);

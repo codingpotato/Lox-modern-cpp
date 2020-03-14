@@ -66,6 +66,16 @@ inline void virtual_machine::handle<op_pop>(oprand_t) {
 }
 
 template <>
+inline void virtual_machine::handle<op_get_global>(oprand_t oprand) {
+  const auto& name = main_.constants()[oprand].as<std::string>();
+  if (globals.find(name) != globals.cend()) {
+    push(globals[name]);
+  } else {
+    throw runtime_error{"Undefined variable: " + name};
+  }
+}
+
+template <>
 inline void virtual_machine::handle<op_define_global>(oprand_t oprand) {
   const auto& name = main_.constants()[oprand];
   globals.emplace(name.as<std::string>(), pop());

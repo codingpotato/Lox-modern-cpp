@@ -21,79 +21,22 @@ struct value {
       : type_{type::string},
         string_{std::make_unique<std::string>(std::move(str))} {}
 
-  value(const value& v) noexcept : type_{v.type_} {
-    switch (type_) {
-      case type::nil:
-        break;
-      case type::boolean:
-        boolean_ = v.boolean_;
-        break;
-      case type::number:
-        number_ = v.number_;
-        break;
-      case type::string:
-        string_ = std::make_unique<std::string>(*v.string_);
-    }
-  }
-
-  value(value&& v) noexcept : type_{v.type_} {
-    switch (type_) {
-      case type::nil:
-        break;
-      case type::boolean:
-        boolean_ = v.boolean_;
-        break;
-      case type::number:
-        number_ = v.number_;
-        break;
-      case type::string:
-        string_ = std::move(v.string_);
-    }
-  }
-
+  value(const value& v) noexcept { copy(v, *this); }
+  value(value&& v) noexcept { copy(v, *this); }
   value& operator=(const value& v) {
     if (this != &v) {
-      type_ = v.type_;
-      switch (type_) {
-        case type::nil:
-          break;
-        case type::boolean:
-          boolean_ = v.boolean_;
-          break;
-        case type::number:
-          number_ = v.number_;
-          break;
-        case type::string:
-          string_ = std::make_unique<std::string>(*v.string_);
-      }
+      copy(v, *this);
     }
     return *this;
   }
-
   value& operator=(value&& v) {
     if (this != &v) {
-      type_ = v.type_;
-      switch (type_) {
-        case type::nil:
-          break;
-        case type::boolean:
-          boolean_ = v.boolean_;
-          break;
-        case type::number:
-          number_ = v.number_;
-          break;
-        case type::string:
-          string_ = std::move(v.string_);
-      }
+      copy(v, *this);
     }
     return *this;
   }
 
-  ~value() noexcept {
-    if (type_ == type::string) {
-      string_.~unique_ptr();
-    }
-  }
+  ~value() noexcept { destory(*this); }
 
   template <typename T>
   bool is() const noexcept {
@@ -163,6 +106,32 @@ struct value {
 
  private:
   enum class type { nil, boolean, number, string };
+
+  template <typename Value>
+  friend inline void copy(Value&& from, value& to) noexcept {
+    destory(to);
+    to.type_ = from.type_;
+    switch (to.type_) {
+      case type::nil:
+        break;
+      case type::boolean:
+        to.boolean_ = from.boolean_;
+        break;
+      case type::number:
+        to.number_ = from.number_;
+        break;
+      case type::string:
+        new (&to.string_) std::unique_ptr<std::string>{
+            new std::string{*std::forward<Value>(from).string_}};
+        break;
+    }
+  }
+
+  friend inline void destory(const value& v) noexcept {
+    if (v.type_ == type::string) {
+      v.string_.~unique_ptr();
+    }
+  }
 
   type type_;
   union {

@@ -7,6 +7,11 @@
 TEST_CASE("run") {
   lox::scanner scanner{"print 1 + 2;"};
   auto chunk = lox::compiler{}.compile(scanner.scan());
-  chunk.add_instruction(lox::op_return{}, 2);
+  lox::virtual_machine{}.interpret(chunk);
+}
+
+TEST_CASE("global variable") {
+  lox::scanner scanner{"var a = 1; var b = 2; print a + b;"};
+  auto chunk = lox::compiler{}.compile(scanner.scan());
   lox::virtual_machine{}.interpret(chunk);
 }
