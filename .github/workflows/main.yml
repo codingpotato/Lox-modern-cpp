@@ -4,7 +4,7 @@ on: push
 
 jobs:
   ci:
-    runs-on: ubuntu-lastest
+    runs-on: ubuntu-latest
     strategy:
       max-parallel: 2
       matrix:
