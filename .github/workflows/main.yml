@@ -5,8 +5,9 @@ on: push
 jobs:
   ci:
     name ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
+      max-parallel: 2
       matrix:
         name: [
           ubuntu-latest-gcc-7, ubuntu-latest-gcc-8, ubuntu-latest-gcc-9, 
