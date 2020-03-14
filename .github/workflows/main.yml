@@ -4,45 +4,17 @@ on: push
 
 jobs:
   ci:
-    name: ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-lastest
     strategy:
       max-parallel: 2
       matrix:
-        name: [
-          ubuntu-latest-gcc-7, ubuntu-latest-gcc-8, ubuntu-latest-gcc-9, 
-          ubuntu-latest-clang-7, ubuntu-latest-clang-8, ubuntu-latest-clang-9
-        ]
-        include: 
-        - name: ubuntu-latest-gcc-7
-          os: ubuntu-latest
-          compiler: gcc
-          version: "7"
-        - name: ubuntu-latest-gcc-8
-          os: ubuntu-latest
-          compiler: gcc
-          version: "8"
-        - name: ubuntu-latest-gcc-9
-          os: ubuntu-latest
-          compiler: gcc
-          version: "9"
-        - name: ubuntu-latest-clang-7
-          os: ubuntu-latest
-          compiler: clang
-          version: "7"
-        - name: ubuntu-latest-clang-8
-          os: ubuntu-latest
-          compiler: clang
-          version: "8"
-        - name: ubuntu-latest-clang-9
-          os: ubuntu-latest
-          compiler: clang
-          version: "9"
+        cc: [gcc, clang]
     steps:
-    - uses: actions/checkout@master
-    - name: configure
-      run: mkdir build && cd build && cmake ..
-    - name: build
-      run: cmake --build build -j 2
-    - name: test
-      run: cd build && ctest
+      - uses: actions/checkout@master
+          cc: ${{ matrix.cc }}
+      - name: configure
+         run: mkdir build && cd build && cmake ..
+      - name: build
+         run: cmake --build build -j 2
+      - name: test
+         run: cd build && ctest
