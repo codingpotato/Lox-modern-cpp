@@ -12,4 +12,4 @@ target_include_directories(lox PUBLIC ${PROJECT_SOURCE_DIR}/include
                                       ${DOCTEST_INCLUDE_DIR})
 target_compile_options(lox PUBLIC -Wall -Werror -Wextra -Wpedantic
                                   -pedantic-errors)
-add_test(NAME lox COMMAND lox)
+doctest_discover_tests(lox)

@@ -3,16 +3,40 @@ name: CI
 on: push
 
 jobs:
-  CI:
+  ci:
+    name ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, ubuntu-latest]
+        name: [
+          ubuntu-latest-gcc-7, ubuntu-latest-gcc-8, ubuntu-latest-gcc-9, 
+          ubuntu-latest-clang-7, ubuntu-latest-clang-8, ubuntu-latest-clang-9
+        ]
         include: 
-        - os: ubuntu-latest
-          COMPILER: gcc
-        - os: ubuntu-latest
-          COMPILER: clang
+        - name: ubuntu-latest-gcc-7
+          os: ubuntu-latest
+          compiler: gcc
+          version: "7"
+        - name: ubuntu-latest-gcc-8
+          os: ubuntu-latest
+          compiler: gcc
+          version: "8"
+        - name: ubuntu-latest-gcc-9
+          os: ubuntu-latest
+          compiler: gcc
+          version: "9"
+        - name: ubuntu-latest-clang-7
+          os: ubuntu-latest
+          compiler: clang
+          version: "7"
+        - name: ubuntu-latest-clang-8
+          os: ubuntu-latest
+          compiler: clang
+          version: "8"
+        - name: ubuntu-latest-clang-9
+          os: ubuntu-latest
+          compiler: clang
+          version: "9"
     steps:
     - uses: actions/checkout@master
     - name: configure

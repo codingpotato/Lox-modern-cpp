@@ -8,7 +8,7 @@ project(
 
 enable_testing()
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 include(doctest)
 
 set(CMAKE_CXX_STANDARD 17)

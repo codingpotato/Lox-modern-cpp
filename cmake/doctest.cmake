@@ -15,3 +15,6 @@ ExternalProject_Get_Property(doctest source_dir)
 set(DOCTEST_INCLUDE_DIR
     ${source_dir}/doctest
     CACHE INTERNAL "Path to include folder for doctest")
+
+set(CMAKE_MODULE_PATH "${source_dir}/scripts/cmake")
+include(doctest)
