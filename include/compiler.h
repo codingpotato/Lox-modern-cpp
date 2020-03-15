@@ -10,7 +10,7 @@
 
 namespace lox {
 
-namespace {
+namespace precedence {
 
 enum precedence {
   p_none,
@@ -30,22 +30,22 @@ template <typename Compiler>
 using parse_func = void (Compiler::*)(chunk&);
 
 template <typename Compiler>
-struct precedence_rule {
+struct rule {
   parse_func<Compiler> prefix;
   parse_func<Compiler> infix;
   precedence prec;
 };
 
 template <typename Compiler>
-using precedence_rules = std::array<precedence_rule<Compiler>,
-                                    static_cast<std::size_t>(token::eof) + 1>;
+using rules =
+    std::array<rule<Compiler>, static_cast<std::size_t>(token::eof) + 1>;
 
 template <typename Compiler>
 struct rules_generator {
-  static constexpr precedence_rules<Compiler> make_rules() noexcept {
+  static constexpr rules<Compiler> make_rules() noexcept {
     struct element {
       token::type_t type;
-      precedence_rule<Compiler> rule;
+      rule<Compiler> rule;
     };
     constexpr element elements[] = {
         {token::left_paren, {&Compiler::grouping, nullptr, p_none}},
@@ -68,7 +68,7 @@ struct rules_generator {
         {token::k_nil, {&Compiler::parse_literal, nullptr, p_none}},
         {token::k_true, {&Compiler::parse_literal, nullptr, p_none}},
     };
-    precedence_rules<Compiler> rules{};
+    rules<Compiler> rules{};
     for (auto it = std::cbegin(elements); it != std::end(elements); ++it) {
       rules[static_cast<std::size_t>(it->type)] = it->rule;
     }
@@ -76,7 +76,7 @@ struct rules_generator {
   };
 };
 
-}  // namespace
+}  // namespace precedence
 
 class compiler {
  public:
@@ -139,11 +139,12 @@ class compiler {
     ch.add_instruction(op_pop{}, previous_->line);
   }
 
-  void expression(chunk& ch) { parse_precedence(p_assignment, ch); }
+  void expression(chunk& ch) { parse_precedence(precedence::p_assignment, ch); }
 
   void binary(chunk& ch) {
     const auto op_type = previous_->type;
-    parse_precedence(static_cast<precedence>(p_rules_[op_type].prec + 1), ch);
+    parse_precedence(
+        static_cast<precedence::precedence>(p_rules_[op_type].prec + 1), ch);
     switch (op_type) {
       case token::bang_equal:
         ch.add_instruction(op_equal{}, previous_->line);
@@ -190,7 +191,7 @@ class compiler {
 
   void unary(chunk& ch) {
     auto op_type = previous_->type;
-    parse_precedence(p_unary, ch);
+    parse_precedence(precedence::p_unary, ch);
     switch (op_type) {
       case token::bang:
         ch.add_instruction(op_not{}, previous_->line);
@@ -234,7 +235,7 @@ class compiler {
     }
   }
 
-  void parse_precedence(precedence prec, chunk& ch) {
+  void parse_precedence(precedence::precedence prec, chunk& ch) {
     advance();
     const auto& prefix = p_rules_[previous_->type].prefix;
     if (prefix == nullptr) {
@@ -271,9 +272,9 @@ class compiler {
     return false;
   }
 
-  friend rules_generator<compiler>;
-  static constexpr precedence_rules<compiler> p_rules_ =
-      rules_generator<compiler>::make_rules();
+  friend precedence::rules_generator<compiler>;
+  static constexpr precedence::rules<compiler> p_rules_ =
+      precedence::rules_generator<compiler>::make_rules();
 
   token_vector tokens_;
   token_vector::const_iterator current_;

@@ -24,6 +24,13 @@ struct virtual_machine {
   }
 
  private:
+  template <typename Func>
+  void binary(Func&& func) noexcept {
+    auto right = pop();
+    auto left = pop();
+    push(std::forward<Func>(func)(left, right));
+  }
+
   template <typename... Args>
   void push(Args&&... args) noexcept {
     stack_.emplace_back(std::forward<Args>(args)...);
@@ -83,51 +90,37 @@ inline void virtual_machine::handle<op_define_global>(oprand_t oprand) {
 
 template <>
 inline void virtual_machine::handle<op_equal>(oprand_t) {
-  auto b = pop();
-  auto a = pop();
-  push(a == b);
+  binary([](const auto& left, const auto& right) { return left == right; });
 }
 
 template <>
 inline void virtual_machine::handle<op_greater>(oprand_t) {
-  auto b = pop();
-  auto a = pop();
-  push(a > b);
+  binary([](const auto& left, const auto& right) { return left > right; });
 }
 
 template <>
 inline void virtual_machine::handle<op_less>(oprand_t) {
-  auto b = pop();
-  auto a = pop();
-  push(a < b);
+  binary([](const auto& left, const auto& right) { return left < right; });
 }
 
 template <>
 inline void virtual_machine::handle<op_add>(oprand_t) {
-  auto b = pop();
-  auto a = pop();
-  push(a + b);
+  binary([](const auto& left, const auto& right) { return left + right; });
 }
 
 template <>
 inline void virtual_machine::handle<op_subtract>(oprand_t) {
-  auto b = pop();
-  auto a = pop();
-  push(a - b);
+  binary([](const auto& left, const auto& right) { return left - right; });
 }
 
 template <>
 inline void virtual_machine::handle<op_multiply>(oprand_t) {
-  auto b = pop();
-  auto a = pop();
-  push(a * b);
+  binary([](const auto& left, const auto& right) { return left * right; });
 }
 
 template <>
 inline void virtual_machine::handle<op_divide>(oprand_t) {
-  auto b = pop();
-  auto a = pop();
-  push(a / b);
+  binary([](const auto& left, const auto& right) { return left / right; });
 }
 
 template <>
@@ -165,6 +158,7 @@ inline void virtual_machine::interpret(chunk ch) {
   for (auto& instr : main_.code()) {
 #ifdef DEBUG_TRACE_EXECUTION
     std::cout << instr.visit([](auto opcode, auto) { return opcode.name; });
+    ;
     std::cout << "    ";
     for (auto& v : stack_) {
       std::cout << "[ " << v.repr() << " ]";
@@ -174,6 +168,7 @@ inline void virtual_machine::interpret(chunk ch) {
 
     instr.visit(
         [this](auto opcode, auto oprand) { handle<decltype(opcode)>(oprand); });
+    ;
   }
 }
 
