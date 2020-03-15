@@ -67,9 +67,19 @@ TEST_CASE("local variable") {
 }
 
 TEST_CASE("if statement") {
-  const std::string source{R"(
+  std::string source{R"(
 if (true) print 1;
 )"};
-  const std::string expected{"1\n"};
+  std::string expected{"1\n"};
+  CHECK_EQ(run(source), expected);
+
+  source = {R"(
+if (false) {
+  print 1;
+} else {
+  print 2;
+}
+)"};
+  expected = {"2\n"};
   CHECK_EQ(run(source), expected);
 }

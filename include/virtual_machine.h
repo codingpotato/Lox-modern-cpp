@@ -185,6 +185,11 @@ inline void virtual_machine::handle<op_print>(oprand_t) {
 }
 
 template <>
+inline void virtual_machine::handle<op_jump>(oprand_t oprand) {
+  ip_ += oprand;
+}
+
+template <>
 inline void virtual_machine::handle<op_jump_if_false>(oprand_t oprand) {
   ENSURES(!stack_.empty());
   if (!peek().as<bool>()) {

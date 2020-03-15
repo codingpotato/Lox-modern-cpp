@@ -165,10 +165,19 @@ class compiler {
     expression(ch);
     consume(token::right_paren, "Expect ')' after condition.");
 
-    const auto if_false_index =
+    const auto then_jump_index =
         ch.add_instruction(op_jump_if_false{}, 0, previous_->line);
+    ch.add_instruction(op_pop{}, previous_->line);
     statement(ch);
-    ch.set_oprand(if_false_index, ch.code().size() - (if_false_index + 1));
+    const auto else_jump_index =
+        ch.add_instruction(op_jump{}, 0, previous_->line);
+
+    ch.set_oprand(then_jump_index, ch.code().size() - (then_jump_index + 1));
+    ch.add_instruction(op_pop{}, previous_->line);
+    if (match(token::k_else)) {
+      statement(ch);
+    }
+    ch.set_oprand(else_jump_index, ch.code().size() - (else_jump_index + 1));
   }
 
   void parse_block(chunk& ch) {
