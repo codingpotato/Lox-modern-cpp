@@ -74,12 +74,38 @@ if (true) print 1;
   CHECK_EQ(run(source), expected);
 
   source = {R"(
-if (false) {
+if (1 > 2) {
   print 1;
 } else {
   print 2;
 }
 )"};
   expected = {"2\n"};
+  CHECK_EQ(run(source), expected);
+}
+
+TEST_CASE("and expression") {
+  std::string source{R"(
+print true and true;
+)"};
+  std::string expected{"true\n"};
+  CHECK_EQ(run(source), expected);
+
+  source = {R"(
+print true and false;
+)"};
+  expected = {"false\n"};
+  CHECK_EQ(run(source), expected);
+
+  source = {R"(
+print false and true;
+)"};
+  expected = {"false\n"};
+  CHECK_EQ(run(source), expected);
+
+  source = {R"(
+print false and false;
+)"};
+  expected = {"false\n"};
   CHECK_EQ(run(source), expected);
 }

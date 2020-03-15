@@ -64,6 +64,7 @@ struct rules_generator {
         {token::identifier, {&Compiler::add_variable, nullptr, p_none}},
         {token::number, {&Compiler::add_number, nullptr, p_none}},
         {token::string, {&Compiler::add_string, nullptr, p_none}},
+        {token::k_and, {nullptr, &Compiler::parse_and, p_and}},
         {token::k_false, {&Compiler::add_literal, nullptr, p_none}},
         {token::k_nil, {&Compiler::add_literal, nullptr, p_none}},
         {token::k_true, {&Compiler::add_literal, nullptr, p_none}},
@@ -324,6 +325,14 @@ class compiler {
       default:
         throw internal_error{"Unknow literal."};
     }
+  }
+
+  void parse_and(chunk& ch, bool) {
+    const auto end_jump_index =
+        ch.add_instruction(op_jump_if_false{}, 0, previous_->line);
+    ch.add_instruction(op_pop{}, previous_->line);
+    parse_precedence(precedence::p_and, ch);
+    ch.set_oprand(end_jump_index, ch.code().size() - (end_jump_index + 1));
   }
 
   void parse_precedence(precedence::precedence prec, chunk& ch) {
