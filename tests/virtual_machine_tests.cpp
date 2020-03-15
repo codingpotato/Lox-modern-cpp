@@ -15,3 +15,9 @@ TEST_CASE("global variable") {
   auto chunk = lox::compiler{}.compile(scanner.scan());
   lox::virtual_machine{}.interpret(chunk);
 }
+
+TEST_CASE("set global variable") {
+  lox::scanner scanner{"var a = 1; a = 2; print a;"};
+  auto chunk = lox::compiler{}.compile(scanner.scan());
+  lox::virtual_machine{}.interpret(chunk);
+}
