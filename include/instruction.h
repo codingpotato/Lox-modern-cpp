@@ -16,12 +16,12 @@
               generator(op_set_global, true) generator(op_equal, false)      \
                   generator(op_greater, false) generator(op_less, false)     \
                       generator(op_add, false) generator(op_subtract, false) \
-                          generator(op_multiply, false)                      \
-                              generator(op_divide, false)                    \
-                                  generator(op_not, false)                   \
-                                      generator(op_negate, false)            \
-                                          generator(op_print, false)         \
-                                              generator(op_return, false)
+                          generator(op_multiply, false) generator(           \
+                              op_divide, false) generator(op_not, false)     \
+                              generator(op_negate, false)                    \
+                                  generator(op_print, false)                 \
+                                      generator(op_jump_if_false, true)      \
+                                          generator(op_return, false)
 
 #define FORWARD_DECLARATION(opcode, has_oprand_value) struct opcode;
 
@@ -60,6 +60,11 @@ struct instruction {
   }
 
   constexpr oprand_t oprand() const noexcept { return raw_data_ & oprand_mask; }
+  void set_oprand(oprand_t oprand) noexcept {
+    ENSURES(oprand <= oprand_mask);
+    raw_data_ &= ~oprand_mask;
+    raw_data_ |= oprand & oprand_mask;
+  }
 
  private:
   using raw_data_t = unsigned int;

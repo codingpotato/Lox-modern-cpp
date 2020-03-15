@@ -49,6 +49,7 @@ class virtual_machine {
 
   std::ostream& out;
   chunk main_;
+  std::size_t ip_;
   value_vector stack_;
   std::map<std::string, value> globals_;
 };
@@ -179,8 +180,16 @@ inline void virtual_machine::handle<op_negate>(oprand_t) {
 
 template <>
 inline void virtual_machine::handle<op_print>(oprand_t) {
-  ENSURES(stack_.size() > 0);
+  ENSURES(!stack_.empty());
   out << pop().repr() << "\n";
+}
+
+template <>
+inline void virtual_machine::handle<op_jump_if_false>(oprand_t oprand) {
+  ENSURES(!stack_.empty());
+  if (!peek().as<bool>()) {
+    ip_ += oprand;
+  }
 }
 
 template <>
@@ -189,8 +198,10 @@ inline void virtual_machine::handle<op_return>(oprand_t) {}
 inline void virtual_machine::interpret(chunk ch) {
   main_ = std::move(ch);
   stack_.clear();
-  for (auto& instr : main_.code()) {
-    instr.visit(
+  ip_ = 0;
+  while (ip_ < main_.code().size()) {
+    const auto& instruction = main_.code()[ip_++];
+    instruction.visit(
         [this](auto opcode, auto oprand) { handle<decltype(opcode)>(oprand); });
     ;
   }

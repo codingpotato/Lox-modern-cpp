@@ -10,22 +10,26 @@
 
 namespace lox {
 
-struct chunk {
+class chunk {
+ public:
   using code_vector = std::vector<instruction>;
   using value_vector = std::vector<value>;
   using line_vector = std::vector<int>;
 
   template <typename Opcode>
-  void add_instruction(Opcode opcode, int line) noexcept {
+  std::size_t add_instruction(Opcode opcode, int line) noexcept {
     code_.emplace_back(instruction{opcode});
     lines_.emplace_back(line);
     EXPECTS(lines_.size() == code_.size());
+    return code_.size() - 1;
   }
   template <typename Opcode>
-  void add_instruction(Opcode opcode, oprand_t oprand, int line) noexcept {
+  std::size_t add_instruction(Opcode opcode, oprand_t oprand,
+                              int line) noexcept {
     code_.emplace_back(instruction{opcode, oprand});
     lines_.emplace_back(line);
     EXPECTS(lines_.size() == code_.size());
+    return code_.size() - 1;
   }
 
   template <typename... Args>
@@ -36,6 +40,10 @@ struct chunk {
 
   const code_vector& code() const noexcept { return code_; }
   const value_vector& constants() const noexcept { return constants_; }
+
+  void set_oprand(std::size_t offset, oprand_t oprand) noexcept {
+    return code_[offset].set_oprand(oprand);
+  }
 
   std::string repr(const std::string& name) const noexcept {
     std::string string = "== " + name + " ==\n";

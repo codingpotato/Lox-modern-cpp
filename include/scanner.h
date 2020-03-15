@@ -240,10 +240,10 @@ struct scanner {
     }
   }
 
-  token::type_t check_keyword(const std::string& rest, token::type_t type) const
-      noexcept {
-    auto first = start_ + 1;
-    auto last = start_ + 1 + rest.size();
+  token::type_t check_keyword(int distance, const std::string& rest,
+                              token::type_t type) const noexcept {
+    auto first = start_ + distance;
+    auto last = start_ + distance + rest.size();
     if (std::equal(first, last, rest.cbegin(), rest.cend())) {
       return type;
     }
@@ -253,49 +253,49 @@ struct scanner {
   token::type_t identifier_type() const noexcept {
     switch (*start_) {
       case 'a':
-        return check_keyword("nd", token::k_and);
+        return check_keyword(1, "nd", token::k_and);
       case 'c':
-        return check_keyword("lass", token::k_class);
+        return check_keyword(1, "lass", token::k_class);
       case 'e':
-        return check_keyword("lse", token::k_else);
+        return check_keyword(1, "lse", token::k_else);
       case 'f':
         if (std::distance(start_, source_.cend()) > 1) {
           switch (*(start_ + 1)) {
             case 'a':
-              return check_keyword("lse", token::k_false);
+              return check_keyword(2, "lse", token::k_false);
             case 'o':
-              return check_keyword("r", token::k_for);
+              return check_keyword(2, "r", token::k_for);
             case 'u':
-              return check_keyword("n", token::k_func);
+              return check_keyword(2, "n", token::k_func);
           }
         }
         break;
       case 'i':
-        return check_keyword("f", token::k_if);
+        return check_keyword(1, "f", token::k_if);
       case 'n':
-        return check_keyword("il", token::k_nil);
+        return check_keyword(1, "il", token::k_nil);
       case 'o':
-        return check_keyword("r", token::k_or);
+        return check_keyword(1, "r", token::k_or);
       case 'p':
-        return check_keyword("rint", token::k_print);
+        return check_keyword(1, "rint", token::k_print);
       case 'r':
-        return check_keyword("eturn", token::k_return);
+        return check_keyword(1, "eturn", token::k_return);
       case 's':
-        return check_keyword("uper", token::k_super);
+        return check_keyword(1, "uper", token::k_super);
       case 't':
         if (std::distance(start_, source_.cend()) > 1) {
           switch (*(start_ + 1)) {
             case 'h':
-              return check_keyword("is", token::k_this);
+              return check_keyword(2, "is", token::k_this);
             case 'r':
-              return check_keyword("ue", token::k_true);
+              return check_keyword(2, "ue", token::k_true);
           }
         }
         break;
       case 'v':
-        return check_keyword("ar", token::k_var);
+        return check_keyword(1, "ar", token::k_var);
       case 'w':
-        return check_keyword("hile", token::k_while);
+        return check_keyword(1, "hile", token::k_while);
     }
     return token::identifier;
   }

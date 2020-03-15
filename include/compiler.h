@@ -149,6 +149,8 @@ class compiler {
   void statement(chunk& ch) {
     if (match(token::k_print)) {
       print_statement(ch);
+    } else if (match(token::k_if)) {
+      parse_if(ch);
     } else if (match(token::left_brace)) {
       begin_scope();
       parse_block(ch);
@@ -156,6 +158,17 @@ class compiler {
     } else {
       expression_statement(ch);
     }
+  }
+
+  void parse_if(chunk& ch) {
+    consume(token::left_paren, "Expect '(' after 'if'.");
+    expression(ch);
+    consume(token::right_paren, "Expect ')' after condition.");
+
+    const auto if_false_index =
+        ch.add_instruction(op_jump_if_false{}, 0, previous_->line);
+    statement(ch);
+    ch.set_oprand(if_false_index, ch.code().size() - (if_false_index + 1));
   }
 
   void parse_block(chunk& ch) {

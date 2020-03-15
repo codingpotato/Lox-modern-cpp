@@ -65,3 +65,11 @@ TEST_CASE("local variable") {
   const std::string expected{"1\n"};
   CHECK_EQ(run(source), expected);
 }
+
+TEST_CASE("if statement") {
+  const std::string source{R"(
+if (true) print 1;
+)"};
+  const std::string expected{"1\n"};
+  CHECK_EQ(run(source), expected);
+}
