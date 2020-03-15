@@ -27,7 +27,7 @@ enum precedence {
 };
 
 template <typename Compiler>
-using parse_func = void (Compiler::*)(chunk&);
+using parse_func = void (Compiler::*)(chunk&, bool can_assign);
 
 template <typename Compiler>
 struct rule {
@@ -100,23 +100,23 @@ class compiler {
   }
 
   void var_declaration(chunk& ch) {
-    auto global = add_variable(ch, "Expect variable name.");
+    const auto name = add_variable_name(ch, "Expect variable name.");
     if (match(token::equal)) {
       expression(ch);
     } else {
       ch.add_instruction(op_nil{}, previous_->line);
     }
     consume(token::semicolon, "Expect ';' after variable declaration.");
-    define_variable(ch, global);
+    define_variable(ch, name);
   }
 
-  std::size_t add_variable(chunk& ch, const std::string& message) {
+  std::size_t add_variable_name(chunk& ch, const std::string& message) {
     consume(token::identifier, message);
     return ch.add_constant(previous_->lexeme);
   }
 
-  void define_variable(chunk& ch, std::size_t global) {
-    ch.add_instruction(op_define_global{}, global, previous_->line);
+  void define_variable(chunk& ch, std::size_t name) {
+    ch.add_instruction(op_define_global{}, name, previous_->line);
   }
 
   void statement(chunk& ch) {
@@ -141,7 +141,7 @@ class compiler {
 
   void expression(chunk& ch) { parse_precedence(precedence::p_assignment, ch); }
 
-  void binary(chunk& ch) {
+  void binary(chunk& ch, bool) {
     const auto op_type = previous_->type;
     parse_precedence(
         static_cast<precedence::precedence>(p_rules_[op_type].prec + 1), ch);
@@ -184,12 +184,12 @@ class compiler {
     }
   }
 
-  void grouping(chunk& ch) {
+  void grouping(chunk& ch, bool) {
     expression(ch);
     consume(token::right_paren, "Expect ')' after expression.");
   }
 
-  void unary(chunk& ch) {
+  void unary(chunk& ch, bool) {
     auto op_type = previous_->type;
     parse_precedence(precedence::p_unary, ch);
     switch (op_type) {
@@ -204,9 +204,9 @@ class compiler {
     }
   }
 
-  void add_variable(chunk& ch) {
+  void add_variable(chunk& ch, bool can_assign) {
     const auto constant = ch.add_constant(previous_->lexeme);
-    if (match(token::equal)) {
+    if (can_assign && match(token::equal)) {
       expression(ch);
       ch.add_instruction(op_set_global{}, constant, previous_->line);
     } else {
@@ -214,17 +214,17 @@ class compiler {
     }
   }
 
-  void add_number(chunk& ch) {
+  void add_number(chunk& ch, bool) {
     const auto constant = ch.add_constant(std::stod(previous_->lexeme));
     ch.add_instruction(op_constant{}, constant, previous_->line);
   }
 
-  void add_string(chunk& ch) {
+  void add_string(chunk& ch, bool) {
     const auto constant = ch.add_constant(previous_->lexeme);
     ch.add_instruction(op_constant{}, constant, previous_->line);
   }
 
-  void add_literal(chunk& ch) {
+  void add_literal(chunk& ch, bool) {
     switch (previous_->type) {
       case token::k_nil:
         ch.add_instruction(op_nil{}, previous_->line);
@@ -247,12 +247,17 @@ class compiler {
       throw compile_error{"Expect expression."};
       return;
     }
-    (this->*prefix)(ch);
+    const auto can_assign = prec <= precedence::p_assignment;
+    (this->*prefix)(ch, can_assign);
     while (static_cast<int>(prec) <
            static_cast<int>(p_rules_[current_->type].prec)) {
       advance();
       auto infix = p_rules_[previous_->type].infix;
-      (this->*infix)(ch);
+      (this->*infix)(ch, can_assign);
+    }
+
+    if (can_assign && match(token::equal)) {
+      throw compile_error{"Invalid assignment target."};
     }
   }
 
