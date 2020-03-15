@@ -27,12 +27,14 @@ struct value {
   value(value&& v) noexcept { copy(std::move(v)); }
   value& operator=(const value& v) {
     if (this != &v) {
+      destory();
       copy(v);
     }
     return *this;
   }
   value& operator=(value&& v) {
     if (this != &v) {
+      destory();
       copy(std::move(v));
     }
     return *this;
@@ -116,7 +118,6 @@ struct value {
 
   template <typename Value>
   void copy(Value&& from) noexcept {
-    destory();
     id_ = from.id_;
     switch (id_) {
       case id<nil>:
