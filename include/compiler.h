@@ -45,7 +45,7 @@ struct rules_generator {
   static constexpr rules<Compiler> make_rules() noexcept {
     struct element {
       token::type_t type;
-      rule<Compiler> rule;
+      rule<Compiler> rule_of_type;
     };
     constexpr element elements[] = {
         {token::left_paren, {&Compiler::grouping, nullptr, p_none}},
@@ -70,7 +70,7 @@ struct rules_generator {
     };
     rules<Compiler> rules{};
     for (auto it = std::cbegin(elements); it != std::end(elements); ++it) {
-      rules[static_cast<std::size_t>(it->type)] = it->rule;
+      rules[static_cast<std::size_t>(it->type)] = it->rule_of_type;
     }
     return rules;
   };

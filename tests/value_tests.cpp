@@ -2,11 +2,27 @@
 
 #include "value.h"
 
-TEST_CASE("value") {
-  const auto str = "test string";
-  const lox::value v{str};
-  CHECK(v.is<std::string>());
-  CHECK_EQ(v.as<std::string>(), str);
+TEST_CASE("nil value") {
+  const lox::value v{};
+  CHECK(v.is<lox::nil>());
+}
+
+TEST_CASE("bool value") {
+  lox::value v{true};
+  CHECK(v.is<bool>());
+  CHECK(v.as<bool>());
+  v = false;
+  CHECK(v.is<bool>());
+  CHECK(!v.as<bool>());
+}
+
+TEST_CASE("double value") {
+  lox::value v{1.0};
+  CHECK(v.is<double>());
+  CHECK_EQ(v.as<double>(), 1);
+  v = 2.0;
+  CHECK(v.is<double>());
+  CHECK_EQ(v.as<double>(), 2);
 }
 
 TEST_CASE("copy string value") {
@@ -26,4 +42,21 @@ TEST_CASE("move string value") {
   CHECK(v1.is<lox::nil>());
   CHECK(v2.is<std::string>());
   CHECK_EQ(v2.as<std::string>(), str);
+}
+
+TEST_CASE("multiple type value assignment") {
+  lox::value v{};
+  CHECK(v.is<lox::nil>());
+  v = false;
+  CHECK(v.is<bool>());
+  CHECK(!v.as<bool>());
+  v = 1.0;
+  CHECK(v.is<double>());
+  CHECK_EQ(v.as<double>(), 1.0);
+  const auto str = "test string";
+  v = str;
+  CHECK(v.is<std::string>());
+  CHECK_EQ(v.as<std::string>(), str);
+  v = {};
+  CHECK(v.is<lox::nil>());
 }
