@@ -73,14 +73,14 @@ if (true) print 1;
   std::string expected{"1\n"};
   CHECK_EQ(run(source), expected);
 
-  source = {R"(
+  source = std::string{R"(
 if (1 > 2) {
   print 1;
 } else {
   print 2;
 }
 )"};
-  expected = {"2\n"};
+  expected = std::string{"2\n"};
   CHECK_EQ(run(source), expected);
 }
 
@@ -91,22 +91,22 @@ print true and true;
   std::string expected{"true\n"};
   CHECK_EQ(run(source), expected);
 
-  source = {R"(
+  source = std::string{R"(
 print true and false;
 )"};
-  expected = {"false\n"};
+  expected = std::string{"false\n"};
   CHECK_EQ(run(source), expected);
 
-  source = {R"(
+  source = std::string{R"(
 print false and true;
 )"};
-  expected = {"false\n"};
+  expected = std::string{"false\n"};
   CHECK_EQ(run(source), expected);
 
-  source = {R"(
+  source = std::string{R"(
 print false and false;
 )"};
-  expected = {"false\n"};
+  expected = std::string{"false\n"};
   CHECK_EQ(run(source), expected);
 }
 
@@ -117,21 +117,21 @@ print true or true;
   std::string expected{"true\n"};
   CHECK_EQ(run(source), expected);
 
-  source = {R"(
+  source = std::string{R"(
 print true or false;
 )"};
-  expected = {"true\n"};
+  expected = std::string{"true\n"};
   CHECK_EQ(run(source), expected);
 
-  source = {R"(
+  source = std::string{R"(
 print false or true;
 )"};
-  expected = {"true\n"};
+  expected = std::string{"true\n"};
   CHECK_EQ(run(source), expected);
 
-  source = {R"(
+  source = std::string{R"(
 print false or false;
 )"};
-  expected = {"false\n"};
+  expected = std::string{"false\n"};
   CHECK_EQ(run(source), expected);
 }
