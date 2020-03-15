@@ -109,3 +109,29 @@ print false and false;
   expected = {"false\n"};
   CHECK_EQ(run(source), expected);
 }
+
+TEST_CASE("or expression") {
+  std::string source{R"(
+print true or true;
+)"};
+  std::string expected{"true\n"};
+  CHECK_EQ(run(source), expected);
+
+  source = {R"(
+print true or false;
+)"};
+  expected = {"true\n"};
+  CHECK_EQ(run(source), expected);
+
+  source = {R"(
+print false or true;
+)"};
+  expected = {"true\n"};
+  CHECK_EQ(run(source), expected);
+
+  source = {R"(
+print false or false;
+)"};
+  expected = {"false\n"};
+  CHECK_EQ(run(source), expected);
+}

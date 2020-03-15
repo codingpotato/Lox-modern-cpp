@@ -65,6 +65,7 @@ struct rules_generator {
         {token::number, {&Compiler::add_number, nullptr, p_none}},
         {token::string, {&Compiler::add_string, nullptr, p_none}},
         {token::k_and, {nullptr, &Compiler::parse_and, p_and}},
+        {token::k_or, {nullptr, &Compiler::parse_or, p_or}},
         {token::k_false, {&Compiler::add_literal, nullptr, p_none}},
         {token::k_nil, {&Compiler::add_literal, nullptr, p_none}},
         {token::k_true, {&Compiler::add_literal, nullptr, p_none}},
@@ -332,6 +333,17 @@ class compiler {
         ch.add_instruction(op_jump_if_false{}, 0, previous_->line);
     ch.add_instruction(op_pop{}, previous_->line);
     parse_precedence(precedence::p_and, ch);
+    ch.set_oprand(end_jump_index, ch.code().size() - (end_jump_index + 1));
+  }
+
+  void parse_or(chunk& ch, bool) {
+    const auto else_jump_index =
+        ch.add_instruction(op_jump_if_false{}, 0, previous_->line);
+    const auto end_jump_index =
+        ch.add_instruction(op_jump{}, 0, previous_->line);
+    ch.set_oprand(else_jump_index, ch.code().size() - (else_jump_index + 1));
+    ch.add_instruction(op_pop{}, previous_->line);
+    parse_precedence(precedence::p_or, ch);
     ch.set_oprand(end_jump_index, ch.code().size() - (end_jump_index + 1));
   }
 
