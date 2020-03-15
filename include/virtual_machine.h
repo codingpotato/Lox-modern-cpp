@@ -1,8 +1,8 @@
 #ifndef LOX_VIRTUAL_MACHINE_H
 #define LOX_VIRTUAL_MACHINE_H
 
-#include <iostream>
 #include <map>
+#include <ostream>
 #include <string>
 #include <vector>
 
@@ -15,7 +15,10 @@
 
 namespace lox {
 
-struct virtual_machine {
+class virtual_machine {
+ public:
+  explicit virtual_machine(std::ostream& os) noexcept : out{os} {}
+
   inline void interpret(chunk ch);
 
   template <typename Opcode>
@@ -42,9 +45,12 @@ struct virtual_machine {
   }
   const value& peek() const noexcept { return stack_.back(); }
 
+  using value_vector = std::vector<value>;
+
+  std::ostream& out;
   chunk main_;
-  std::vector<value> stack_;
-  std::map<std::string, value> globals;
+  value_vector stack_;
+  std::map<std::string, value> globals_;
 };
 
 template <>
@@ -73,11 +79,26 @@ inline void virtual_machine::handle<op_pop>(oprand_t) {
 }
 
 template <>
+inline void virtual_machine::handle<op_get_local>(oprand_t oprand) {
+  ENSURES(oprand < main_.constants().size());
+  ENSURES(oprand < stack_.size());
+  push(stack_[oprand]);
+}
+
+template <>
+inline void virtual_machine::handle<op_set_local>(oprand_t oprand) {
+  ENSURES(oprand < main_.constants().size());
+  const auto slot = main_.constants()[oprand].as<double>();
+  ENSURES(slot < stack_.size());
+  stack_[slot] = peek();
+}
+
+template <>
 inline void virtual_machine::handle<op_get_global>(oprand_t oprand) {
   ENSURES(oprand < main_.constants().size());
   const auto& name = main_.constants()[oprand].as<std::string>();
-  if (globals.find(name) != globals.cend()) {
-    push(globals[name]);
+  if (globals_.find(name) != globals_.cend()) {
+    push(globals_[name]);
   } else {
     throw runtime_error{"Undefined variable: " + name};
   }
@@ -87,15 +108,15 @@ template <>
 inline void virtual_machine::handle<op_define_global>(oprand_t oprand) {
   ENSURES(oprand < main_.constants().size());
   const auto& name = main_.constants()[oprand].as<std::string>();
-  globals.emplace(name, pop());
+  globals_.emplace(name, pop());
 }
 
 template <>
 inline void virtual_machine::handle<op_set_global>(oprand_t oprand) {
   ENSURES(oprand < main_.constants().size());
   const auto& name = main_.constants()[oprand].as<std::string>();
-  if (globals.find(name) != globals.cend()) {
-    globals[name] = peek();
+  if (globals_.find(name) != globals_.cend()) {
+    globals_[name] = peek();
   } else {
     throw runtime_error{"Undefined variable: " + name};
   }
@@ -159,7 +180,7 @@ inline void virtual_machine::handle<op_negate>(oprand_t) {
 template <>
 inline void virtual_machine::handle<op_print>(oprand_t) {
   ENSURES(stack_.size() > 0);
-  std::cout << pop().repr() << "\n";
+  out << pop().repr() << "\n";
 }
 
 template <>
@@ -169,16 +190,6 @@ inline void virtual_machine::interpret(chunk ch) {
   main_ = std::move(ch);
   stack_.clear();
   for (auto& instr : main_.code()) {
-#ifdef DEBUG_TRACE_EXECUTION
-    std::cout << instr.visit([](auto opcode, auto) { return opcode.name; });
-    ;
-    std::cout << "    ";
-    for (auto& v : stack_) {
-      std::cout << "[ " << v.repr() << " ]";
-    }
-    std::cout << "\n";
-#endif
-
     instr.visit(
         [this](auto opcode, auto oprand) { handle<decltype(opcode)>(oprand); });
     ;

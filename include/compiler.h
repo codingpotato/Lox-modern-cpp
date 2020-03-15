@@ -83,6 +83,7 @@ class compiler {
   chunk compile(token_vector tokens) noexcept {
     tokens_ = std::move(tokens);
     current_ = tokens_.cbegin();
+    scope_depth_ = 0;
     chunk ch;
     while (!match(token::eof)) {
       declaration(ch);
@@ -100,7 +101,7 @@ class compiler {
   }
 
   void var_declaration(chunk& ch) {
-    const auto name = add_variable_name(ch, "Expect variable name.");
+    const auto name = variable_name_constant(ch, "Expect variable name.");
     if (match(token::equal)) {
       expression(ch);
     } else {
@@ -110,21 +111,58 @@ class compiler {
     define_variable(ch, name);
   }
 
-  std::size_t add_variable_name(chunk& ch, const std::string& message) {
+  std::size_t variable_name_constant(chunk& ch, const std::string& message) {
     consume(token::identifier, message);
+
+    declare_variable();
+    if (scope_depth_ > 0) {
+      return 0;
+    }
     return ch.add_constant(previous_->lexeme);
   }
 
-  void define_variable(chunk& ch, std::size_t name) {
-    ch.add_instruction(op_define_global{}, name, previous_->line);
+  void declare_variable() {
+    if (scope_depth_ > 0) {
+      const auto& name = previous_->lexeme;
+      for (auto it = locals_.crbegin(); it != locals_.crend(); ++it) {
+        if (it->depth != -1 && it->depth < scope_depth_) {
+          break;
+        }
+        if (it->name == name) {
+          throw compile_error{"Variable '" + name +
+                              "' already declared in this scope."};
+        }
+      }
+      locals_.emplace_back(previous_->lexeme, -1);
+    }
+  }
+
+  void define_variable(chunk& ch, std::size_t name) noexcept {
+    if (scope_depth_ > 0) {
+      ENSURES(!locals_.empty());
+      locals_.back().depth = scope_depth_;
+    } else {
+      ch.add_instruction(op_define_global{}, name, previous_->line);
+    }
   }
 
   void statement(chunk& ch) {
     if (match(token::k_print)) {
       print_statement(ch);
+    } else if (match(token::left_brace)) {
+      begin_scope();
+      parse_block(ch);
+      end_scope(ch);
     } else {
       expression_statement(ch);
     }
+  }
+
+  void parse_block(chunk& ch) {
+    while (!check(token::right_brace) && !check(token::eof)) {
+      declaration(ch);
+    }
+    consume(token::right_brace, "Expect '}' after block.");
   }
 
   void print_statement(chunk& ch) {
@@ -204,13 +242,39 @@ class compiler {
     }
   }
 
+  int resolve_local(const std::string& name) {
+    for (int i = locals_.size() - 1; i >= 0; --i) {
+      if (locals_[i].name == name) {
+        if (locals_[i].depth != -1) {
+          return i;
+        }
+        throw compile_error{
+            "Cannot read local variable in its own initializer."};
+      }
+    }
+    return -1;
+  }
+
   void add_variable(chunk& ch, bool can_assign) {
-    const auto constant = ch.add_constant(previous_->lexeme);
+    auto index = resolve_local(previous_->lexeme);
+    bool is_global = false;
+    if (index == -1) {
+      is_global = true;
+      index = ch.add_constant(previous_->lexeme);
+    }
     if (can_assign && match(token::equal)) {
       expression(ch);
-      ch.add_instruction(op_set_global{}, constant, previous_->line);
+      if (is_global) {
+        ch.add_instruction(op_set_global{}, index, previous_->line);
+      } else {
+        ch.add_instruction(op_set_local{}, index, previous_->line);
+      }
     } else {
-      ch.add_instruction(op_get_global{}, constant, previous_->line);
+      if (is_global) {
+        ch.add_instruction(op_get_global{}, index, previous_->line);
+      } else {
+        ch.add_instruction(op_get_local{}, index, previous_->line);
+      }
     }
   }
 
@@ -274,13 +338,31 @@ class compiler {
     }
   }
 
+  bool check(token::type_t type) noexcept { return current_->type == type; }
+
   bool match(token::type_t type) noexcept {
-    if (current_->type == type) {
+    if (check(type)) {
       advance();
       return true;
     }
     return false;
   }
+
+  void begin_scope() noexcept { ++scope_depth_; }
+  void end_scope(chunk& ch) noexcept {
+    --scope_depth_;
+    while (!locals_.empty() && locals_.back().depth > scope_depth_) {
+      ch.add_instruction(op_pop{}, previous_->line);
+      locals_.pop_back();
+    }
+  }
+
+  struct local {
+    local(std::string n, int d) noexcept : name{std::move(n)}, depth{d} {}
+
+    std::string name;
+    int depth;
+  };
 
   friend precedence::rules_generator<compiler>;
   static constexpr precedence::rules<compiler> p_rules_ =
@@ -289,6 +371,8 @@ class compiler {
   token_vector tokens_;
   token_vector::const_iterator current_;
   token_vector::const_iterator previous_;
+  std::vector<local> locals_;
+  int scope_depth_;
 };
 
 }  // namespace lox

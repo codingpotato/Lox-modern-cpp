@@ -171,11 +171,11 @@ struct scanner {
       }
       advance();
     }
-    if (is_at_end()) {
-      throw scan_error{"Unterminated string."};
+    if (!is_at_end()) {
+      advance();
+      return make_token(token::string);
     }
-    advance();
-    return make_token(token::string);
+    throw scan_error{"Unterminated string."};
   }
 
   token make_token(token::type_t type) const noexcept {
