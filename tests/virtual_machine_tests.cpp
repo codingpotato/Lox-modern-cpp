@@ -135,3 +135,24 @@ print false or false;
   expected = std::string{"false\n"};
   CHECK_EQ(run(source), expected);
 }
+
+TEST_CASE("while statement") {
+  std::string source{R"(
+var a = 1;
+while (a < 10) {
+  print a;
+  a = a + 1;
+}
+)"};
+  std::string expected{R"(1
+2
+3
+4
+5
+6
+7
+8
+9
+)"};
+  CHECK_EQ(run(source), expected);
+}

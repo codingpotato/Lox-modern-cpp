@@ -20,7 +20,8 @@
                       generator(op_not, false) generator(op_negate, false)     \
                           generator(op_print, false) generator(op_jump, true)  \
                               generator(op_jump_if_false, true)                \
-                                  generator(op_return, false)
+                                  generator(op_loop, true)                     \
+                                      generator(op_return, false)
 
 #define FORWARD_DECLARATION(opcode, has_oprand_value) struct opcode;
 
@@ -72,7 +73,7 @@ struct instruction {
   constexpr static unsigned int opcode_bits = 8;
   constexpr static unsigned int oprand_bits =
       sizeof(raw_data_t) * char_bits - opcode_bits;
-  constexpr static unsigned int oprand_mask = 0xffff;
+  constexpr static unsigned int oprand_mask = (1 << oprand_bits) - 1;
 
   constexpr std::size_t raw_opcode() const noexcept {
     return raw_data_ >> oprand_bits;
@@ -80,7 +81,7 @@ struct instruction {
 
   template <typename Opcode>
   static constexpr raw_data_t raw_data_of(oprand_t oprand) noexcept {
-    ENSURES(oprand <= 0xffff);
+    ENSURES(oprand <= oprand_mask);
     return Opcode::id << oprand_bits | oprand;
   }
 

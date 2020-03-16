@@ -153,6 +153,8 @@ class compiler {
       print_statement(ch);
     } else if (match(token::k_if)) {
       parse_if(ch);
+    } else if (match(token::k_while)) {
+      parse_while(ch);
     } else if (match(token::left_brace)) {
       begin_scope();
       parse_block(ch);
@@ -180,6 +182,21 @@ class compiler {
       statement(ch);
     }
     ch.set_oprand(else_jump_index, ch.code().size() - (else_jump_index + 1));
+  }
+
+  void parse_while(chunk& ch) {
+    const auto loop_start = ch.code().size();
+    consume(token::left_paren, "Expect '(' after 'while'.");
+    expression(ch);
+    consume(token::right_paren, "Expect ')' after condition.");
+    const auto exit_jump_index =
+        ch.add_instruction(op_jump_if_false{}, 0, previous_->line);
+    ch.add_instruction(op_pop{}, previous_->line);
+    statement(ch);
+    ch.add_instruction(op_loop{}, ch.code().size() - loop_start + 1,
+                       previous_->line);
+    ch.set_oprand(exit_jump_index, ch.code().size() - (exit_jump_index + 1));
+    ch.add_instruction(op_pop{}, previous_->line);
   }
 
   void parse_block(chunk& ch) {

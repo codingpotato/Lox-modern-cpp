@@ -11,8 +11,6 @@
 #include "instruction.h"
 #include "value.h"
 
-#define DEBUG_TRACE_EXECUTION
-
 namespace lox {
 
 class virtual_machine {
@@ -81,17 +79,14 @@ inline void virtual_machine::handle<op_pop>(oprand_t) {
 
 template <>
 inline void virtual_machine::handle<op_get_local>(oprand_t oprand) {
-  ENSURES(oprand < main_.constants().size());
   ENSURES(oprand < stack_.size());
   push(stack_[oprand]);
 }
 
 template <>
 inline void virtual_machine::handle<op_set_local>(oprand_t oprand) {
-  ENSURES(oprand < main_.constants().size());
-  const auto slot = main_.constants()[oprand].as<double>();
-  ENSURES(slot < stack_.size());
-  stack_[slot] = peek();
+  ENSURES(oprand < stack_.size());
+  stack_[oprand] = peek();
 }
 
 template <>
@@ -195,6 +190,11 @@ inline void virtual_machine::handle<op_jump_if_false>(oprand_t oprand) {
   if (!peek().as<bool>()) {
     ip_ += oprand;
   }
+}
+
+template <>
+inline void virtual_machine::handle<op_loop>(oprand_t oprand) {
+  ip_ -= oprand;
 }
 
 template <>
