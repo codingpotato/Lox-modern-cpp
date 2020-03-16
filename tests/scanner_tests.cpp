@@ -4,6 +4,7 @@
 
 inline void check_tokens(const lox::token_vector& tokens,
                          const lox::token_vector& expected) noexcept {
+  (void)(expected);
   CHECK_EQ(tokens.size(), expected.size());
   for (std::size_t i = 0; i < tokens.size(); ++i) {
     CHECK_EQ(tokens[i].type, expected[i].type);

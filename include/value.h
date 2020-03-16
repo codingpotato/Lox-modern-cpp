@@ -158,7 +158,7 @@ struct value {
 };
 
 inline value operator+(const value& lhs, const value& rhs) {
-  if (lhs.is<double>() && rhs.as<double>()) {
+  if (lhs.is<double>() && rhs.is<double>()) {
     return lhs.as<double>() + rhs.as<double>();
   } else if (lhs.is<std::string>() && rhs.is<std::string>()) {
     return lhs.as<std::string>() + rhs.as<std::string>();
