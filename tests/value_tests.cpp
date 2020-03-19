@@ -1,5 +1,6 @@
 #include <doctest.h>
 
+#include "performance.h"
 #include "value.h"
 
 TEST_CASE("nil value") {
@@ -59,4 +60,19 @@ TEST_CASE("multiple type value assignment") {
   CHECK_EQ(v.as<std::string>(), str);
   v = {};
   CHECK(v.is<lox::nil>());
+}
+
+TEST_CASE("variant value performance") {
+  volatile double result = 0;
+  lox::measure("variant value performance", 10000000, [&]() {
+    lox::variant::value value{(double)std::rand()};
+    lox::variant::value v = value;
+    result = v.as<double>();
+  });
+
+  lox::measure("value performance", 10000000, [&]() {
+    lox::value value{(double)std::rand()};
+    lox::value v = value;
+    result = v.as<double>();
+  });
 }

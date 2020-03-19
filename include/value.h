@@ -5,13 +5,36 @@
 #include <sstream>
 #include <string>
 #include <type_traits>
+#include <variant>
 
 #include "exception.h"
+#include "object.h"
 #include "type_list.h"
 
 namespace lox {
 
 struct nil {};
+
+namespace variant {
+
+struct value {
+  value() noexcept : storage{nil{}} {}
+  value(bool b) noexcept : storage{b} {}
+  value(double d) noexcept : storage{d} {}
+  value(const object* o) noexcept : storage{o} {}
+
+  template <typename T>
+  const T& as() const noexcept {
+    return std::get<T>(storage);
+  }
+
+ private:
+  using storage_t = std::variant<nil, bool, double, object*>;
+
+  storage_t storage;
+};
+
+}  // namespace variant
 
 struct value {
   value() noexcept : id_{id<nil>} {}
@@ -58,20 +81,11 @@ struct value {
   template <typename T>
   const T& as() const {
     if constexpr (std::is_same_v<T, bool>) {
-      if (id_ == id<bool>) {
-        return boolean_;
-      }
-      throw runtime_error{"Expect boolean value."};
+      return boolean_;
     } else if constexpr (std::is_same_v<T, double>) {
-      if (id_ == id<double>) {
-        return double_;
-      }
-      throw runtime_error{"Expect number value."};
+      return double_;
     } else if constexpr (std::is_same_v<T, std::string>) {
-      if (id_ == id<string_ptr>) {
-        return *string_;
-      }
-      throw runtime_error{"Expect string value."};
+      return *string_;
     }
   }
 
