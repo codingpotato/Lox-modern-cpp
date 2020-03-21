@@ -1,12 +1,9 @@
 #include <doctest.h>
 
 #include "object.h"
-#include "performance.h"
 
-TEST_CASE("object performance") {
-  volatile const std::string* result = nullptr;
-  lox::measure("object performance", 100000, [&]() {
-    lox::object string{"test string"};
-    result = &string.as<std::string>();
-  });
+TEST_CASE("object") {
+  const std::string str{"test string"};
+  lox::object object{str};
+  CHECK_EQ(object.as<std::string>(), str);
 }

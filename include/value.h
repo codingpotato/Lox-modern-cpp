@@ -15,26 +15,36 @@ namespace lox {
 
 struct nil {};
 
-namespace variant {
+namespace fast {
 
 struct value {
-  value() noexcept : storage{nil{}} {}
-  value(bool b) noexcept : storage{b} {}
-  value(double d) noexcept : storage{d} {}
-  value(const object* o) noexcept : storage{o} {}
+  value() noexcept : type_{nil} {}
+  value(bool b) noexcept : type_{boolean}, boolean_{b} {}
+  value(double d) noexcept : type_{number}, double_{d} {}
+  value(object* o) noexcept : type_{object_t}, object_{o} {}
 
   template <typename T>
   const T& as() const noexcept {
-    return std::get<T>(storage);
+    (void)type_;
+    if constexpr (std::is_same_v<T, bool>) {
+      return boolean_;
+    } else if constexpr (std::is_same_v<T, double>) {
+      return double_;
+    }
   }
 
  private:
-  using storage_t = std::variant<nil, bool, double, object*>;
+  enum type_t { nil, boolean, number, object_t };
 
-  storage_t storage;
+  type_t type_;
+  union {
+    bool boolean_;
+    double double_;
+    object* object_;
+  };
 };
 
-}  // namespace variant
+}  // namespace fast
 
 struct value {
   value() noexcept : id_{id<nil>} {}
@@ -83,7 +93,10 @@ struct value {
     if constexpr (std::is_same_v<T, bool>) {
       return boolean_;
     } else if constexpr (std::is_same_v<T, double>) {
-      return double_;
+      if (id_ == id<double>) {
+        return double_;
+      }
+      throw internal_error{""};
     } else if constexpr (std::is_same_v<T, std::string>) {
       return *string_;
     }

@@ -4,27 +4,36 @@
 #include <string>
 #include <variant>
 
+#include "contract.h"
+
 namespace lox {
 
-namespace variant {
-
 struct object {
-  explicit object(std::string string) noexcept : storage{std::move(string)} {}
+  explicit object(std::string str) noexcept
+      : type_{string}, string_{std::move(str)} {}
+
+  ~object() noexcept {
+    switch (type_) {
+      case string:
+        string_.~basic_string();
+        break;
+    }
+  }
 
   template <typename T>
   const std::string& as() const noexcept {
-    return std::get<std::string>(storage);
+    ENSURES(type_ == string);
+    return string_;
   }
 
  private:
-  using storage_t = std::variant<std::string>;
+  enum type_t { string };
 
-  storage_t storage;
+  type_t type_;
+  union {
+    std::string string_;
+  };
 };
-
-}  // namespace variant
-
-using object = variant::object;
 
 }  // namespace lox
 

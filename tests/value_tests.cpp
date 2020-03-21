@@ -1,7 +1,11 @@
 #include <doctest.h>
 
+#include <iostream>
+#include <vector>
+
 #include "performance.h"
 #include "value.h"
+#include "vector.h"
 
 TEST_CASE("nil value") {
   const lox::value v{};
@@ -62,17 +66,38 @@ TEST_CASE("multiple type value assignment") {
   CHECK(v.is<lox::nil>());
 }
 
-TEST_CASE("variant value performance") {
+TEST_CASE("value performance") {
+  std::srand(std::time(nullptr));
+  lox::vector<lox::fast::value> values;
+  for (std::size_t i = 0; i < 50; ++i) {
+    values.emplace_back(static_cast<double>(std::rand()));
+  }
   volatile double result = 0;
-  lox::measure("variant value performance", 10000000, [&]() {
-    lox::variant::value value{(double)std::rand()};
-    lox::variant::value v = value;
-    result = v.as<double>();
+  lox::measure("fast value performance", 10000000, [&]() {
+    result += values[std::rand() % values.size()].as<double>();
   });
+  std::cout << result << "\n";
 
-  lox::measure("value performance", 10000000, [&]() {
-    lox::value value{(double)std::rand()};
-    lox::value v = value;
-    result = v.as<double>();
-  });
+  {
+    lox::vector<lox::value> values;
+    for (std::size_t i = 0; i < 50; ++i) {
+      values.emplace_back(static_cast<double>(std::rand()));
+    }
+    volatile double result = 0;
+    lox::measure("value performance", 10000000, [&]() {
+      result += values[std::rand() % values.size()].as<double>();
+    });
+    std::cout << result << "\n";
+  }
+
+  {
+    lox::vector<int> values;
+    for (std::size_t i = 0; i < 50; ++i) {
+      values.emplace_back(static_cast<int>(std::rand()));
+    }
+    volatile int result = 0;
+    lox::measure("uint value performance", 10000000,
+                 [&]() { result += values[std::rand() % values.size()]; });
+    std::cout << result << "\n";
+  }
 }
