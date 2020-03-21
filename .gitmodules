@@ -1,6 +1,6 @@
-[submodule "vendor/benchmark"]
-	path = vendor/benchmark
+[submodule "submodules/benchmark"]
+	path = submodules/benchmark
 	url = https://github.com/google/benchmark.git
-[submodule "vendor/doctest"]
-	path = vendor/doctest
+[submodule "submodules/doctest"]
+	path = submodules/doctest
 	url = https://github.com/onqtam/doctest.git
