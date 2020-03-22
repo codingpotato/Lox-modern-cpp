@@ -11,8 +11,6 @@ jobs:
         compiler: [gcc, clang]
     steps:
       - uses: actions/checkout@master
-        with:
-          args: git submodule update --init --recursive
 
       - name: install
         run: |
@@ -32,3 +30,6 @@ jobs:
 
       - name: test
         run: cd build && ctest
+
+      - name: benchmark
+        run: ./build/benchmark/lox-benchmark
