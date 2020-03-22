@@ -8,31 +8,50 @@
 
 namespace lox {
 
-struct object {
-  explicit object(std::string str) noexcept
-      : type_{string}, string_{std::move(str)} {}
+struct string {
+  string(std::string str) noexcept : str_{std::move(str)}, hash_{hash(str_)} {}
+  uint32_t hash() const noexcept { return hash_; }
 
-  ~object() noexcept {
-    switch (type_) {
-      case string:
-        string_.~basic_string();
-        break;
-    }
-  }
-
-  template <typename T>
-  const std::string& as() const noexcept {
-    ENSURES(type_ == string);
-    return string_;
+  friend bool operator==(const string& lhs, const string& rhs) noexcept {
+    return lhs.str_ == rhs.str_;
   }
 
  private:
-  enum type_t { string };
+  constexpr static uint32_t hash(const std::string& str) noexcept {
+    uint32_t hash = 2166136261u;
+    for (const auto ch : str) {
+      hash ^= ch;
+      hash *= 16777619;
+    }
+    return hash;
+  }
 
-  type_t type_;
-  union {
-    std::string string_;
-  };
+  std::string str_;
+  uint32_t hash_;
+};
+
+struct object {
+  object(string str) noexcept : storage_{std::move(str)} {}
+
+  uint32_t hash() const noexcept { return std::get<string>(storage_).hash(); }
+
+  template <typename T>
+  const T& as() const noexcept {
+    return std::get<T>(storage_);
+  }
+
+  friend bool operator==(const object& lhs, const object& rhs) noexcept {
+    if (std::holds_alternative<string>(lhs.storage_) &&
+        std::holds_alternative<string>(rhs.storage_)) {
+      return lhs.as<string>() == rhs.as<string>();
+    }
+    return false;
+  }
+
+ private:
+  using storage = std::variant<string>;
+
+  storage storage_;
 };
 
 }  // namespace lox

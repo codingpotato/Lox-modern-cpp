@@ -1,6 +1,7 @@
 #ifndef LOX_VIRTUAL_MACHINE_H
 #define LOX_VIRTUAL_MACHINE_H
 
+#include <list>
 #include <map>
 #include <ostream>
 #include <string>
@@ -8,7 +9,9 @@
 
 #include "chunk.h"
 #include "exception.h"
+#include "hash_table.h"
 #include "instruction.h"
+#include "object.h"
 #include "value.h"
 
 namespace lox {
@@ -49,7 +52,8 @@ class virtual_machine {
   chunk main_;
   std::size_t ip_;
   value_vector stack_;
-  std::map<std::string, value> globals_;
+  std::list<object> objects_;
+  hash_table<object, value> globals_;
 };
 
 template <>
@@ -93,8 +97,9 @@ template <>
 inline void virtual_machine::handle<op_get_global>(oprand_t oprand) {
   ENSURES(oprand < main_.constants().size());
   const auto& name = main_.constants()[oprand].as<std::string>();
-  if (globals_.find(name) != globals_.cend()) {
-    push(globals_[name]);
+  const object obj{name};
+  if (globals_.contains(obj)) {
+    push(globals_[obj]);
   } else {
     throw runtime_error{"Undefined variable: " + name};
   }
@@ -104,15 +109,17 @@ template <>
 inline void virtual_machine::handle<op_define_global>(oprand_t oprand) {
   ENSURES(oprand < main_.constants().size());
   const auto& name = main_.constants()[oprand].as<std::string>();
-  globals_.emplace(name, pop());
+  objects_.emplace_back(name);
+  globals_.insert(objects_.back(), pop());
 }
 
 template <>
 inline void virtual_machine::handle<op_set_global>(oprand_t oprand) {
   ENSURES(oprand < main_.constants().size());
   const auto& name = main_.constants()[oprand].as<std::string>();
-  if (globals_.find(name) != globals_.cend()) {
-    globals_[name] = peek();
+  const object obj{name};
+  if (globals_.contains(obj)) {
+    globals_[obj] = peek();
   } else {
     throw runtime_error{"Undefined variable: " + name};
   }

@@ -3,7 +3,7 @@
 #include "object.h"
 
 TEST_CASE("object") {
-  const std::string str{"test string"};
+  const lox::string str{"test string"};
   lox::object object{str};
-  CHECK_EQ(object.as<std::string>(), str);
+  CHECK_EQ(object.as<lox::string>(), str);
 }
