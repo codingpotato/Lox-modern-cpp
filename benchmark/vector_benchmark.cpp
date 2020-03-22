@@ -3,8 +3,6 @@
 #include "value.h"
 #include "vector.h"
 
-constexpr int count = 100;
-
 static void vector(benchmark::State& state) {
   lox::vector<lox::value> vector;
   vector.emplace_back(static_cast<double>(100.0));

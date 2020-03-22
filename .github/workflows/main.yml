@@ -23,7 +23,7 @@ jobs:
           fi
 
       - name: configure
-        run: mkdir build && cd build && cmake ..
+        run: mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ..
 
       - name: build
         run: cmake --build build -j 2
