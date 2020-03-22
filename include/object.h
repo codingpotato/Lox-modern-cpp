@@ -41,11 +41,7 @@ struct object {
   }
 
   friend bool operator==(const object& lhs, const object& rhs) noexcept {
-    if (std::holds_alternative<string>(lhs.storage_) &&
-        std::holds_alternative<string>(rhs.storage_)) {
-      return lhs.as<string>() == rhs.as<string>();
-    }
-    return false;
+    return lhs.as<string>() == rhs.as<string>();
   }
 
  private:

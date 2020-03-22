@@ -207,15 +207,18 @@ inline void virtual_machine::handle<op_loop>(oprand_t oprand) {
 template <>
 inline void virtual_machine::handle<op_return>(oprand_t) {}
 
+#define SWITCH_CASE_(opcode, has_oprand_value) \
+  case opcode::id:                             \
+    handle<opcode>(instr.oprand());            \
+    break;
+
 inline void virtual_machine::interpret(chunk ch) {
   main_ = std::move(ch);
   stack_.clear();
   ip_ = 0;
   while (ip_ < main_.code().size()) {
-    const auto& instruction = main_.code()[ip_++];
-    instruction.visit(
-        [this](auto opcode, auto oprand) { handle<decltype(opcode)>(oprand); });
-    ;
+    const auto& instr = main_.code()[ip_++];
+    switch (instr.raw_opcode()) { OPCODES(SWITCH_CASE_) };
   }
 }
 

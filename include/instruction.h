@@ -59,6 +59,10 @@ struct instruction {
     throw internal_error("Unknow opcode.");
   }
 
+  constexpr std::size_t raw_opcode() const noexcept {
+    return raw_data_ >> oprand_bits;
+  }
+
   constexpr oprand_t oprand() const noexcept { return raw_data_ & oprand_mask; }
   void set_oprand(oprand_t oprand) noexcept {
     ENSURES(oprand <= oprand_mask);
@@ -74,10 +78,6 @@ struct instruction {
   constexpr static unsigned int oprand_bits =
       sizeof(raw_data_t) * char_bits - opcode_bits;
   constexpr static unsigned int oprand_mask = (1 << oprand_bits) - 1;
-
-  constexpr std::size_t raw_opcode() const noexcept {
-    return raw_data_ >> oprand_bits;
-  }
 
   template <typename Opcode>
   static constexpr raw_data_t raw_data_of(oprand_t oprand) noexcept {
