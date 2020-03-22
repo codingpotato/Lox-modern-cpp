@@ -17,7 +17,7 @@ struct string {
   }
 
  private:
-  constexpr static uint32_t hash(const std::string& str) noexcept {
+  static uint32_t hash(const std::string& str) noexcept {
     uint32_t hash = 2166136261u;
     for (const auto ch : str) {
       hash ^= ch;
