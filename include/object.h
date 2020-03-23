@@ -8,6 +8,35 @@
 
 namespace lox {
 
+namespace refectoring {
+
+struct object {};
+
+struct string : object {
+  string(std::string str) noexcept : str_{std::move(str)}, hash_{hash(str_)} {}
+
+  uint32_t hash() const noexcept { return hash_; }
+
+  friend bool operator==(const string& lhs, const string& rhs) noexcept {
+    return lhs.str_ == rhs.str_;
+  }
+
+ private:
+  static uint32_t hash(const std::string& str) noexcept {
+    uint32_t hash = 2166136261u;
+    for (const auto ch : str) {
+      hash ^= ch;
+      hash *= 16777619;
+    }
+    return hash;
+  }
+
+  std::string str_;
+  uint32_t hash_;
+};
+
+}  // namespace refectoring
+
 struct string {
   string(std::string str) noexcept : str_{std::move(str)}, hash_{hash(str_)} {}
   uint32_t hash() const noexcept { return hash_; }
