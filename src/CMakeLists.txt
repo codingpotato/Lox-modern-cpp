@@ -5,6 +5,7 @@ set(TESTS_SOURCES
     ${TESTS_DIR}/chunk_tests.cpp
     ${TESTS_DIR}/compiler_tests.cpp
     ${TESTS_DIR}/hash_table_tests.cpp
+    ${TESTS_DIR}/heap_tests.cpp
     ${TESTS_DIR}/list_tests.cpp
     ${TESTS_DIR}/object_tests.cpp
     ${TESTS_DIR}/scanner_tests.cpp

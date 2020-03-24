@@ -10,7 +10,13 @@ namespace lox {
 
 namespace refectoring {
 
-struct object {};
+struct object {
+  object* next() const noexcept { return next_; }
+  void set_next(object* next) noexcept { next_ = next; }
+
+ private:
+  object* next_;
+};
 
 struct string : object {
   string(std::string str) noexcept : str_{std::move(str)}, hash_{hash(str_)} {}
