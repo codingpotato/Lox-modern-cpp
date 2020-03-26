@@ -47,11 +47,12 @@ struct string {
   string(std::string str) noexcept : str_{std::move(str)}, hash_{hash(str_)} {}
   uint32_t hash() const noexcept { return hash_; }
 
+  bool operator==(const std::string& str) const noexcept { return str_ == str; }
+
   friend bool operator==(const string& lhs, const string& rhs) noexcept {
     return lhs.str_ == rhs.str_;
   }
 
- private:
   static uint32_t hash(const std::string& str) noexcept {
     uint32_t hash = 2166136261u;
     for (const auto ch : str) {
@@ -61,6 +62,7 @@ struct string {
     return hash;
   }
 
+ private:
   std::string str_;
   uint32_t hash_;
 };

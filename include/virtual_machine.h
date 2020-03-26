@@ -53,7 +53,7 @@ class virtual_machine {
   std::size_t ip_;
   value_vector stack_;
   std::list<object> objects_;
-  hash_table<object, value> globals_;
+  hash_table globals_;
 };
 
 template <>
@@ -94,35 +94,35 @@ inline void virtual_machine::handle<op_set_local>(oprand_t oprand) {
 }
 
 template <>
-inline void virtual_machine::handle<op_get_global>(oprand_t oprand) {
+inline void virtual_machine::handle<op_get_global>(oprand_t) {
   ENSURES(oprand < main_.constants().size());
-  const auto& name = main_.constants()[oprand].as<std::string>();
+  /*const auto& name = main_.constants()[oprand].as<std::string>();
   const object obj{name};
   if (globals_.contains(&obj)) {
     push(globals_[&obj]);
   } else {
     throw runtime_error{"Undefined variable: " + name};
-  }
+  }*/
 }
 
 template <>
-inline void virtual_machine::handle<op_define_global>(oprand_t oprand) {
+inline void virtual_machine::handle<op_define_global>(oprand_t) {
   ENSURES(oprand < main_.constants().size());
-  const auto& name = main_.constants()[oprand].as<std::string>();
+  /*const auto& name = main_.constants()[oprand].as<std::string>();
   objects_.emplace_back(name);
-  globals_.insert({&objects_.back(), pop()});
+  globals_.insert({&objects_.back(), pop()});*/
 }
 
 template <>
-inline void virtual_machine::handle<op_set_global>(oprand_t oprand) {
+inline void virtual_machine::handle<op_set_global>(oprand_t) {
   ENSURES(oprand < main_.constants().size());
-  const auto& name = main_.constants()[oprand].as<std::string>();
+  /*const auto& name = main_.constants()[oprand].as<std::string>();
   const object obj{name};
   if (globals_.contains(&obj)) {
     globals_[&obj] = peek();
   } else {
     throw runtime_error{"Undefined variable: " + name};
-  }
+  }*/
 }
 
 template <>
