@@ -3,17 +3,18 @@
 
 #include <utility>
 
+#include "object.h"
+
 namespace lox {
 
-template <typename T>
 struct list {
   struct iterator {
-    iterator(T* current) noexcept : current_{current} {}
+    iterator(object* current) noexcept : current_{current} {}
 
-    T* operator->() noexcept { return current_; }
+    object* operator->() noexcept { return current_; }
 
     iterator& operator++() noexcept {
-      current_ = current_->next();
+      current_ = current_->next;
       return *this;
     }
 
@@ -22,7 +23,7 @@ struct list {
     }
 
    private:
-    T* current_;
+    object* current_;
   };
 
   list() noexcept : head_{nullptr} {}
@@ -30,7 +31,7 @@ struct list {
   ~list() noexcept {
     while (head_) {
       auto current = head_;
-      head_ = head_->next();
+      head_ = head_->next;
       delete current;
     }
   }
@@ -38,15 +39,13 @@ struct list {
   iterator begin() const noexcept { return head_; }
   iterator end() const noexcept { return nullptr; }
 
-  template <typename... Args>
-  void emplace(Args&&... args) noexcept {
-    auto t = new T{std::forward<Args>(args)...};
-    t->set_next(head_);
-    head_ = t;
+  void insert(object* obj) noexcept {
+    obj->next = head_;
+    head_ = obj;
   }
 
  private:
-  T* head_;
+  object* head_;
 };
 
 }  // namespace lox

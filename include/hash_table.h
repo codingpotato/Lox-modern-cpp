@@ -19,7 +19,7 @@ struct hash_table {
 
   int size() const noexcept { return count_; }
 
-  bool insert(const string* key, value v) noexcept {
+  bool insert(string* key, value v) noexcept {
     adjust_capacity();
     auto dest = find_entry(entries_, capacity_mask_, key);
     if (dest->key_ == nullptr) {
@@ -55,7 +55,7 @@ struct hash_table {
     return false;
   }
 
-  const string* find_string(const std::string& str) const noexcept {
+  string* find_string(const std::string& str) noexcept {
     if (count_ == 0) {
       return nullptr;
     }
@@ -73,7 +73,7 @@ struct hash_table {
 
  private:
   struct entry {
-    const string* key_ = nullptr;
+    string* key_ = nullptr;
     value value_;
   };
 

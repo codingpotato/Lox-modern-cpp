@@ -1,5 +1,12 @@
 #include <doctest/doctest.h>
 
+#include <string>
+
 #include "heap.h"
 
-TEST_CASE("") { lox::heap heap; }
+TEST_CASE("heap") {
+  lox::heap heap;
+  std::string str{"test string"};
+  auto obj = heap.add_string(str);
+  CHECK_EQ(heap.add_string(str), obj);
+}

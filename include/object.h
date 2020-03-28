@@ -3,14 +3,37 @@
 
 #include <string>
 
+#include "contract.h"
+#include "exception.h"
+#include "type_list.h"
+
 namespace lox {
 
 struct object {
+  struct string_t;
+  using types = type_list<string_t>;
+
+  struct string_t {
+    constexpr static std::size_t id = index_of<string_t, types>::value;
+  };
+
+  object(std::size_t t) noexcept : type_{t} {}
+  virtual ~object() = default;
+
+  template <typename T>
+  bool is() const noexcept;
+
+  template <typename T>
+  T& as() noexcept;
+
   object* next = nullptr;
+
+ private:
+  std::size_t type_;
 };
 
 struct string : object {
-  static uint32_t hash(const std::string& str) noexcept {
+  constexpr static uint32_t hash(const std::string& str) noexcept {
     uint32_t hash = 2166136261u;
     for (const auto ch : str) {
       hash ^= ch;
@@ -19,7 +42,8 @@ struct string : object {
     return hash;
   }
 
-  string(std::string str) noexcept : str_{std::move(str)}, hash_{hash(str_)} {}
+  string(std::string str) noexcept
+      : object{object::string_t::id}, str_{std::move(str)}, hash_{hash(str_)} {}
 
   uint32_t hash() const noexcept { return hash_; }
 
@@ -33,6 +57,23 @@ struct string : object {
   std::string str_;
   uint32_t hash_;
 };
+
+template <typename T>
+inline bool object::is() const noexcept {
+  if constexpr (std::is_same_v<T, string>) {
+    return type_ == string_t::id;
+  }
+  throw internal_error{""};
+}
+
+template <typename T>
+inline T& object::as() noexcept {
+  if constexpr (std::is_same_v<T, string>) {
+    ENSURES(type_ == string_t::id);
+    return *dynamic_cast<string*>(this);
+  }
+  throw internal_error{""};
+}
 
 }  // namespace lox
 
