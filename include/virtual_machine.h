@@ -95,8 +95,8 @@ inline void virtual_machine::handle<op_set_local>(oprand_t oprand) {
 
 template <>
 inline void virtual_machine::handle<op_get_global>(oprand_t) {
-  ENSURES(oprand < main_.constants().size());
-  /*const auto& name = main_.constants()[oprand].as<std::string>();
+  /*ENSURES(oprand < main_.constants().size());
+  const auto& name = main_.constants()[oprand].as<std::string>();
   const object obj{name};
   if (globals_.contains(&obj)) {
     push(globals_[&obj]);
@@ -107,16 +107,16 @@ inline void virtual_machine::handle<op_get_global>(oprand_t) {
 
 template <>
 inline void virtual_machine::handle<op_define_global>(oprand_t) {
-  ENSURES(oprand < main_.constants().size());
-  /*const auto& name = main_.constants()[oprand].as<std::string>();
+  /*ENSURES(oprand < main_.constants().size());
+  const auto& name = main_.constants()[oprand].as<std::string>();
   objects_.emplace_back(name);
   globals_.insert({&objects_.back(), pop()});*/
 }
 
 template <>
 inline void virtual_machine::handle<op_set_global>(oprand_t) {
-  ENSURES(oprand < main_.constants().size());
-  /*const auto& name = main_.constants()[oprand].as<std::string>();
+  /*ENSURES(oprand < main_.constants().size());
+  const auto& name = main_.constants()[oprand].as<std::string>();
   const object obj{name};
   if (globals_.contains(&obj)) {
     globals_[&obj] = peek();

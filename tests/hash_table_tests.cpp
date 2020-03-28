@@ -1,22 +1,47 @@
 #include <doctest/doctest.h>
 
-#include <array>
+#include <vector>
 
 #include "hash_table.h"
 
-TEST_CASE("hash table") {
-  constexpr int count = 11;
-  std::array<lox::refectoring::string, count> keys = {
-      std::string{"1"}, std::string{"2"},  std::string{"3"}, std::string{"4"},
-      std::string{"5"}, std::string{"6"},  std::string{"7"}, std::string{"8"},
-      std::string{"9"}, std::string{"10"}, std::string{"11"}};
-  std::array<double, count> values = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+TEST_CASE("hash table insert") {
   lox::hash_table table;
-  for (std::size_t i = 0; i < keys.size(); ++i) {
-    table.insert(&keys[i], lox::value{values[i]});
+  lox::refectoring::string string{"test string"};
+  table.insert(&string, lox::value{1.0});
+  CHECK_EQ(table.size(), 1);
+  CHECK(table.contains(&string));
+  CHECK_EQ(table[&string].as<double>(), 1);
+}
+
+TEST_CASE("hash table insert multiple entries") {
+  lox::hash_table table;
+  std::vector<lox::refectoring::string> strings;
+  for (auto i = 0; i < 100; ++i) {
+    strings.emplace_back("test string " + std::to_string(i));
   }
-  CHECK_EQ(table.size(), count);
-  for (std::size_t i = 0; i < keys.size(); ++i) {
-    CHECK_EQ(table[&keys[i]].as<double>(), values[i]);
+  for (std::size_t i = 0; i < strings.size(); ++i) {
+    table.insert(&strings[i], lox::value{static_cast<double>(i)});
+  }
+  CHECK_EQ(table.size(), strings.size());
+  for (std::size_t i = 0; i < strings.size(); ++i) {
+    CHECK_EQ(table[&strings[i]].as<double>(), i);
+  }
+}
+
+TEST_CASE("hash table erase") {
+  lox::hash_table table;
+  std::vector<lox::refectoring::string> strings;
+  for (auto i = 0; i < 100; ++i) {
+    strings.emplace_back("test string " + std::to_string(i));
+  }
+  for (std::size_t i = 0; i < strings.size(); ++i) {
+    table.insert(&strings[i], lox::value{static_cast<double>(i)});
+  }
+  for (std::size_t i = 0; i < strings.size(); i += 2) {
+    table.erase(&strings[i]);
+  }
+  CHECK_EQ(table.size(), strings.size() / 2);
+  for (std::size_t i = 1; i < strings.size(); i += 2) {
+    CHECK_EQ(table[&strings[i]].as<double>(), i);
   }
 }

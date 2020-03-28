@@ -21,10 +21,10 @@ struct hash_table {
 
   bool insert(const refectoring::string* key, value v) noexcept {
     adjust_capacity();
-    auto& dest = find_entry(entries_, capacity_mask_, key);
-    if (dest.key_ == nullptr) {
-      dest.key_ = key;
-      dest.value_ = v;
+    auto dest = find_entry(entries_, capacity_mask_, key);
+    if (dest->key_ == nullptr) {
+      dest->key_ = key;
+      dest->value_ = v;
       ++count_;
       return true;
     }
@@ -32,14 +32,27 @@ struct hash_table {
   }
 
   bool contains(const refectoring::string* key) const noexcept {
-    auto& dest = find_entry(entries_, capacity_mask_, key);
-    return dest.key_ != nullptr;
+    auto dest = find_entry(entries_, capacity_mask_, key);
+    return dest->key_ != nullptr;
   }
 
-  value operator[](const refectoring::string* key) noexcept {
-    auto& dest = find_entry(entries_, capacity_mask_, key);
-    ENSURES(dest.key_ != nullptr);
-    return dest.value_;
+  value operator[](const refectoring::string* key) const noexcept {
+    auto dest = find_entry(entries_, capacity_mask_, key);
+    ENSURES(dest->key_ != nullptr);
+    return dest->value_;
+  }
+
+  bool erase(const refectoring::string* key) noexcept {
+    if (count_ == 0) {
+      return false;
+    }
+    auto dest = find_entry(entries_, capacity_mask_, key);
+    if (dest->key_ != nullptr) {
+      dest->key_ = nullptr;
+      --count_;
+      return true;
+    }
+    return false;
   }
 
   const refectoring::string* find_string(const std::string& str) const
@@ -47,7 +60,7 @@ struct hash_table {
     if (count_ == 0) {
       return nullptr;
     }
-    int index = string::hash(str) & capacity_mask_;
+    int index = refectoring::string::hash(str) & capacity_mask_;
     while (true) {
       auto& current = entries_[index];
       if (current.key_ != nullptr && *current.key_ == str) {
@@ -65,21 +78,31 @@ struct hash_table {
     value value_;
   };
 
-  entry& find_entry(entry* entries, int capacity_mask,
+  constexpr static int capacity_of(int capacity_mask) noexcept {
+    return capacity_mask + 1;
+  }
+  constexpr static int capacity_mask_of(int capacity) noexcept {
+    return capacity - 1;
+  }
+
+  entry* find_entry(entry* entries, int capacity_mask,
                     const refectoring::string* key) const noexcept {
     int index = key->hash() & capacity_mask;
     entry* tobmstone = nullptr;
     while (true) {
-      auto& current = entries[index];
-      if (current.key_ == nullptr) {
-        if (current.value_.is<nil>()) {
-          return tobmstone != nullptr ? *tobmstone : current;
+      auto current = &entries[index];
+      if (current->key_ == nullptr) {
+        if (current->value_.is<nil>()) {
+          return tobmstone != nullptr ? tobmstone : current;
         } else {
           if (tobmstone == nullptr) {
-            tobmstone = &current;
+            tobmstone = current;
           }
         }
+      } else if (current->key_ == key) {
+        return current;
       }
+
       index = (index + 1) & capacity_mask;
     }
   }
@@ -92,12 +115,12 @@ struct hash_table {
       const auto new_capacity_mask = capacity_mask_of(
           capacity < initial_capacity ? initial_capacity : capacity * 2);
       const auto new_capacity = capacity_of(new_capacity_mask);
-      auto* new_entries = new entry[new_capacity];
-      for (int i = 0; i <= capacity_mask_; ++i) {
-        auto& current = entries_[i];
-        if (current.key_ != nullptr) {
-          auto& dest = find_entry(new_entries, new_capacity_mask, current.key_);
-          dest = current;
+      auto new_entries = new entry[new_capacity];
+      for (int index = 0; index <= capacity_mask_; ++index) {
+        auto current = &entries_[index];
+        if (current->key_ != nullptr) {
+          auto dest = find_entry(new_entries, new_capacity_mask, current->key_);
+          *dest = *current;
         }
       }
       if (entries_) {
@@ -107,11 +130,6 @@ struct hash_table {
       capacity_mask_ = new_capacity_mask;
     }
   }
-
-  int capacity_of(int capacity_mask) const noexcept {
-    return capacity_mask + 1;
-  }
-  int capacity_mask_of(int capacity) const noexcept { return capacity - 1; }
 
   entry* entries_;
   int capacity_mask_;
