@@ -1,9 +1,13 @@
 #include <doctest/doctest.h>
 
+#include <ostream>
+#include <string>
+
 #include "object.h"
 
-TEST_CASE("object") {
-  const lox::string str{"test string"};
-  lox::object object{str};
-  CHECK_EQ(object.as<lox::string>(), str);
+TEST_CASE("string") {
+  const std::string str = "test string";
+  lox::string string{str};
+  CHECK_EQ(string.hash(), lox::string::hash(str));
+  CHECK_EQ(string, str);
 }

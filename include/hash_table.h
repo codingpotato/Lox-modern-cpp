@@ -19,7 +19,7 @@ struct hash_table {
 
   int size() const noexcept { return count_; }
 
-  bool insert(const refectoring::string* key, value v) noexcept {
+  bool insert(const string* key, value v) noexcept {
     adjust_capacity();
     auto dest = find_entry(entries_, capacity_mask_, key);
     if (dest->key_ == nullptr) {
@@ -31,18 +31,18 @@ struct hash_table {
     return false;
   }
 
-  bool contains(const refectoring::string* key) const noexcept {
+  bool contains(const string* key) const noexcept {
     auto dest = find_entry(entries_, capacity_mask_, key);
     return dest->key_ != nullptr;
   }
 
-  value operator[](const refectoring::string* key) const noexcept {
+  value operator[](const string* key) const noexcept {
     auto dest = find_entry(entries_, capacity_mask_, key);
     ENSURES(dest->key_ != nullptr);
     return dest->value_;
   }
 
-  bool erase(const refectoring::string* key) noexcept {
+  bool erase(const string* key) noexcept {
     if (count_ == 0) {
       return false;
     }
@@ -55,12 +55,11 @@ struct hash_table {
     return false;
   }
 
-  const refectoring::string* find_string(const std::string& str) const
-      noexcept {
+  const string* find_string(const std::string& str) const noexcept {
     if (count_ == 0) {
       return nullptr;
     }
-    int index = refectoring::string::hash(str) & capacity_mask_;
+    int index = string::hash(str) & capacity_mask_;
     while (true) {
       auto& current = entries_[index];
       if (current.key_ != nullptr && *current.key_ == str) {
@@ -74,7 +73,7 @@ struct hash_table {
 
  private:
   struct entry {
-    const refectoring::string* key_ = nullptr;
+    const string* key_ = nullptr;
     value value_;
   };
 
@@ -85,8 +84,8 @@ struct hash_table {
     return capacity - 1;
   }
 
-  entry* find_entry(entry* entries, int capacity_mask,
-                    const refectoring::string* key) const noexcept {
+  entry* find_entry(entry* entries, int capacity_mask, const string* key) const
+      noexcept {
     int index = key->hash() & capacity_mask;
     entry* tobmstone = nullptr;
     while (true) {

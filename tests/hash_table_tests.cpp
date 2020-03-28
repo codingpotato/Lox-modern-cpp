@@ -6,7 +6,7 @@
 
 TEST_CASE("hash table insert") {
   lox::hash_table table;
-  lox::refectoring::string string{"test string"};
+  lox::string string{"test string"};
   table.insert(&string, lox::value{1.0});
   CHECK_EQ(table.size(), 1);
   CHECK(table.contains(&string));
@@ -15,7 +15,7 @@ TEST_CASE("hash table insert") {
 
 TEST_CASE("hash table insert multiple entries") {
   lox::hash_table table;
-  std::vector<lox::refectoring::string> strings;
+  std::vector<lox::string> strings;
   for (auto i = 0; i < 100; ++i) {
     strings.emplace_back("test string " + std::to_string(i));
   }
@@ -30,7 +30,7 @@ TEST_CASE("hash table insert multiple entries") {
 
 TEST_CASE("hash table erase") {
   lox::hash_table table;
-  std::vector<lox::refectoring::string> strings;
+  std::vector<lox::string> strings;
   for (auto i = 0; i < 100; ++i) {
     strings.emplace_back("test string " + std::to_string(i));
   }
