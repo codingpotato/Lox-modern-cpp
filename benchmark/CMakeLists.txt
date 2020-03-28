@@ -3,7 +3,7 @@ set(BENCHMARK_ENABLE_TESTING
     CACHE BOOL "Suppressing benchmark's tests" FORCE)
 
 set(SOURCE main.cpp hash_table_benchmark.cpp program_benchmark.cpp
-           value_benchmark.cpp vector_benchmark.cpp)
+           value_benchmark.cpp)
 
 add_executable(lox-benchmark ${SOURCE})
 target_include_directories(lox-benchmark PRIVATE ${BENCHMARK_DIR}/include

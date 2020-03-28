@@ -61,14 +61,10 @@ class virtual_machine {
 
   template <typename... Args>
   void push(Args&&... args) noexcept {
-    stack_.emplace_back(std::forward<Args>(args)...);
+    stack_[count_++] = value{std::forward<Args>(args)...};
   }
-  value pop() noexcept {
-    auto v = stack_.back();
-    stack_.pop_back();
-    return v;
-  }
-  const value& peek() const noexcept { return stack_.back(); }
+  value pop() noexcept { return stack_[--count_]; }
+  const value& peek() const noexcept { return stack_[count_ - 1]; }
 
  private:
   using value_vector = std::vector<value>;
@@ -77,6 +73,7 @@ class virtual_machine {
   chunk main_;
   std::size_t ip_;
   value_vector stack_;
+  size_t count_;
   heap heap_;
   hash_table globals_;
 };
@@ -238,7 +235,8 @@ inline void virtual_machine::handle<op_return>(oprand_t) {}
     break;
 
 inline void virtual_machine::interpret() {
-  stack_.clear();
+  stack_.resize(10000);
+  count_ = 0;
   ip_ = 0;
   while (ip_ < main_.code().size()) {
     const auto& instr = main_.code()[ip_++];

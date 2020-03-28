@@ -11,7 +11,6 @@ set(TESTS_SOURCES
     ${TESTS_DIR}/scanner_tests.cpp
     ${TESTS_DIR}/type_list_tests.cpp
     ${TESTS_DIR}/value_tests.cpp
-    ${TESTS_DIR}/vector_tests.cpp
     ${TESTS_DIR}/virtual_machine_tests.cpp)
 
 add_executable(lox ${SOURCES} ${TESTS_SOURCES})
