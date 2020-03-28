@@ -68,7 +68,7 @@ TEST_CASE("multiple type value assignment") {
 
 TEST_CASE("value performance") {
   std::srand(std::time(nullptr));
-  lox::vector<lox::fast::value> values;
+  lox::vector<lox::value> values;
   for (std::size_t i = 0; i < 50; ++i) {
     values.emplace_back(static_cast<double>(std::rand()));
   }

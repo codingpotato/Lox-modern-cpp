@@ -17,15 +17,8 @@ class chunk {
   using line_vector = std::vector<int>;
 
   template <typename Opcode>
-  std::size_t add_instruction(Opcode opcode, int line) noexcept {
-    code_.emplace_back(instruction{opcode});
-    lines_.emplace_back(line);
-    EXPECTS(lines_.size() == code_.size());
-    return code_.size() - 1;
-  }
-  template <typename Opcode>
-  std::size_t add_instruction(Opcode opcode, oprand_t oprand,
-                              int line) noexcept {
+  std::size_t add_instruction(int line, Opcode opcode,
+                              oprand_t oprand = 0) noexcept {
     code_.emplace_back(instruction{opcode, oprand});
     lines_.emplace_back(line);
     EXPECTS(lines_.size() == code_.size());

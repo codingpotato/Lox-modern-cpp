@@ -11,7 +11,7 @@ TEST_CASE("list") {
   }
   int expected = count - 1;
   for (auto it = list.begin(); it != list.end(); ++it) {
-    CHECK_EQ(it->as<lox::string>(), std::to_string(expected));
+    CHECK_EQ(*it->as<lox::string>(), std::to_string(expected));
     --expected;
   }
 }

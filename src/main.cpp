@@ -13,8 +13,9 @@ namespace lox {
 inline void run(const std::string &source) {
   try {
     scanner scanner{source};
-    auto chunk = compiler{}.compile(scanner.scan());
-    lox::virtual_machine{std::cout}.interpret(chunk);
+    virtual_machine vm{std::cout};
+    compiler{vm}.compile(scanner.scan());
+    vm.interpret();
   } catch (std::exception &e) {
     std::cout << e.what() << '\n';
   }

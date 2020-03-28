@@ -7,6 +7,7 @@
 #include "chunk.h"
 #include "exception.h"
 #include "scanner.h"
+#include "virtual_machine.h"
 
 namespace lox {
 
@@ -27,7 +28,7 @@ enum precedence {
 };
 
 template <typename Compiler>
-using parse_func = void (Compiler::*)(chunk&, bool can_assign);
+using parse_func = void (Compiler::*)(bool can_assign);
 
 template <typename Compiler>
 struct rule {
@@ -82,45 +83,44 @@ struct rules_generator {
 
 class compiler {
  public:
-  chunk compile(token_vector tokens) noexcept {
+  explicit compiler(virtual_machine& vm) noexcept : vm_{vm} {}
+
+  void compile(token_vector tokens) noexcept {
     tokens_ = std::move(tokens);
     current_ = tokens_.cbegin();
     scope_depth_ = 0;
-    chunk ch;
     while (!match(token::eof)) {
-      declaration(ch);
+      declaration();
     }
-    return ch;
   }
 
  private:
-  void declaration(chunk& ch) {
+  void declaration() {
     if (match(token::k_var)) {
-      var_declaration(ch);
+      var_declaration();
     } else {
-      statement(ch);
+      statement();
     }
   }
 
-  void var_declaration(chunk& ch) {
-    const auto name = variable_name_constant(ch, "Expect variable name.");
+  void var_declaration() {
+    const auto name = variable_name_constant("Expect variable name.");
     if (match(token::equal)) {
-      expression(ch);
+      expression();
     } else {
-      ch.add_instruction(op_nil{}, previous_->line);
+      add_instruction(op_nil{});
     }
     consume(token::semicolon, "Expect ';' after variable declaration.");
-    define_variable(ch, name);
+    define_variable(name);
   }
 
-  std::size_t variable_name_constant(chunk& ch, const std::string& message) {
+  std::size_t variable_name_constant(const std::string& message) {
     consume(token::identifier, message);
-
     declare_variable();
     if (scope_depth_ > 0) {
       return 0;
     }
-    return ch.add_constant(previous_->lexeme);
+    return vm_.add_constant_string(previous_->lexeme);
   }
 
   void declare_variable() {
@@ -139,144 +139,140 @@ class compiler {
     }
   }
 
-  void define_variable(chunk& ch, std::size_t name) noexcept {
+  void define_variable(std::size_t name) noexcept {
     if (scope_depth_ > 0) {
       ENSURES(!locals_.empty());
       locals_.back().depth = scope_depth_;
     } else {
-      ch.add_instruction(op_define_global{}, name, previous_->line);
+      add_instruction(op_define_global{}, name);
     }
   }
 
-  void statement(chunk& ch) {
+  void statement() {
     if (match(token::k_print)) {
-      print_statement(ch);
+      print_statement();
     } else if (match(token::k_if)) {
-      parse_if(ch);
+      parse_if();
     } else if (match(token::k_while)) {
-      parse_while(ch);
+      parse_while();
     } else if (match(token::left_brace)) {
       begin_scope();
-      parse_block(ch);
-      end_scope(ch);
+      parse_block();
+      end_scope();
     } else {
-      expression_statement(ch);
+      expression_statement();
     }
   }
 
-  void parse_if(chunk& ch) {
+  void parse_if() {
     consume(token::left_paren, "Expect '(' after 'if'.");
-    expression(ch);
+    expression();
     consume(token::right_paren, "Expect ')' after condition.");
 
-    const auto then_jump_index =
-        ch.add_instruction(op_jump_if_false{}, 0, previous_->line);
-    ch.add_instruction(op_pop{}, previous_->line);
-    statement(ch);
-    const auto else_jump_index =
-        ch.add_instruction(op_jump{}, 0, previous_->line);
+    const auto then_jump_index = add_instruction(op_jump_if_false{}, 0);
+    add_instruction(op_pop{});
+    statement();
+    const auto else_jump_index = add_instruction(op_jump{}, 0);
 
-    ch.set_oprand(then_jump_index, ch.code().size() - (then_jump_index + 1));
-    ch.add_instruction(op_pop{}, previous_->line);
+    vm_.set_oprand(then_jump_index, vm_.code_size() - (then_jump_index + 1));
+    add_instruction(op_pop{});
     if (match(token::k_else)) {
-      statement(ch);
+      statement();
     }
-    ch.set_oprand(else_jump_index, ch.code().size() - (else_jump_index + 1));
+    vm_.set_oprand(else_jump_index, vm_.code_size() - (else_jump_index + 1));
   }
 
-  void parse_while(chunk& ch) {
-    const auto loop_start = ch.code().size();
+  void parse_while() {
+    const auto loop_start = vm_.code_size();
     consume(token::left_paren, "Expect '(' after 'while'.");
-    expression(ch);
+    expression();
     consume(token::right_paren, "Expect ')' after condition.");
-    const auto exit_jump_index =
-        ch.add_instruction(op_jump_if_false{}, 0, previous_->line);
-    ch.add_instruction(op_pop{}, previous_->line);
-    statement(ch);
-    ch.add_instruction(op_loop{}, ch.code().size() - loop_start + 1,
-                       previous_->line);
-    ch.set_oprand(exit_jump_index, ch.code().size() - (exit_jump_index + 1));
-    ch.add_instruction(op_pop{}, previous_->line);
+    const auto exit_jump_index = add_instruction(op_jump_if_false{}, 0);
+    add_instruction(op_pop{});
+    statement();
+    add_instruction(op_loop{}, vm_.code_size() - loop_start + 1);
+    vm_.set_oprand(exit_jump_index, vm_.code_size() - (exit_jump_index + 1));
+    add_instruction(op_pop{});
   }
 
-  void parse_block(chunk& ch) {
+  void parse_block() {
     while (!check(token::right_brace) && !check(token::eof)) {
-      declaration(ch);
+      declaration();
     }
     consume(token::right_brace, "Expect '}' after block.");
   }
 
-  void print_statement(chunk& ch) {
-    expression(ch);
+  void print_statement() {
+    expression();
     consume(token::semicolon, "Expect ';' after value.");
-    ch.add_instruction(op_print{}, previous_->line);
+    add_instruction(op_print{});
   }
 
-  void expression_statement(chunk& ch) {
-    expression(ch);
+  void expression_statement() {
+    expression();
     consume(token::semicolon, "Expect ';' after value.");
-    ch.add_instruction(op_pop{}, previous_->line);
+    add_instruction(op_pop{});
   }
 
-  void expression(chunk& ch) { parse_precedence(precedence::p_assignment, ch); }
+  void expression() { parse_precedence(precedence::p_assignment); }
 
-  void binary(chunk& ch, bool) {
+  void binary(bool) {
     const auto op_type = previous_->type;
     parse_precedence(
-        static_cast<precedence::precedence>(p_rules_[op_type].prec + 1), ch);
+        static_cast<precedence::precedence>(p_rules_[op_type].prec + 1));
     switch (op_type) {
       case token::bang_equal:
-        ch.add_instruction(op_equal{}, previous_->line);
-        ch.add_instruction(op_not{}, previous_->line);
+        add_instruction(op_equal{});
+        add_instruction(op_not{});
         break;
       case token::equal_equal:
-        ch.add_instruction(op_equal{}, previous_->line);
+        add_instruction(op_equal{});
         break;
       case token::greater:
-        ch.add_instruction(op_greater{}, previous_->line);
+        add_instruction(op_greater{});
         break;
       case token::greater_equal:
-        ch.add_instruction(op_less{}, previous_->line);
-        ch.add_instruction(op_not{}, previous_->line);
+        add_instruction(op_less{});
+        add_instruction(op_not{});
         break;
       case token::less:
-        ch.add_instruction(op_less{}, previous_->line);
+        add_instruction(op_less{});
         break;
       case token::less_equal:
-        ch.add_instruction(op_greater{}, previous_->line);
-        ch.add_instruction(op_not{}, previous_->line);
+        add_instruction(op_greater{});
+        add_instruction(op_not{});
         break;
       case token::plus:
-        ch.add_instruction(op_add{}, previous_->line);
+        add_instruction(op_add{});
         break;
       case token::minus:
-        ch.add_instruction(op_subtract{}, previous_->line);
+        add_instruction(op_subtract{});
         break;
       case token::star:
-        ch.add_instruction(op_multiply{}, previous_->line);
+        add_instruction(op_multiply{});
         break;
       case token::slash:
-        ch.add_instruction(op_divide{}, previous_->line);
+        add_instruction(op_divide{});
         break;
       default:
         break;
     }
   }
 
-  void grouping(chunk& ch, bool) {
-    expression(ch);
+  void grouping(bool) {
+    expression();
     consume(token::right_paren, "Expect ')' after expression.");
   }
 
-  void unary(chunk& ch, bool) {
+  void unary(bool) {
     auto op_type = previous_->type;
-    parse_precedence(precedence::p_unary, ch);
+    parse_precedence(precedence::p_unary);
     switch (op_type) {
       case token::bang:
-        ch.add_instruction(op_not{}, previous_->line);
+        add_instruction(op_not{});
         break;
       case token::minus:
-        ch.add_instruction(op_negate{}, previous_->line);
+        add_instruction(op_negate{});
         break;
       default:
         break;
@@ -296,75 +292,72 @@ class compiler {
     return -1;
   }
 
-  void add_variable(chunk& ch, bool can_assign) {
+  void add_variable(bool can_assign) {
     auto index = resolve_local(previous_->lexeme);
     bool is_global = false;
     if (index == -1) {
       is_global = true;
-      index = ch.add_constant(previous_->lexeme);
+      index = vm_.add_constant_string(previous_->lexeme);
     }
     if (can_assign && match(token::equal)) {
-      expression(ch);
+      expression();
       if (is_global) {
-        ch.add_instruction(op_set_global{}, index, previous_->line);
+        add_instruction(op_set_global{}, index);
       } else {
-        ch.add_instruction(op_set_local{}, index, previous_->line);
+        add_instruction(op_set_local{}, index);
       }
     } else {
       if (is_global) {
-        ch.add_instruction(op_get_global{}, index, previous_->line);
+        add_instruction(op_get_global{}, index);
       } else {
-        ch.add_instruction(op_get_local{}, index, previous_->line);
+        add_instruction(op_get_local{}, index);
       }
     }
   }
 
-  void add_number(chunk& ch, bool) {
-    const auto constant = ch.add_constant(std::stod(previous_->lexeme));
-    ch.add_instruction(op_constant{}, constant, previous_->line);
+  void add_number(bool) {
+    const auto constant = vm_.add_constant_number(std::stod(previous_->lexeme));
+    add_instruction(op_constant{}, constant);
   }
 
-  void add_string(chunk& ch, bool) {
-    const auto constant = ch.add_constant(previous_->lexeme);
-    ch.add_instruction(op_constant{}, constant, previous_->line);
+  void add_string(bool) {
+    const auto constant = vm_.add_constant_string(previous_->lexeme);
+    add_instruction(op_constant{}, constant);
   }
 
-  void add_literal(chunk& ch, bool) {
+  void add_literal(bool) {
     switch (previous_->type) {
       case token::k_nil:
-        ch.add_instruction(op_nil{}, previous_->line);
+        add_instruction(op_nil{});
         break;
       case token::k_false:
-        ch.add_instruction(op_false{}, previous_->line);
+        add_instruction(op_false{});
         break;
       case token::k_true:
-        ch.add_instruction(op_true{}, previous_->line);
+        add_instruction(op_true{});
         break;
       default:
         throw internal_error{"Unknow literal."};
     }
   }
 
-  void parse_and(chunk& ch, bool) {
-    const auto end_jump_index =
-        ch.add_instruction(op_jump_if_false{}, 0, previous_->line);
-    ch.add_instruction(op_pop{}, previous_->line);
-    parse_precedence(precedence::p_and, ch);
-    ch.set_oprand(end_jump_index, ch.code().size() - (end_jump_index + 1));
+  void parse_and(bool) {
+    const auto end_jump_index = add_instruction(op_jump_if_false{}, 0);
+    add_instruction(op_pop{});
+    parse_precedence(precedence::p_and);
+    vm_.set_oprand(end_jump_index, vm_.code_size() - (end_jump_index + 1));
   }
 
-  void parse_or(chunk& ch, bool) {
-    const auto else_jump_index =
-        ch.add_instruction(op_jump_if_false{}, 0, previous_->line);
-    const auto end_jump_index =
-        ch.add_instruction(op_jump{}, 0, previous_->line);
-    ch.set_oprand(else_jump_index, ch.code().size() - (else_jump_index + 1));
-    ch.add_instruction(op_pop{}, previous_->line);
-    parse_precedence(precedence::p_or, ch);
-    ch.set_oprand(end_jump_index, ch.code().size() - (end_jump_index + 1));
+  void parse_or(bool) {
+    const auto else_jump_index = add_instruction(op_jump_if_false{}, 0);
+    const auto end_jump_index = add_instruction(op_jump{}, 0);
+    vm_.set_oprand(else_jump_index, vm_.code_size() - (else_jump_index + 1));
+    add_instruction(op_pop{});
+    parse_precedence(precedence::p_or);
+    vm_.set_oprand(end_jump_index, vm_.code_size() - (end_jump_index + 1));
   }
 
-  void parse_precedence(precedence::precedence prec, chunk& ch) {
+  void parse_precedence(precedence::precedence prec) {
     advance();
     const auto& prefix = p_rules_[previous_->type].prefix;
     if (prefix == nullptr) {
@@ -372,17 +365,22 @@ class compiler {
       return;
     }
     const auto can_assign = prec <= precedence::p_assignment;
-    (this->*prefix)(ch, can_assign);
+    (this->*prefix)(can_assign);
     while (static_cast<int>(prec) <
            static_cast<int>(p_rules_[current_->type].prec)) {
       advance();
       auto infix = p_rules_[previous_->type].infix;
-      (this->*infix)(ch, can_assign);
+      (this->*infix)(can_assign);
     }
 
     if (can_assign && match(token::equal)) {
       throw compile_error{"Invalid assignment target."};
     }
+  }
+
+  template <typename Opcode>
+  size_t add_instruction(Opcode opcode, oprand_t oprand = 0) noexcept {
+    return vm_.add_instruction(previous_->line, opcode, oprand);
   }
 
   void advance() noexcept {
@@ -409,10 +407,10 @@ class compiler {
   }
 
   void begin_scope() noexcept { ++scope_depth_; }
-  void end_scope(chunk& ch) noexcept {
+  void end_scope() noexcept {
     --scope_depth_;
     while (!locals_.empty() && locals_.back().depth > scope_depth_) {
-      ch.add_instruction(op_pop{}, previous_->line);
+      add_instruction(op_pop{});
       locals_.pop_back();
     }
   }
@@ -428,6 +426,7 @@ class compiler {
   static constexpr precedence::rules<compiler> p_rules_ =
       precedence::rules_generator<compiler>::make_rules();
 
+  virtual_machine& vm_;
   token_vector tokens_;
   token_vector::const_iterator current_;
   token_vector::const_iterator previous_;

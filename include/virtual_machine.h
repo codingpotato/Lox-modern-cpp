@@ -10,6 +10,7 @@
 #include "chunk.h"
 #include "exception.h"
 #include "hash_table.h"
+#include "heap.h"
 #include "instruction.h"
 #include "object.h"
 #include "value.h"
@@ -20,7 +21,30 @@ class virtual_machine {
  public:
   explicit virtual_machine(std::ostream& os) noexcept : out{os} {}
 
-  inline void interpret(chunk ch);
+  inline void interpret();
+
+  const chunk& main() const noexcept { return main_; }
+
+  template <typename Opcode>
+  size_t add_instruction(int line, Opcode opcode,
+                         oprand_t oprand = 0) noexcept {
+    return main_.add_instruction(line, opcode, oprand);
+  }
+
+  std::size_t code_size() const noexcept { return main_.code().size(); }
+
+  std::size_t add_constant_number(double number) noexcept {
+    return main_.add_constant(number);
+  }
+
+  std::size_t add_constant_string(std::string str) noexcept {
+    auto obj = heap_.add_string(std::move(str));
+    return main_.add_constant(obj);
+  }
+
+  void set_oprand(std::size_t offset, oprand_t oprand) noexcept {
+    return main_.set_oprand(offset, oprand);
+  }
 
   template <typename Opcode>
   void handle(oprand_t) {
@@ -46,13 +70,14 @@ class virtual_machine {
   }
   const value& peek() const noexcept { return stack_.back(); }
 
+ private:
   using value_vector = std::vector<value>;
 
   std::ostream& out;
   chunk main_;
   std::size_t ip_;
   value_vector stack_;
-  std::list<object> objects_;
+  heap heap_;
   hash_table globals_;
 };
 
@@ -94,35 +119,35 @@ inline void virtual_machine::handle<op_set_local>(oprand_t oprand) {
 }
 
 template <>
-inline void virtual_machine::handle<op_get_global>(oprand_t) {
-  /*ENSURES(oprand < main_.constants().size());
-  const auto& name = main_.constants()[oprand].as<std::string>();
-  const object obj{name};
-  if (globals_.contains(&obj)) {
-    push(globals_[&obj]);
+inline void virtual_machine::handle<op_get_global>(oprand_t oprand) {
+  ENSURES(oprand < main_.constants().size());
+  const auto name = main_.constants()[oprand].as<object*>()->as<string>();
+  if (globals_.contains(name)) {
+    push(globals_[name]);
   } else {
-    throw runtime_error{"Undefined variable: " + name};
-  }*/
+    throw runtime_error{"Undefined variable: " +
+                        static_cast<std::string>(*name)};
+  }
 }
 
 template <>
-inline void virtual_machine::handle<op_define_global>(oprand_t) {
-  /*ENSURES(oprand < main_.constants().size());
-  const auto& name = main_.constants()[oprand].as<std::string>();
-  objects_.emplace_back(name);
-  globals_.insert({&objects_.back(), pop()});*/
+inline void virtual_machine::handle<op_define_global>(oprand_t oprand) {
+  ENSURES(oprand < main_.constants().size());
+  const auto name = main_.constants()[oprand].as<object*>()->as<string>();
+  auto str = heap_.add_string(static_cast<std::string>(*name));
+  globals_.insert(str, pop());
 }
 
 template <>
-inline void virtual_machine::handle<op_set_global>(oprand_t) {
-  /*ENSURES(oprand < main_.constants().size());
-  const auto& name = main_.constants()[oprand].as<std::string>();
-  const object obj{name};
-  if (globals_.contains(&obj)) {
-    globals_[&obj] = peek();
+inline void virtual_machine::handle<op_set_global>(oprand_t oprand) {
+  ENSURES(oprand < main_.constants().size());
+  const auto name = main_.constants()[oprand].as<object*>()->as<string>();
+  if (globals_.contains(name)) {
+    globals_[name] = peek();
   } else {
-    throw runtime_error{"Undefined variable: " + name};
-  }*/
+    throw runtime_error{"Undefined variable: " +
+                        static_cast<std::string>(*name)};
+  }
 }
 
 template <>
@@ -212,8 +237,7 @@ inline void virtual_machine::handle<op_return>(oprand_t) {}
     handle<opcode>(instr.oprand());            \
     break;
 
-inline void virtual_machine::interpret(chunk ch) {
-  main_ = std::move(ch);
+inline void virtual_machine::interpret() {
   stack_.clear();
   ip_ = 0;
   while (ip_ < main_.code().size()) {

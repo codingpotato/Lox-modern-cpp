@@ -24,7 +24,7 @@ struct object {
   bool is() const noexcept;
 
   template <typename T>
-  T& as() noexcept;
+  const T* as() const;
 
   object* next = nullptr;
 
@@ -67,12 +67,12 @@ inline bool object::is() const noexcept {
 }
 
 template <typename T>
-inline T& object::as() noexcept {
-  if constexpr (std::is_same_v<T, string>) {
+inline const T* object::as() const {
+  if constexpr (std::is_same_v<std::decay_t<T>, string>) {
     ENSURES(type_ == string_t::id);
-    return *dynamic_cast<string*>(this);
+    return dynamic_cast<const string*>(this);
   }
-  throw internal_error{""};
+  throw internal_error{"Unknown object type"};
 }
 
 }  // namespace lox
