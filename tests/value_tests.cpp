@@ -5,7 +5,6 @@
 
 #include "performance.h"
 #include "value.h"
-#include "vector.h"
 
 TEST_CASE("nil value") {
   const lox::value v{};
