@@ -18,7 +18,7 @@ inline std::string run(const std::string& source) {
 
 TEST_CASE("binary") {
   const std::string source{"print 1 + 2;"};
-  const std::string expected{"3\n"};
+  const std::string expected{"3.000000\n"};
   CHECK_EQ(run(source), expected);
 }
 
@@ -28,7 +28,7 @@ var a = 1;
 var b = 2;
 print a + b;
 )"};
-  const std::string expected{"3\n"};
+  const std::string expected{"3.000000\n"};
   CHECK_EQ(run(source), expected);
 }
 
@@ -38,19 +38,7 @@ var a = 1;
 a = 2;
 print a;
 )"};
-  const std::string expected{"2\n"};
-  CHECK_EQ(run(source), expected);
-}
-
-TEST_CASE("string variable") {
-  const std::string source{R"(
-var breakfast = "beignets";
-var beverage = "cafe au lait";
-breakfast = "beignets with " + beverage;
-print breakfast;
-)"};
-  const std::string expected{R"("beignets with ""cafe au lait"
-)"};
+  const std::string expected{"2.000000\n"};
   CHECK_EQ(run(source), expected);
 }
 
@@ -63,7 +51,7 @@ TEST_CASE("local variable") {
   }
 }
 )"};
-  const std::string expected{"1\n"};
+  const std::string expected{"1.000000\n"};
   CHECK_EQ(run(source), expected);
 }
 
@@ -71,7 +59,7 @@ TEST_CASE("if statement") {
   std::string source{R"(
 if (true) print 1;
 )"};
-  std::string expected{"1\n"};
+  std::string expected{"1.000000\n"};
   CHECK_EQ(run(source), expected);
 
   source = std::string{R"(
@@ -81,7 +69,7 @@ if (1 > 2) {
   print 2;
 }
 )"};
-  expected = std::string{"2\n"};
+  expected = std::string{"2.000000\n"};
   CHECK_EQ(run(source), expected);
 }
 
@@ -145,15 +133,30 @@ while (a < 10) {
   a = a + 1;
 }
 )"};
-  std::string expected{R"(1
-2
-3
-4
-5
-6
-7
-8
-9
+  std::string expected{R"(1.000000
+2.000000
+3.000000
+4.000000
+5.000000
+6.000000
+7.000000
+8.000000
+9.000000
+)"};
+  CHECK_EQ(run(source), expected);
+}
+
+TEST_CASE("sum") {
+  std::string source{R"(
+var sum = 0.0;
+var i = 0;
+while (i < 10000000) {
+    sum = sum + i;
+    i = i + 1;
+}
+print sum;
+)"};
+  std::string expected{R"(49999995000000.000000
 )"};
   CHECK_EQ(run(source), expected);
 }

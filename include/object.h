@@ -33,7 +33,7 @@ struct object {
 };
 
 struct string : object {
-  constexpr static uint32_t hash(const std::string& str) noexcept {
+  static uint32_t hash(const std::string& str) noexcept {
     uint32_t hash = 2166136261u;
     for (const auto ch : str) {
       hash ^= ch;
@@ -70,7 +70,7 @@ template <typename T>
 inline const T* object::as() const {
   if constexpr (std::is_same_v<std::decay_t<T>, string>) {
     ENSURES(type_ == string_t::id);
-    return dynamic_cast<const string*>(this);
+    return reinterpret_cast<const string*>(this);
   }
   throw internal_error{"Unknown object type"};
 }

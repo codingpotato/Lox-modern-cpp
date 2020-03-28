@@ -44,19 +44,19 @@ struct value {
   }
 
   friend bool operator==(const value& lhs, const value& rhs) noexcept {
-    if (lhs.type_ != rhs.type_) {
-      return false;
+    if (lhs.type_ == rhs.type_) {
+      switch (lhs.type_) {
+        case nil_t:
+          return true;
+        case boolean:
+          return lhs.boolean_ == rhs.boolean_;
+        case number:
+          return lhs.double_ == rhs.double_;
+        case object_t:
+          return false;
+      }
     }
-    switch (lhs.type_) {
-      case nil_t:
-        return true;
-      case boolean:
-        return lhs.boolean_ == rhs.boolean_;
-      case number:
-        return lhs.double_ == rhs.double_;
-      case object_t:
-        return false;
-    }
+    return false;
   }
 
   std::string repr() const {
@@ -65,11 +65,8 @@ struct value {
         return "nil";
       case boolean:
         return boolean_ ? "true" : "false";
-      case number: {
-        std::ostringstream oss;
-        oss << double_;
-        return oss.str();
-      }
+      case number:
+        return std::to_string(double_);
       case object_t:
         return "object";
     }

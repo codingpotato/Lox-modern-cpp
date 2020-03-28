@@ -36,7 +36,7 @@ struct hash_table {
     return dest->key_ != nullptr;
   }
 
-  value operator[](const string* key) const noexcept {
+  value& operator[](const string* key) const noexcept {
     auto dest = find_entry(entries_, capacity_mask_, key);
     ENSURES(dest->key_ != nullptr);
     return dest->value_;

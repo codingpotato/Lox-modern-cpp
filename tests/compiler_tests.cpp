@@ -16,8 +16,8 @@ TEST_CASE("compiler add expression") {
   lox::virtual_machine vm{oss};
   lox::compiler{vm}.compile(tokens);
   const std::string expected = R"(== test expression ==
-0000    1 op_constant 1
-0001    | op_constant 2
+0000    1 op_constant 1.000000
+0001    | op_constant 2.000000
 0002    | op_add
 0003    | op_print
 )";
