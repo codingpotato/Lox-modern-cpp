@@ -6,20 +6,32 @@
 #include "compiler.h"
 #include "virtual_machine.h"
 
-TEST_CASE("compiler add expression") {
-  lox::token_vector tokens{
-      {lox::token::k_print, "print", 1}, {lox::token::number, "1", 1},
-      {lox::token::plus, "+", 1},        {lox::token::number, "2", 1},
-      {lox::token::semicolon, ";", 1},   {lox::token::eof, "", 1},
-  };
+inline std::string compile(const std::string& message,
+                           std::string source) noexcept {
+  lox::scanner scanner{std::move(source)};
   std::ostringstream oss;
   lox::virtual_machine vm{oss};
-  lox::compiler{vm}.compile(tokens);
-  const std::string expected = R"(== test expression ==
+  lox::compiler{vm}.compile(scanner.scan());
+  return vm.main().repr(message);
+}
+
+TEST_CASE("compile primary") {
+  const std::string source{R"(1; 2; nil;
+  true; false; "str";
+)"};
+  const std::string expected = R"(== primary ==
 0000    1 op_constant 1.000000
-0001    | op_constant 2.000000
-0002    | op_add
-0003    | op_print
+0001    | op_pop
+0002    | op_constant 2.000000
+0003    | op_pop
+0004    | op_nil
+0005    | op_pop
+0006    2 op_true
+0007    | op_pop
+0008    | op_false
+0009    | op_pop
+0010    | op_constant object
+0011    | op_pop
 )";
-  CHECK_EQ(vm.main().repr("test expression"), expected);
+  CHECK_EQ(compile("primary", source), expected);
 }

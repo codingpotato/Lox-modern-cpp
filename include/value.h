@@ -102,7 +102,7 @@ struct value {
   }
   constexpr bool is_number() const noexcept { return (bits_ & qnan) != qnan; }
   constexpr bool is_object() const noexcept {
-    return (bits_ & (tag_object | qnan)) != (tag_object | qnan);
+    return (bits_ & (tag_object | qnan)) == (tag_object | qnan);
   }
 
   union {

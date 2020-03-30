@@ -1,6 +1,7 @@
 #include <benchmark/benchmark.h>
 
 #include "compiler.h"
+#include "helper.h"
 #include "scanner.h"
 #include "virtual_machine.h"
 
@@ -15,11 +16,7 @@ while (i < 10000000) {
 print sum;
 )"};
   while (state.KeepRunning()) {
-    lox::scanner scanner{source};
-    std::ostringstream oss;
-    lox::virtual_machine vm{oss};
-    lox::compiler{vm}.compile(scanner.scan());
-    vm.interpret();
+    run(source);
   }
 }
 BENCHMARK(sum);
