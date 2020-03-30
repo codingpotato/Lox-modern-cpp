@@ -146,6 +146,25 @@ while (a < 10) {
   CHECK_EQ(run(source), expected);
 }
 
+TEST_CASE("for statement") {
+  std::string source{R"(
+for (var a = 1; a < 10; a = a + 1) {
+  print a;
+}
+)"};
+  std::string expected{R"(1.000000
+2.000000
+3.000000
+4.000000
+5.000000
+6.000000
+7.000000
+8.000000
+9.000000
+)"};
+  CHECK_EQ(run(source), expected);
+}
+
 TEST_CASE("sum") {
   std::string source{R"(
 var sum = 0.0;

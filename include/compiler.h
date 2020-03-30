@@ -151,6 +151,8 @@ class compiler {
   void statement() {
     if (match(token::k_print)) {
       print_statement();
+    } else if (match(token::k_for)) {
+      parse_for();
     } else if (match(token::k_if)) {
       parse_if();
     } else if (match(token::k_while)) {
@@ -164,22 +166,60 @@ class compiler {
     }
   }
 
+  void parse_for() {
+    begin_scope();
+    consume(token::left_paren, "Expect '(' after 'for'.");
+    if (match(token::semicolon)) {
+    } else if (match(token::k_var)) {
+      var_declaration();
+    } else {
+      expression_statement();
+    }
+    auto loop_start = vm_.code_size();
+    auto exit_jump = -1;
+    if (!match(token::semicolon)) {
+      expression();
+      consume(token::semicolon, "Expect ';' after loop condition.");
+      exit_jump = add_instruction(op_jump_if_false{});
+      add_instruction(op_pop{});
+    }
+
+    if (!match(token::right_paren)) {
+      auto body_jump = add_instruction(op_jump{});
+      auto increament_start = vm_.code_size();
+      expression();
+      add_instruction(op_pop{});
+      consume(token::right_paren, "Expect ')' after for clauses.");
+      add_instruction(op_loop{}, vm_.code_size() - loop_start + 1);
+      loop_start = increament_start;
+      patch_jump(body_jump);
+    }
+
+    statement();
+    add_instruction(op_loop{}, vm_.code_size() - loop_start + 1);
+    if (exit_jump != -1) {
+      patch_jump(exit_jump);
+      add_instruction(op_pop{});
+    }
+    end_scope();
+  }
+
   void parse_if() {
     consume(token::left_paren, "Expect '(' after 'if'.");
     expression();
     consume(token::right_paren, "Expect ')' after condition.");
 
-    const auto then_jump_index = add_instruction(op_jump_if_false{}, 0);
+    const auto then_jump_index = add_instruction(op_jump_if_false{});
     add_instruction(op_pop{});
     statement();
-    const auto else_jump_index = add_instruction(op_jump{}, 0);
+    const auto else_jump_index = add_instruction(op_jump{});
 
-    vm_.set_oprand(then_jump_index, vm_.code_size() - (then_jump_index + 1));
+    patch_jump(then_jump_index);
     add_instruction(op_pop{});
     if (match(token::k_else)) {
       statement();
     }
-    vm_.set_oprand(else_jump_index, vm_.code_size() - (else_jump_index + 1));
+    patch_jump(else_jump_index);
   }
 
   void parse_while() {
@@ -191,7 +231,7 @@ class compiler {
     add_instruction(op_pop{});
     statement();
     add_instruction(op_loop{}, vm_.code_size() - loop_start + 1);
-    vm_.set_oprand(exit_jump_index, vm_.code_size() - (exit_jump_index + 1));
+    patch_jump(exit_jump_index);
     add_instruction(op_pop{});
   }
 
@@ -345,16 +385,16 @@ class compiler {
     const auto end_jump_index = add_instruction(op_jump_if_false{}, 0);
     add_instruction(op_pop{});
     parse_precedence(precedence::p_and);
-    vm_.set_oprand(end_jump_index, vm_.code_size() - (end_jump_index + 1));
+    patch_jump(end_jump_index);
   }
 
   void parse_or(bool) {
     const auto else_jump_index = add_instruction(op_jump_if_false{}, 0);
     const auto end_jump_index = add_instruction(op_jump{}, 0);
-    vm_.set_oprand(else_jump_index, vm_.code_size() - (else_jump_index + 1));
+    patch_jump(else_jump_index);
     add_instruction(op_pop{});
     parse_precedence(precedence::p_or);
-    vm_.set_oprand(end_jump_index, vm_.code_size() - (end_jump_index + 1));
+    patch_jump(end_jump_index);
   }
 
   void parse_precedence(precedence::precedence prec) {
@@ -413,6 +453,10 @@ class compiler {
       add_instruction(op_pop{});
       locals_.pop_back();
     }
+  }
+
+  void patch_jump(size_t jump) noexcept {
+    vm_.set_oprand(jump, vm_.code_size() - (jump + 1));
   }
 
   struct local {
