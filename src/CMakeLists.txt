@@ -2,6 +2,7 @@ set(SOURCES main.cpp)
 
 set(TESTS_DIR ../tests)
 set(TESTS_SOURCES
+    ${TESTS_DIR}/assignment_tests.cpp
     ${TESTS_DIR}/chunk_tests.cpp
     ${TESTS_DIR}/compiler_tests.cpp
     ${TESTS_DIR}/hash_table_tests.cpp

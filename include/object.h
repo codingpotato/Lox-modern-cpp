@@ -26,6 +26,8 @@ struct object {
   template <typename T>
   const T* as() const;
 
+  virtual std::string repr() const noexcept = 0;
+
   object* next = nullptr;
 
  private:
@@ -48,6 +50,8 @@ struct string : object {
   uint32_t hash() const noexcept { return hash_; }
 
   operator const std::string&() const noexcept { return str_; }
+
+  std::string repr() const noexcept override { return str_; }
 
   friend bool operator==(const string& lhs, const string& rhs) noexcept {
     return lhs.hash_ == rhs.hash_ && lhs.str_ == rhs.str_;

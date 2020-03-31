@@ -74,7 +74,7 @@ struct value {
       return std::to_string(as<double>());
     }
     if (is_object()) {
-      return "object";
+      return as<object*>()->repr();
     }
     throw internal_error{""};
   }
@@ -172,7 +172,7 @@ struct value {
       case number:
         return std::to_string(double_);
       case object_t:
-        return "object";
+        return as<object*>()->repr();
     }
     throw internal_error{""};
   }

@@ -30,7 +30,7 @@ TEST_CASE("compile primary") {
 0007    | op_pop
 0008    | op_false
 0009    | op_pop
-0010    | op_constant object
+0010    | op_constant "str"
 0011    | op_pop
 )";
   CHECK_EQ(compile("primary", source), expected);
