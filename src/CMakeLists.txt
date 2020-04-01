@@ -1,4 +1,4 @@
-set(SOURCES main.cpp)
+set(SOURCES main.cpp value.cpp)
 
 set(TESTS_DIR ../tests)
 set(TESTS_SOURCES

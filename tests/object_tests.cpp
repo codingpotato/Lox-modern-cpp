@@ -1,6 +1,5 @@
 #include <doctest/doctest.h>
 
-#include <ostream>
 #include <string>
 
 #include "object.h"

@@ -3,15 +3,17 @@
 
 #include <string>
 
+#include "contract.h"
 #include "exception.h"
-#include "object.h"
 #include "type_list.h"
 
 namespace lox {
 
 struct nil {};
+struct object;
 
 namespace optimized {
+
 struct value {
   value() noexcept : bits_{make_nil()} {}
   value(bool b) noexcept : bits_{make_bool(b)} {}
@@ -63,21 +65,7 @@ struct value {
     return false;
   }
 
-  std::string repr() const {
-    if (is_nil()) {
-      return "nil";
-    }
-    if (is_bool()) {
-      return as<bool>() ? "true" : "false";
-    }
-    if (is_number()) {
-      return std::to_string(as<double>());
-    }
-    if (is_object()) {
-      return as<object*>()->repr();
-    }
-    throw internal_error{""};
-  }
+  std::string repr() const;
 
  private:
   using value_t = uint64_t;
@@ -163,19 +151,7 @@ struct value {
     return false;
   }
 
-  std::string repr() const {
-    switch (type_) {
-      case nil_t:
-        return "nil";
-      case boolean:
-        return boolean_ ? "true" : "false";
-      case number:
-        return std::to_string(double_);
-      case object_t:
-        return as<object*>()->repr();
-    }
-    throw internal_error{""};
-  }
+  std::string repr() const;
 
  private:
   enum type_t { nil_t, boolean, number, object_t };

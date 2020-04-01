@@ -3,21 +3,16 @@
 
 #include <string>
 
+#include "chunk.h"
 #include "contract.h"
 #include "exception.h"
-#include "type_list.h"
 
 namespace lox {
 
 struct object {
-  struct string_t;
-  using types = type_list<string_t>;
+  enum class type { string, function };
 
-  struct string_t {
-    constexpr static std::size_t id = index_of<string_t, types>::value;
-  };
-
-  object(std::size_t t) noexcept : type_{t} {}
+  object(type t) noexcept : type_{t} {}
   virtual ~object() = default;
 
   template <typename T>
@@ -31,7 +26,7 @@ struct object {
   object* next = nullptr;
 
  private:
-  std::size_t type_;
+  type type_;
 };
 
 struct string : object {
@@ -45,7 +40,7 @@ struct string : object {
   }
 
   string(std::string str) noexcept
-      : object{object::string_t::id}, str_{std::move(str)}, hash_{hash(str_)} {}
+      : object{type::string}, str_{std::move(str)}, hash_{hash(str_)} {}
 
   uint32_t hash() const noexcept { return hash_; }
 
@@ -62,21 +57,43 @@ struct string : object {
   uint32_t hash_;
 };
 
+struct function : object {
+  std::string repr() const noexcept override {
+    std::string name = *name_;
+    if (name.empty()) {
+      return "<script>";
+    }
+    return std::string{"<function: "} + name + " > ";
+  }
+
+ private:
+  // int arity_;
+  // chunk code_;
+  string* name_;
+};
+
 template <typename T>
 inline bool object::is() const noexcept {
   if constexpr (std::is_same_v<T, string>) {
-    return type_ == string_t::id;
+    return type_ == type::string;
   }
-  throw internal_error{""};
+  if constexpr (std::is_same_v<T, function>) {
+    return type_ == type::function;
+  }
+  throw internal_error{"Unknown object type."};
 }
 
 template <typename T>
 inline const T* object::as() const {
-  if constexpr (std::is_same_v<std::decay_t<T>, string>) {
-    ENSURES(type_ == string_t::id);
-    return reinterpret_cast<const string*>(this);
+  if constexpr (std::is_same_v<T, string>) {
+    ENSURES(type_ == type::string);
+    return reinterpret_cast<const T*>(this);
   }
-  throw internal_error{"Unknown object type"};
+  if constexpr (std::is_same_v<T, function>) {
+    ENSURES(type_ == type::function);
+    return reinterpret_cast<const T*>(this);
+  }
+  throw internal_error{"Unknown object type."};
 }
 
 }  // namespace lox
