@@ -15,7 +15,7 @@ static void hash_table(benchmark::State& state) {
     for (std::size_t i = 0; i < strings.size(); ++i) {
       table.insert(&strings[i], lox::value{static_cast<double>(i)});
     }
-    double result;
+    double result = 0;
     for (std::size_t i = 0; i < strings.size(); ++i) {
       benchmark::DoNotOptimize(result += table[&strings[i]].as<double>());
     }

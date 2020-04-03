@@ -1,25 +1,7 @@
-set(SOURCES main.cpp value.cpp)
+set(SOURCES value.cpp)
 
-set(TESTS_DIR ../tests)
-set(TESTS_SOURCES
-    ${TESTS_DIR}/assignment_tests.cpp
-    ${TESTS_DIR}/chunk_tests.cpp
-    ${TESTS_DIR}/compiler_tests.cpp
-    ${TESTS_DIR}/hash_table_tests.cpp
-    ${TESTS_DIR}/heap_tests.cpp
-    ${TESTS_DIR}/list_tests.cpp
-    ${TESTS_DIR}/object_tests.cpp
-    ${TESTS_DIR}/scanner_tests.cpp
-    ${TESTS_DIR}/type_list_tests.cpp
-    ${TESTS_DIR}/value_tests.cpp
-    ${TESTS_DIR}/virtual_machine_tests.cpp)
-
-add_executable(lox ${SOURCES} ${TESTS_SOURCES})
-add_dependencies(lox doctest)
-target_include_directories(lox PUBLIC ${DOCTEST_DIR}
-                                      ${PROJECT_SOURCE_DIR}/include)
-target_compile_options(lox PUBLIC -Wall -Werror -Wextra -Wpedantic
-                                  -pedantic-errors)
-
-include(${DOCTEST_DIR}/scripts/cmake/doctest.cmake)
-doctest_discover_tests(lox)
+add_library(lox-core ${SOURCES})
+target_include_directories(lox-core PUBLIC ${DOCTEST_DIR}
+                                           ${PROJECT_SOURCE_DIR}/include)
+target_compile_options(lox-core PUBLIC -Wall -Werror -Wextra -Wpedantic
+                                       -pedantic-errors)
