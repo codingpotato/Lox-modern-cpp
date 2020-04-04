@@ -35,5 +35,4 @@ add_dependencies(lox doctest)
 target_link_libraries(lox PUBLIC lox-core)
 
 include(${DOCTEST_DIR}/scripts/cmake/doctest.cmake)
-message(${DOCTEST_DIR})
 doctest_discover_tests(lox)
