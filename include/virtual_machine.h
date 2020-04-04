@@ -99,11 +99,11 @@ inline void virtual_machine::handle<op_set_local>(oprand_t oprand) {
 
 template <>
 inline void virtual_machine::handle<op_get_global>(oprand_t oprand) {
-  ENSURES(oprand < call_frames.peek().func->constant_size());
+  ENSURES(oprand < current_code().constant_size());
   const auto constant = current_code().constant_at(oprand);
   const auto name = constant.as<object*>()->as<string>();
-  if (globals_.contains(name)) {
-    stack_.push(globals_[name]);
+  if (auto value = globals_.get_if(name); value != nullptr) {
+    stack_.push(*value);
   } else {
     throw runtime_error{"Undefined variable: " + name->std_string()};
   }
@@ -111,7 +111,7 @@ inline void virtual_machine::handle<op_get_global>(oprand_t oprand) {
 
 template <>
 inline void virtual_machine::handle<op_define_global>(oprand_t oprand) {
-  ENSURES(oprand < call_frames.peek().func->constant_size());
+  ENSURES(oprand < current_code().constant_size());
   const auto constant = current_code().constant_at(oprand);
   const auto name = constant.as<object*>()->as<string>();
   auto str = main_heap.make_string(name->std_string());
@@ -120,12 +120,10 @@ inline void virtual_machine::handle<op_define_global>(oprand_t oprand) {
 
 template <>
 inline void virtual_machine::handle<op_set_global>(oprand_t oprand) {
-  ENSURES(oprand < call_frames.peek().func->constant_size());
+  ENSURES(oprand < current_code().constant_size());
   const auto constant = current_code().constant_at(oprand);
   const auto name = constant.as<object*>()->as<string>();
-  if (globals_.contains(name)) {
-    globals_[name] = stack_.peek();
-  } else {
+  if (!globals_.set(name, stack_.peek())) {
     throw runtime_error{"Undefined variable: " + name->std_string()};
   }
 }

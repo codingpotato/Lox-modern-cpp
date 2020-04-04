@@ -17,7 +17,9 @@ static void hash_table(benchmark::State& state) {
     }
     double result = 0;
     for (std::size_t i = 0; i < strings.size(); ++i) {
-      benchmark::DoNotOptimize(result += table[&strings[i]].as<double>());
+      if (auto value = table.get_if(&strings[i]); value != nullptr) {
+        benchmark::DoNotOptimize(result += value->as<double>());
+      }
     }
   }
 }

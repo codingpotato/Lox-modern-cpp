@@ -36,10 +36,18 @@ struct hash_table {
     return dest->key_ != nullptr;
   }
 
-  value& operator[](const string* key) const noexcept {
+  value* get_if(const string* key) const noexcept {
     auto dest = find_entry(entries_, capacity_mask_, key);
-    ENSURES(dest->key_ != nullptr);
-    return dest->value_;
+    return dest->key_ ? &dest->value_ : nullptr;
+  }
+
+  bool set(const string* key, value v) const noexcept {
+    auto dest = find_entry(entries_, capacity_mask_, key);
+    if (dest->key_) {
+      dest->value_ = v;
+      return true;
+    }
+    return false;
   }
 
   bool erase(const string* key) noexcept {
