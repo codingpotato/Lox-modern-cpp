@@ -11,8 +11,8 @@ inline std::string compile(const std::string& message,
   lox::scanner scanner{std::move(source)};
   std::ostringstream oss;
   lox::virtual_machine vm{oss};
-  lox::compiler{vm}.compile(scanner.scan());
-  return vm.main().repr(message);
+  auto function = lox::compiler{vm}.compile(scanner.scan());
+  return function->code.repr(message);
 }
 
 TEST_CASE("compile primary") {
@@ -32,6 +32,7 @@ TEST_CASE("compile primary") {
 0009    | op_pop
 0010    | op_constant "str"
 0011    | op_pop
+0012    3 op_return
 )";
   CHECK_EQ(compile("primary", source), expected);
 }

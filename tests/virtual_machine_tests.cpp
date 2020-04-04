@@ -11,8 +11,8 @@ inline std::string run(const std::string& source) {
   lox::scanner scanner{source};
   std::ostringstream oss;
   lox::virtual_machine vm{oss};
-  lox::compiler{vm}.compile(scanner.scan());
-  vm.interpret();
+  lox::compiler compiler{vm};
+  vm.interpret(compiler.compile(scanner.scan()));
   return oss.str();
 }
 

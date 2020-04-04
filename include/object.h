@@ -44,7 +44,7 @@ struct string : object {
 
   uint32_t hash() const noexcept { return hash_; }
 
-  operator const std::string&() const noexcept { return str_; }
+  const std::string& std_string() const noexcept { return str_; }
 
   std::string repr() const noexcept override { return str_; }
 
@@ -58,18 +58,22 @@ struct string : object {
 };
 
 struct function : object {
+  function() noexcept : object{type::function} {}
+  explicit function(string* n) noexcept : object{type::function}, name{n} {}
+
   std::string repr() const noexcept override {
-    std::string name = *name_;
-    if (name.empty()) {
+    auto& name_str = name->std_string();
+    if (name_str.empty()) {
       return "<script>";
     }
-    return std::string{"<function: "} + name + " > ";
+    return std::string{"<function: "} + name_str + " > ";
   }
+
+  chunk code;
 
  private:
   // int arity_;
-  // chunk code_;
-  string* name_;
+  string* name;
 };
 
 template <typename T>

@@ -85,13 +85,17 @@ class compiler {
  public:
   explicit compiler(virtual_machine& vm) noexcept : vm_{vm} {}
 
-  void compile(token_vector tokens) noexcept {
+  function* compile(token_vector tokens) noexcept {
+    function_ = vm_.main_heap.make_object<function>();
     tokens_ = std::move(tokens);
     current_ = tokens_.cbegin();
     scope_depth_ = 0;
+    locals_.emplace_back("", 0);
     while (!match(token::eof)) {
       declaration();
     }
+    add_instruction(op_return{});
+    return function_;
   }
 
  private:
@@ -120,7 +124,8 @@ class compiler {
     if (scope_depth_ > 0) {
       return 0;
     }
-    return vm_.add_constant_string(previous_->lexeme);
+    auto obj = vm_.main_heap.make_string(previous_->lexeme);
+    return function_->code.add_constant(obj);
   }
 
   void declare_variable() {
@@ -175,7 +180,7 @@ class compiler {
     } else {
       expression_statement();
     }
-    auto loop_start = vm_.code_size();
+    auto loop_start = next_code_position();
     auto exit_jump = -1;
     if (!match(token::semicolon)) {
       expression();
@@ -186,17 +191,17 @@ class compiler {
 
     if (!match(token::right_paren)) {
       auto body_jump = add_instruction(op_jump{});
-      auto increament_start = vm_.code_size();
+      auto increament_start = next_code_position();
       expression();
       add_instruction(op_pop{});
       consume(token::right_paren, "Expect ')' after for clauses.");
-      add_instruction(op_loop{}, vm_.code_size() - loop_start + 1);
+      add_instruction(op_loop{}, distance_from(loop_start));
       loop_start = increament_start;
       patch_jump(body_jump);
     }
 
     statement();
-    add_instruction(op_loop{}, vm_.code_size() - loop_start + 1);
+    add_instruction(op_loop{}, distance_from(loop_start));
     if (exit_jump != -1) {
       patch_jump(exit_jump);
       add_instruction(op_pop{});
@@ -223,14 +228,14 @@ class compiler {
   }
 
   void parse_while() {
-    const auto loop_start = vm_.code_size();
+    const auto loop_start = next_code_position();
     consume(token::left_paren, "Expect '(' after 'while'.");
     expression();
     consume(token::right_paren, "Expect ')' after condition.");
     const auto exit_jump_index = add_instruction(op_jump_if_false{}, 0);
     add_instruction(op_pop{});
     statement();
-    add_instruction(op_loop{}, vm_.code_size() - loop_start + 1);
+    add_instruction(op_loop{}, distance_from(loop_start));
     patch_jump(exit_jump_index);
     add_instruction(op_pop{});
   }
@@ -337,7 +342,8 @@ class compiler {
     bool is_global = false;
     if (index == -1) {
       is_global = true;
-      index = vm_.add_constant_string(previous_->lexeme);
+      auto obj = vm_.main_heap.make_string(previous_->lexeme);
+      index = function_->code.add_constant(obj);
     }
     if (can_assign && match(token::equal)) {
       expression();
@@ -356,12 +362,14 @@ class compiler {
   }
 
   void add_number(bool) {
-    const auto constant = vm_.add_constant_number(std::stod(previous_->lexeme));
+    const auto constant =
+        function_->code.add_constant(std::stod(previous_->lexeme));
     add_instruction(op_constant{}, constant);
   }
 
   void add_string(bool) {
-    const auto constant = vm_.add_constant_string(previous_->lexeme);
+    auto obj = vm_.main_heap.make_string(previous_->lexeme);
+    const auto constant = function_->code.add_constant(obj);
     add_instruction(op_constant{}, constant);
   }
 
@@ -420,7 +428,7 @@ class compiler {
 
   template <typename Opcode>
   size_t add_instruction(Opcode opcode, oprand_t oprand = 0) noexcept {
-    return vm_.add_instruction(previous_->line, opcode, oprand);
+    return function_->code.add_instruction(previous_->line, opcode, oprand);
   }
 
   void advance() noexcept {
@@ -456,7 +464,13 @@ class compiler {
   }
 
   void patch_jump(size_t jump) noexcept {
-    vm_.set_oprand(jump, vm_.code_size() - (jump + 1));
+    function_->code.set_oprand(jump, next_code_position() - (jump + 1));
+  }
+  size_t next_code_position() const noexcept {
+    return function_->code.instruction_size();
+  }
+  size_t distance_from(size_t pos) const noexcept {
+    return next_code_position() - pos + 1;
   }
 
   struct local {
@@ -471,6 +485,7 @@ class compiler {
       precedence::rules_generator<compiler>::make_rules();
 
   virtual_machine& vm_;
+  function* function_ = nullptr;
   token_vector tokens_;
   token_vector::const_iterator current_;
   token_vector::const_iterator previous_;

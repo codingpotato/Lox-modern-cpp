@@ -12,8 +12,8 @@ inline std::string run(std::string source) noexcept {
   lox::scanner scanner{std::move(source)};
   std::ostringstream oss;
   lox::virtual_machine vm{oss};
-  lox::compiler{vm}.compile(scanner.scan());
-  vm.interpret();
+  lox::compiler compiler{vm};
+  vm.interpret(compiler.compile(scanner.scan()));
   return oss.str();
 }
 

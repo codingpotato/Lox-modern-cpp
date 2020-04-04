@@ -14,8 +14,7 @@ inline void run(const std::string &source) {
   try {
     scanner scanner{source};
     virtual_machine vm{std::cout};
-    compiler{vm}.compile(scanner.scan());
-    vm.interpret();
+    vm.interpret(compiler{vm}.compile(scanner.scan()));
   } catch (std::exception &e) {
     std::cout << e.what() << '\n';
   }

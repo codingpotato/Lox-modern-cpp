@@ -11,19 +11,26 @@
 namespace lox {
 
 struct heap {
-  string* add_string(std::string str) noexcept {
-    auto obj = strings_.find_string(str);
+  template <typename T, typename... Args>
+  T* make_object(Args&&... args) noexcept {
+    auto obj = new T{std::forward<Args>(args)...};
+    objects.insert(obj);
+    return obj;
+  }
+
+  string* make_string(std::string str) noexcept {
+    auto obj = strings.find_string(str);
     if (!obj) {
       obj = new string{std::move(str)};
-      objects_.insert(obj);
-      strings_.insert(obj, value{true});
+      objects.insert(obj);
+      strings.insert(obj, value{true});
     }
     return obj;
   }
 
  private:
-  list objects_;
-  hash_table strings_;
+  list objects;
+  hash_table strings;
 };
 
 }  // namespace lox

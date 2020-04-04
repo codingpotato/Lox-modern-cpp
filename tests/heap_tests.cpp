@@ -7,7 +7,7 @@
 TEST_CASE("heap") {
   lox::heap heap;
   std::string str{"test string"};
-  auto obj = heap.add_string(str);
+  auto obj = heap.make_string(str);
   (void)obj;
-  CHECK_EQ(heap.add_string(str), obj);
+  CHECK_EQ(heap.make_string(str), obj);
 }

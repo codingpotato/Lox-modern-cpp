@@ -14,12 +14,11 @@ struct stack {
   bool empty() const noexcept { return count_ == 0; }
 
   template <typename... Args>
-  bool push(Args&&... args) noexcept {
-    if (count_ < Max_size) {
-      storage_[count_++] = T{std::forward<Args>(args)...};
-      return true;
+  void push(Args&&... args) {
+    if (count_ == Max_size) {
+      throw runtime_error{"Stack overflow."};
     }
-    return false;
+    storage_[count_++] = T{std::forward<Args>(args)...};
   }
 
   T& operator[](size_t pos) noexcept {
@@ -32,7 +31,7 @@ struct stack {
     return storage_[--count_];
   }
 
-  const T& peek() const noexcept { return storage_[count_ - 1]; }
+  T& peek() noexcept { return storage_[count_ - 1]; }
 
  private:
   std::vector<T> storage_;
