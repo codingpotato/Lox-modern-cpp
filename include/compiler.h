@@ -63,8 +63,8 @@ struct rules_generator {
         {token::less, {nullptr, &Compiler::binary, p_comparison}},
         {token::less_equal, {nullptr, &Compiler::binary, p_comparison}},
         {token::identifier, {&Compiler::add_variable, nullptr, p_none}},
-        {token::number, {&Compiler::add_number, nullptr, p_none}},
-        {token::string, {&Compiler::add_string, nullptr, p_none}},
+        {token::number, {&Compiler::add_number_constant, nullptr, p_none}},
+        {token::string, {&Compiler::add_string_constant, nullptr, p_none}},
         {token::k_and, {nullptr, &Compiler::parse_and, p_and}},
         {token::k_or, {nullptr, &Compiler::parse_or, p_or}},
         {token::k_false, {&Compiler::add_literal, nullptr, p_none}},
@@ -86,71 +86,67 @@ class compiler {
   explicit compiler(virtual_machine& vm) noexcept : vm_{vm} {}
 
   function* compile(token_vector tokens) noexcept {
-    function_ = vm_.main_heap.make_object<function>();
+    make_func_frame(0);
     tokens_ = std::move(tokens);
     current_ = tokens_.cbegin();
-    scope_depth_ = 0;
-    locals_.emplace_back("", 0);
+    current_func_frame().push_local();
     while (!match(token::eof)) {
-      declaration();
+      parse_declaration();
     }
     add_instruction(op_return{});
-    return function_;
+    EXPECTS(func_frames.size() == 1)
+    return current_func_frame().func;
   }
 
  private:
-  void declaration() {
-    if (match(token::k_var)) {
-      var_declaration();
+  void parse_declaration() {
+    if (match(token::k_func)) {
+      parse_func_declaration();
+    } else if (match(token::k_var)) {
+      parse_var_declaration();
     } else {
       statement();
     }
   }
 
-  void var_declaration() {
-    const auto name = variable_name_constant("Expect variable name.");
+  void parse_func_declaration() {
+    const auto name = parse_variable("Expect function name.");
+    current_func_frame().latest_local_initialized();
+    parse_function();
+    current_func_frame().define_variable(name, previous_->line);
+  }
+
+  void parse_function() {
+    make_func_frame(1);
+    current_func_frame().begin_scope();
+    consume(token::left_paren, "Expect '(' after function name.");
+    consume(token::right_paren, "Expect ')' after function name.");
+
+    consume(token::left_brace, "Expect '{' after function name.");
+    parse_block();
+    auto func = current_func_frame().func;
+    pop_func_frame();
+    add_instruction(op_constant{}, add_constant(func));
+  }
+
+  void parse_var_declaration() {
+    const auto name = parse_variable("Expect variable name.");
     if (match(token::equal)) {
       expression();
     } else {
       add_instruction(op_nil{});
     }
     consume(token::semicolon, "Expect ';' after variable declaration.");
-    define_variable(name);
+    current_func_frame().define_variable(name, previous_->line);
   }
 
-  std::size_t variable_name_constant(const std::string& message) {
+  size_t parse_variable(const std::string& message) {
     consume(token::identifier, message);
-    declare_variable();
-    if (scope_depth_ > 0) {
+    current_func_frame().declare_variable(previous_->lexeme);
+    if (current_func_frame().scope_depth > 0) {
       return 0;
     }
-    auto obj = vm_.main_heap.make_string(previous_->lexeme);
-    return function_->code.add_constant(obj);
-  }
-
-  void declare_variable() {
-    if (scope_depth_ > 0) {
-      const auto& name = previous_->lexeme;
-      for (auto it = locals_.crbegin(); it != locals_.crend(); ++it) {
-        if (it->depth != -1 && it->depth < scope_depth_) {
-          break;
-        }
-        if (it->name == name) {
-          throw compile_error{"Variable '" + name +
-                              "' already declared in this scope."};
-        }
-      }
-      locals_.emplace_back(previous_->lexeme, -1);
-    }
-  }
-
-  void define_variable(std::size_t name) noexcept {
-    if (scope_depth_ > 0) {
-      ENSURES(!locals_.empty());
-      locals_.back().depth = scope_depth_;
-    } else {
-      add_instruction(op_define_global{}, name);
-    }
+    return add_constant(vm_.main_heap.make_string(previous_->lexeme));
   }
 
   void statement() {
@@ -163,24 +159,24 @@ class compiler {
     } else if (match(token::k_while)) {
       parse_while();
     } else if (match(token::left_brace)) {
-      begin_scope();
+      current_func_frame().begin_scope();
       parse_block();
-      end_scope();
+      current_func_frame().end_scope(previous_->line);
     } else {
       expression_statement();
     }
   }
 
   void parse_for() {
-    begin_scope();
+    current_func_frame().begin_scope();
     consume(token::left_paren, "Expect '(' after 'for'.");
     if (match(token::semicolon)) {
     } else if (match(token::k_var)) {
-      var_declaration();
+      parse_var_declaration();
     } else {
       expression_statement();
     }
-    auto loop_start = next_code_position();
+    auto loop_start = current_func_frame().current_code_position();
     auto exit_jump = -1;
     if (!match(token::semicolon)) {
       expression();
@@ -191,22 +187,24 @@ class compiler {
 
     if (!match(token::right_paren)) {
       auto body_jump = add_instruction(op_jump{});
-      auto increament_start = next_code_position();
+      auto increament_start = current_func_frame().current_code_position();
       expression();
       add_instruction(op_pop{});
       consume(token::right_paren, "Expect ')' after for clauses.");
-      add_instruction(op_loop{}, distance_from(loop_start));
+      add_instruction(op_loop{},
+                      current_func_frame().code_distance_from(loop_start));
       loop_start = increament_start;
-      patch_jump(body_jump);
+      current_func_frame().patch_jump(body_jump);
     }
 
     statement();
-    add_instruction(op_loop{}, distance_from(loop_start));
+    add_instruction(op_loop{},
+                    current_func_frame().code_distance_from(loop_start));
     if (exit_jump != -1) {
-      patch_jump(exit_jump);
+      current_func_frame().patch_jump(exit_jump);
       add_instruction(op_pop{});
     }
-    end_scope();
+    current_func_frame().end_scope(previous_->line);
   }
 
   void parse_if() {
@@ -219,30 +217,31 @@ class compiler {
     statement();
     const auto else_jump_index = add_instruction(op_jump{});
 
-    patch_jump(then_jump_index);
+    current_func_frame().patch_jump(then_jump_index);
     add_instruction(op_pop{});
     if (match(token::k_else)) {
       statement();
     }
-    patch_jump(else_jump_index);
+    current_func_frame().patch_jump(else_jump_index);
   }
 
   void parse_while() {
-    const auto loop_start = next_code_position();
+    const auto loop_start = current_func_frame().current_code_position();
     consume(token::left_paren, "Expect '(' after 'while'.");
     expression();
     consume(token::right_paren, "Expect ')' after condition.");
     const auto exit_jump_index = add_instruction(op_jump_if_false{}, 0);
     add_instruction(op_pop{});
     statement();
-    add_instruction(op_loop{}, distance_from(loop_start));
-    patch_jump(exit_jump_index);
+    add_instruction(op_loop{},
+                    current_func_frame().code_distance_from(loop_start));
+    current_func_frame().patch_jump(exit_jump_index);
     add_instruction(op_pop{});
   }
 
   void parse_block() {
     while (!check(token::right_brace) && !check(token::eof)) {
-      declaration();
+      parse_declaration();
     }
     consume(token::right_brace, "Expect '}' after block.");
   }
@@ -324,53 +323,34 @@ class compiler {
     }
   }
 
-  int resolve_local(const std::string& name) {
-    for (int i = locals_.size() - 1; i >= 0; --i) {
-      if (locals_[i].name == name) {
-        if (locals_[i].depth != -1) {
-          return i;
-        }
-        throw compile_error{
-            "Cannot read local variable in its own initializer."};
-      }
-    }
-    return -1;
-  }
-
   void add_variable(bool can_assign) {
-    auto index = resolve_local(previous_->lexeme);
-    bool is_global = false;
-    if (index == -1) {
-      is_global = true;
-      auto obj = vm_.main_heap.make_string(previous_->lexeme);
-      index = function_->code.add_constant(obj);
+    auto index_local = current_func_frame().resolve_local(previous_->lexeme);
+    int index_global = -1;
+    if (index_local == -1) {
+      index_global = add_constant(vm_.main_heap.make_string(previous_->lexeme));
     }
     if (can_assign && match(token::equal)) {
       expression();
-      if (is_global) {
-        add_instruction(op_set_global{}, index);
+      if (index_local == -1) {
+        add_instruction(op_set_global{}, index_global);
       } else {
-        add_instruction(op_set_local{}, index);
+        add_instruction(op_set_local{}, index_local);
       }
     } else {
-      if (is_global) {
-        add_instruction(op_get_global{}, index);
+      if (index_local == -1) {
+        add_instruction(op_get_global{}, index_global);
       } else {
-        add_instruction(op_get_local{}, index);
+        add_instruction(op_get_local{}, index_local);
       }
     }
   }
 
-  void add_number(bool) {
-    const auto constant =
-        function_->code.add_constant(std::stod(previous_->lexeme));
-    add_instruction(op_constant{}, constant);
+  void add_number_constant(bool) {
+    add_instruction(op_constant{}, add_constant(std::stod(previous_->lexeme)));
   }
-
-  void add_string(bool) {
-    auto obj = vm_.main_heap.make_string(previous_->lexeme);
-    const auto constant = function_->code.add_constant(obj);
-    add_instruction(op_constant{}, constant);
+  void add_string_constant(bool) {
+    add_instruction(op_constant{},
+                    add_constant(vm_.main_heap.make_string(previous_->lexeme)));
   }
 
   void add_literal(bool) {
@@ -393,16 +373,16 @@ class compiler {
     const auto end_jump_index = add_instruction(op_jump_if_false{}, 0);
     add_instruction(op_pop{});
     parse_precedence(precedence::p_and);
-    patch_jump(end_jump_index);
+    current_func_frame().patch_jump(end_jump_index);
   }
 
   void parse_or(bool) {
     const auto else_jump_index = add_instruction(op_jump_if_false{}, 0);
     const auto end_jump_index = add_instruction(op_jump{}, 0);
-    patch_jump(else_jump_index);
+    current_func_frame().patch_jump(else_jump_index);
     add_instruction(op_pop{});
     parse_precedence(precedence::p_or);
-    patch_jump(end_jump_index);
+    current_func_frame().patch_jump(end_jump_index);
   }
 
   void parse_precedence(precedence::precedence prec) {
@@ -424,11 +404,6 @@ class compiler {
     if (can_assign && match(token::equal)) {
       throw compile_error{"Invalid assignment target."};
     }
-  }
-
-  template <typename Opcode>
-  size_t add_instruction(Opcode opcode, oprand_t oprand = 0) noexcept {
-    return function_->code.add_instruction(previous_->line, opcode, oprand);
   }
 
   void advance() noexcept {
@@ -454,23 +429,14 @@ class compiler {
     return false;
   }
 
-  void begin_scope() noexcept { ++scope_depth_; }
-  void end_scope() noexcept {
-    --scope_depth_;
-    while (!locals_.empty() && locals_.back().depth > scope_depth_) {
-      add_instruction(op_pop{});
-      locals_.pop_back();
-    }
+  template <typename Opcode>
+  size_t add_instruction(Opcode opcode, oprand_t oprand = 0) noexcept {
+    return current_func_frame().add_instruction(previous_->line, opcode,
+                                                oprand);
   }
-
-  void patch_jump(size_t jump) noexcept {
-    function_->code.set_oprand(jump, next_code_position() - (jump + 1));
-  }
-  size_t next_code_position() const noexcept {
-    return function_->code.instruction_size();
-  }
-  size_t distance_from(size_t pos) const noexcept {
-    return next_code_position() - pos + 1;
+  template <typename... Args>
+  size_t add_constant(Args&&... args) noexcept {
+    return current_func_frame().add_constant(std::forward<Args>(args)...);
   }
 
   struct local {
@@ -479,18 +445,107 @@ class compiler {
     std::string name;
     int depth;
   };
+  using local_vector = std::vector<local>;
+
+  struct func_frame {
+    explicit func_frame(function* f, int depth) noexcept
+        : func{f}, scope_depth{depth} {}
+
+    void declare_variable(const std::string& name) {
+      if (scope_depth > 0) {
+        for (auto it = locals.crbegin(); it != locals.crend(); ++it) {
+          if (it->depth != -1 && it->depth < scope_depth) {
+            break;
+          }
+          if (it->name == name) {
+            throw compile_error{"Variable '" + name +
+                                "' already declared in this scope."};
+          }
+        }
+        locals.emplace_back(name, -1);
+      }
+    }
+
+    void define_variable(size_t name, int line) noexcept {
+      if (scope_depth > 0) {
+        latest_local_initialized();
+      } else {
+        add_instruction(line, op_define_global{}, name);
+      }
+    }
+
+    void latest_local_initialized() noexcept {
+      if (scope_depth > 0) {
+        ENSURES(!locals.empty());
+        locals.back().depth = scope_depth;
+      }
+    }
+
+    int resolve_local(const std::string& name) const {
+      for (int i = locals.size() - 1; i >= 0; --i) {
+        if (locals[i].name == name) {
+          if (locals[i].depth != -1) {
+            return i;
+          }
+          throw compile_error{
+              "Cannot read local variable in its own initializer."};
+        }
+      }
+      return -1;
+    }
+
+    template <typename Opcode>
+    size_t add_instruction(int line, Opcode opcode,
+                           oprand_t oprand = 0) noexcept {
+      return func->code.add_instruction(line, opcode, oprand);
+    }
+    template <typename... Args>
+    size_t add_constant(Args&&... args) noexcept {
+      return func->code.add_constant(std::forward<Args>(args)...);
+    }
+
+    void patch_jump(size_t jump) noexcept {
+      func->code.set_oprand(jump, current_code_position() - (jump + 1));
+    }
+    size_t current_code_position() const noexcept {
+      return func->code.instruction_size();
+    }
+    size_t code_distance_from(size_t pos) const noexcept {
+      return current_code_position() - pos + 1;
+    }
+
+    void push_local() noexcept { locals.emplace_back("", 0); }
+
+    void begin_scope() noexcept { ++scope_depth; }
+    void end_scope(int line) noexcept {
+      --scope_depth;
+      while (!locals.empty() && locals.back().depth > scope_depth) {
+        add_instruction(line, op_pop{});
+        locals.pop_back();
+      }
+    }
+
+    function* func = nullptr;
+    std::vector<local> locals;
+    int scope_depth;
+  };
+  using func_frame_vector = std::vector<func_frame>;
+
+  void make_func_frame(int depth) noexcept {
+    func_frames.emplace_back(vm_.main_heap.make_object<function>(), depth);
+  }
+  void pop_func_frame() noexcept { func_frames.pop_back(); }
+  func_frame& current_func_frame() noexcept { return func_frames.back(); }
 
   friend precedence::rules_generator<compiler>;
   static constexpr precedence::rules<compiler> p_rules_ =
       precedence::rules_generator<compiler>::make_rules();
 
   virtual_machine& vm_;
-  function* function_ = nullptr;
+  func_frame_vector func_frames;
   token_vector tokens_;
   token_vector::const_iterator current_;
   token_vector::const_iterator previous_;
-  std::vector<local> locals_;
-  int scope_depth_;
 };
 
 }  // namespace lox
