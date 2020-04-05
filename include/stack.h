@@ -14,10 +14,8 @@ struct stack {
   bool empty() const noexcept { return count_ == 0; }
 
   template <typename... Args>
-  void push(Args&&... args) {
-    if (count_ == Max_size) {
-      throw runtime_error{"Stack overflow."};
-    }
+  void push(Args&&... args) noexcept {
+    ENSURES(count_ < Max_size);
     storage_[count_++] = T{std::forward<Args>(args)...};
   }
 

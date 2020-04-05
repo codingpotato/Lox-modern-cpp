@@ -1,13 +1,9 @@
 #ifndef LOX_VIRTUAL_MACHINE_H
 #define LOX_VIRTUAL_MACHINE_H
 
-#include <list>
-#include <map>
 #include <ostream>
 #include <string>
-#include <vector>
 
-#include "chunk.h"
 #include "exception.h"
 #include "hash_table.h"
 #include "heap.h"
@@ -22,22 +18,20 @@ class virtual_machine {
  public:
   explicit virtual_machine(std::ostream& os) noexcept : out_{os} {}
 
-  inline void interpret(function* func);
+  inline void interpret(const function* func);
 
   template <typename Opcode>
-  void handle(oprand_t) {
-    throw internal_error{"Need implement for " + Opcode::name};
-  }
+  void handle(oprand_t) {}
 
   heap main_heap;
 
  private:
   struct call_frame {
     call_frame() noexcept {}
-    call_frame(function* f, size_t start = 0) noexcept
+    call_frame(const function* f, size_t start = 0) noexcept
         : func{f}, start_of_stack{start} {}
 
-    function* func = nullptr;
+    const function* func = nullptr;
     size_t ip = 0;
     size_t start_of_stack = 0;
   };
@@ -50,7 +44,11 @@ class virtual_machine {
   }
 
   call_frame& current_frame() noexcept { return call_frames.peek(); }
-  chunk& current_code() noexcept { return current_frame().func->code; }
+  const chunk& current_code() noexcept { return current_frame().func->code; }
+
+  void throw_undefined_variable(const string* name) const {
+    throw runtime_error{"Undefined variable: " + name->std_string()};
+  }
 
   constexpr static size_t max_frame_size = 64;
   constexpr static size_t max_stack_size = max_frame_size * 1024;
@@ -89,12 +87,12 @@ inline void virtual_machine::handle<op_pop>(oprand_t) {
 
 template <>
 inline void virtual_machine::handle<op_get_local>(oprand_t oprand) {
-  stack_.push(stack_[call_frames.peek().start_of_stack + oprand]);
+  stack_.push(stack_[current_frame().start_of_stack + oprand]);
 }
 
 template <>
 inline void virtual_machine::handle<op_set_local>(oprand_t oprand) {
-  stack_[call_frames.peek().start_of_stack + oprand] = stack_.peek();
+  stack_[current_frame().start_of_stack + oprand] = stack_.peek();
 }
 
 template <>
@@ -105,7 +103,7 @@ inline void virtual_machine::handle<op_get_global>(oprand_t oprand) {
   if (auto value = globals_.get_if(name); value != nullptr) {
     stack_.push(*value);
   } else {
-    throw runtime_error{"Undefined variable: " + name->std_string()};
+    throw_undefined_variable(name);
   }
 }
 
@@ -124,7 +122,7 @@ inline void virtual_machine::handle<op_set_global>(oprand_t oprand) {
   const auto constant = current_code().constant_at(oprand);
   const auto name = constant.as<object*>()->as<string>();
   if (!globals_.set(name, stack_.peek())) {
-    throw runtime_error{"Undefined variable: " + name->std_string()};
+    throw_undefined_variable(name);
   }
 }
 
@@ -168,7 +166,7 @@ inline void virtual_machine::handle<op_not>(oprand_t) {
   if (stack_.peek().is<bool>()) {
     stack_.push(!stack_.pop().as<bool>());
   } else {
-    throw runtime_error{"Operand must be a boolean."};
+    throw runtime_error{"Operand must be a boolean value."};
   }
 }
 
@@ -179,7 +177,7 @@ inline void virtual_machine::handle<op_negate>(oprand_t) {
     const auto result = operand.is<nil>() || !operand.as<bool>();
     stack_.push(result);
   } else {
-    throw runtime_error{"Operand must be a number."};
+    throw runtime_error{"Operand must be a number value."};
   }
 }
 
@@ -191,20 +189,24 @@ inline void virtual_machine::handle<op_print>(oprand_t) {
 
 template <>
 inline void virtual_machine::handle<op_jump>(oprand_t oprand) {
-  call_frames.peek().ip += oprand;
+  current_frame().ip += oprand;
 }
 
 template <>
 inline void virtual_machine::handle<op_jump_if_false>(oprand_t oprand) {
   ENSURES(!stack_.empty());
-  if (!stack_.peek().as<bool>()) {
-    call_frames.peek().ip += oprand;
+  if (auto value = stack_.peek(); value.is<bool>()) {
+    if (!value.as<bool>()) {
+      current_frame().ip += oprand;
+    }
+  } else {
+    throw runtime_error{"Operand must be a boolean value."};
   }
 }
 
 template <>
 inline void virtual_machine::handle<op_loop>(oprand_t oprand) {
-  call_frames.peek().ip -= oprand;
+  current_frame().ip -= oprand;
 }
 
 template <>
@@ -215,7 +217,7 @@ inline void virtual_machine::handle<op_return>(oprand_t) {}
     handle<opcode>(instr.oprand());            \
     break;
 
-inline void virtual_machine::interpret(function* func) {
+inline void virtual_machine::interpret(const function* func) {
   stack_.push(func);
   call_frames.push(func);
   while (call_frames.peek().ip < current_code().instruction_size()) {
