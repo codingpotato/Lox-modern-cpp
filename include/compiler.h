@@ -49,7 +49,8 @@ struct rules_generator {
       rule<Compiler> rule_of_type;
     };
     constexpr element elements[] = {
-        {token::left_paren, {&Compiler::grouping, nullptr, p_none}},
+        {token::left_paren,
+         {&Compiler::grouping, &Compiler::parse_call, p_call}},
         {token::minus, {&Compiler::unary, &Compiler::binary, p_term}},
         {token::plus, {nullptr, &Compiler::binary, p_term}},
         {token::slash, {nullptr, &Compiler::binary, p_factor}},
@@ -124,11 +125,11 @@ class compiler {
       do {
         auto parameter = parse_variable("Expect parameter name.");
         current_func_frame().define_variable(parameter, previous_->line);
-        constexpr int max_parameters = 255;
         ++current_func_frame().func->arity;
-        if (current_func_frame().func->arity > max_parameters) {
+        if (current_func_frame().func->arity > max_function_parameters) {
           throw runtime_error{"Cannot have more than " +
-                              std::to_string(max_parameters) + " parameters."};
+                              std::to_string(max_function_parameters) +
+                              " parameters."};
         }
       } while (match(token::comma));
     }
@@ -144,7 +145,7 @@ class compiler {
   void parse_var_declaration() {
     const auto name = parse_variable("Expect variable name.");
     if (match(token::equal)) {
-      expression();
+      parse_expression();
     } else {
       add_instruction(op_nil{});
     }
@@ -191,7 +192,7 @@ class compiler {
     auto loop_start = current_func_frame().current_code_position();
     auto exit_jump = -1;
     if (!match(token::semicolon)) {
-      expression();
+      parse_expression();
       consume(token::semicolon, "Expect ';' after loop condition.");
       exit_jump = add_instruction(op_jump_if_false{});
       add_instruction(op_pop{});
@@ -200,7 +201,7 @@ class compiler {
     if (!match(token::right_paren)) {
       auto body_jump = add_instruction(op_jump{});
       auto increament_start = current_func_frame().current_code_position();
-      expression();
+      parse_expression();
       add_instruction(op_pop{});
       consume(token::right_paren, "Expect ')' after for clauses.");
       add_instruction(op_loop{},
@@ -221,7 +222,7 @@ class compiler {
 
   void parse_if() {
     consume(token::left_paren, "Expect '(' after 'if'.");
-    expression();
+    parse_expression();
     consume(token::right_paren, "Expect ')' after condition.");
 
     const auto then_jump_index = add_instruction(op_jump_if_false{});
@@ -240,7 +241,7 @@ class compiler {
   void parse_while() {
     const auto loop_start = current_func_frame().current_code_position();
     consume(token::left_paren, "Expect '(' after 'while'.");
-    expression();
+    parse_expression();
     consume(token::right_paren, "Expect ')' after condition.");
     const auto exit_jump_index = add_instruction(op_jump_if_false{}, 0);
     add_instruction(op_pop{});
@@ -259,18 +260,18 @@ class compiler {
   }
 
   void print_statement() {
-    expression();
+    parse_expression();
     consume(token::semicolon, "Expect ';' after value.");
     add_instruction(op_print{});
   }
 
   void expression_statement() {
-    expression();
+    parse_expression();
     consume(token::semicolon, "Expect ';' after value.");
     add_instruction(op_pop{});
   }
 
-  void expression() { parse_precedence(precedence::p_assignment); }
+  void parse_expression() { parse_precedence(precedence::p_assignment); }
 
   void binary(bool) {
     const auto op_type = previous_->type;
@@ -315,8 +316,27 @@ class compiler {
     }
   }
 
+  void parse_call(bool) { add_instruction(op_call{}, argument_list()); }
+
+  size_t argument_list() {
+    size_t count = 0;
+    if (!check(token::right_paren)) {
+      do {
+        parse_expression();
+        if (count == max_function_parameters) {
+          throw runtime_error{"Cannot have more than " +
+                              std::to_string(max_function_parameters) +
+                              " arguments."};
+        }
+        ++count;
+      } while (match(token::comma));
+    }
+    consume(token::right_paren, "Expect ')' after arguments.");
+    return count;
+  }
+
   void grouping(bool) {
-    expression();
+    parse_expression();
     consume(token::right_paren, "Expect ')' after expression.");
   }
 
@@ -342,7 +362,7 @@ class compiler {
       index_global = add_constant(vm_.main_heap.make_string(previous_->lexeme));
     }
     if (can_assign && match(token::equal)) {
-      expression();
+      parse_expression();
       if (index_local == -1) {
         add_instruction(op_set_global{}, index_global);
       } else {
@@ -550,8 +570,10 @@ class compiler {
   func_frame& current_func_frame() noexcept { return func_frames.back(); }
 
   friend precedence::rules_generator<compiler>;
-  static constexpr precedence::rules<compiler> p_rules_ =
+  constexpr static precedence::rules<compiler> p_rules_ =
       precedence::rules_generator<compiler>::make_rules();
+
+  constexpr static int max_function_parameters = 255;
 
   virtual_machine& vm_;
   func_frame_vector func_frames;

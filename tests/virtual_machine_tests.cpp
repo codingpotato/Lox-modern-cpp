@@ -191,3 +191,21 @@ print areWeHavingItYet;
 )"};
   CHECK_EQ(run(source), expected);
 }
+
+TEST_CASE("function call with incorrect number of argumentws") {
+  std::string source{R"(
+fun a() { b(); }
+fun b() { c(); }
+fun c() {
+  c("too", "many");
+}
+a();
+)"};
+  std::string expected{R"(Expected 0 arguments but got 2.
+<function: c>
+<function: b>
+<function: a>
+<script>
+)"};
+  CHECK_EQ(run(source), expected);
+}

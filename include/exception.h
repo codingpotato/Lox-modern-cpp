@@ -5,20 +5,24 @@
 
 namespace lox {
 
-struct internal_error : std::runtime_error {
+struct exception : std::runtime_error {
   using runtime_error::runtime_error;
 };
 
-struct scan_error : std::runtime_error {
-  using runtime_error::runtime_error;
+struct internal_error : exception {
+  using exception::exception;
 };
 
-struct compile_error : std::runtime_error {
-  using runtime_error::runtime_error;
+struct scan_error : exception {
+  using exception::exception;
 };
 
-struct runtime_error : std::runtime_error {
-  using std::runtime_error::runtime_error;
+struct compile_error : exception {
+  using exception::exception;
+};
+
+struct runtime_error : exception {
+  using exception::exception;
 };
 
 }  // namespace lox

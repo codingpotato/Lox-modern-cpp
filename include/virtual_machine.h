@@ -18,7 +18,7 @@ class virtual_machine {
  public:
   explicit virtual_machine(std::ostream& os) noexcept : out_{os} {}
 
-  inline void interpret(const function* func);
+  inline void interpret(const function* func) noexcept;
 
   template <typename Opcode>
   void handle(oprand_t) {}
@@ -48,6 +48,12 @@ class virtual_machine {
 
   void throw_undefined_variable(const string* name) const {
     throw runtime_error{"Undefined variable: " + name->std_string()};
+  }
+
+  void throw_incorrect_argument_count(int arity, int argument_count) const {
+    throw runtime_error{"Expected " + std::to_string(arity) +
+                        " arguments but got " + std::to_string(argument_count) +
+                        "."};
   }
 
   constexpr static size_t max_frame_size = 64;
@@ -210,6 +216,21 @@ inline void virtual_machine::handle<op_loop>(oprand_t oprand) {
 }
 
 template <>
+inline void virtual_machine::handle<op_call>(oprand_t oprand) {
+  int argument_count = oprand;
+  if (auto value = stack_.peek(argument_count); value.is<object*>()) {
+    if (auto obj = value.as<object*>(); obj->is<function>()) {
+      auto func = obj->as<function>();
+      if (argument_count == func->arity) {
+        call_frames.push(func, stack_.size() - argument_count - 1);
+      } else {
+        throw_incorrect_argument_count(func->arity, argument_count);
+      }
+    }
+  }
+}
+
+template <>
 inline void virtual_machine::handle<op_return>(oprand_t) {}
 
 #define SWITCH_CASE_(opcode, has_oprand_value) \
@@ -217,12 +238,20 @@ inline void virtual_machine::handle<op_return>(oprand_t) {}
     handle<opcode>(instr.oprand());            \
     break;
 
-inline void virtual_machine::interpret(const function* func) {
-  stack_.push(func);
-  call_frames.push(func);
-  while (call_frames.peek().ip < current_code().instruction_size()) {
-    const auto& instr = current_code().instruction_at(call_frames.peek().ip++);
-    switch (instr.raw_opcode()) { OPCODES(SWITCH_CASE_) };
+inline void virtual_machine::interpret(const function* func) noexcept {
+  try {
+    stack_.push(func);
+    call_frames.push(func);
+    while (call_frames.peek().ip < current_code().instruction_size()) {
+      const auto& instr =
+          current_code().instruction_at(call_frames.peek().ip++);
+      switch (instr.raw_opcode()) { OPCODES(SWITCH_CASE_) };
+    }
+  } catch (exception& e) {
+    out_ << e.what() << "\n";
+    for (size_t distance = 0; distance < call_frames.size(); ++distance) {
+      out_ << call_frames.peek(distance).func->repr() << "\n";
+    }
   }
 }
 

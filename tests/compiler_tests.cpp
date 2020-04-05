@@ -15,7 +15,7 @@ inline std::string compile(const std::string& message,
   return function->code.repr(message);
 }
 
-TEST_CASE("compile primary") {
+TEST_CASE("primary") {
   const std::string source{R"(1; 2; nil;
   true; false; "str";
 )"};
@@ -33,6 +33,30 @@ TEST_CASE("compile primary") {
 0010    | op_constant "str"
 0011    | op_pop
 0012    3 op_return
+)";
+  CHECK_EQ(compile("primary", source), expected);
+}
+
+TEST_CASE("function call") {
+  const std::string source{R"(
+fun a() { b(); }
+fun b() { c(); }
+fun c() {
+  c("too", "many");
+}
+a();
+)"};
+  const std::string expected = R"(== primary ==
+0000    2 op_constant <function: a>
+0001    | op_define_global a
+0002    3 op_constant <function: b>
+0003    | op_define_global b
+0004    6 op_constant <function: c>
+0005    | op_define_global c
+0006    7 op_get_global a
+0007    | op_call a
+0008    | op_pop
+0009    8 op_return
 )";
   CHECK_EQ(compile("primary", source), expected);
 }

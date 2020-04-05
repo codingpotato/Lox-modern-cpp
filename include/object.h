@@ -66,7 +66,7 @@ struct function : object {
     if (!name) {
       return "<script>";
     }
-    return std::string{"<function: "} + name->std_string() + ">";
+    return "<function: " + name->std_string() + ">";
   }
 
   int arity = 0;

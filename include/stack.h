@@ -9,31 +9,35 @@ namespace lox {
 
 template <typename T, size_t Max_size>
 struct stack {
-  stack() noexcept : storage_(Max_size), count_{0} {}
+  stack() noexcept : storage_(Max_size), size_{0} {}
 
-  bool empty() const noexcept { return count_ == 0; }
+  bool empty() const noexcept { return size_ == 0; }
+  size_t size() const noexcept { return size_; }
 
   template <typename... Args>
   void push(Args&&... args) noexcept {
-    ENSURES(count_ < Max_size);
-    storage_[count_++] = T{std::forward<Args>(args)...};
+    ENSURES(size_ < Max_size);
+    storage_[size_++] = T{std::forward<Args>(args)...};
   }
 
   T& operator[](size_t pos) noexcept {
-    ENSURES(pos < count_);
+    ENSURES(pos < size_);
     return storage_[pos];
   }
 
   const T& pop() noexcept {
-    ENSURES(count_ > 0);
-    return storage_[--count_];
+    ENSURES(size_ > 0);
+    return storage_[--size_];
   }
 
-  T& peek() noexcept { return storage_[count_ - 1]; }
+  T& peek(size_t distance = 0) noexcept {
+    ENSURES(distance < size_);
+    return storage_[size_ - distance - 1];
+  }
 
  private:
   std::vector<T> storage_;
-  size_t count_;
+  size_t size_;
 };
 
 }  // namespace lox
