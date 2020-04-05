@@ -179,3 +179,15 @@ print sum;
 )"};
   CHECK_EQ(run(source), expected);
 }
+
+TEST_CASE("function declaration") {
+  std::string source{R"(
+fun areWeHavingItYet() {
+  print "Yes we are!";
+}
+print areWeHavingItYet;
+)"};
+  std::string expected{R"(<function: areWeHavingItYet>
+)"};
+  CHECK_EQ(run(source), expected);
+}

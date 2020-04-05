@@ -86,7 +86,7 @@ class compiler {
   explicit compiler(virtual_machine& vm) noexcept : vm_{vm} {}
 
   function* compile(token_vector tokens) noexcept {
-    make_func_frame(0);
+    make_func_frame(nullptr, 0);
     tokens_ = std::move(tokens);
     current_ = tokens_.cbegin();
     current_func_frame().push_local();
@@ -117,9 +117,21 @@ class compiler {
   }
 
   void parse_function() {
-    make_func_frame(1);
+    make_func_frame(vm_.main_heap.make_string(previous_->lexeme), 1);
     current_func_frame().begin_scope();
     consume(token::left_paren, "Expect '(' after function name.");
+    if (!check(token::right_paren)) {
+      do {
+        auto parameter = parse_variable("Expect parameter name.");
+        current_func_frame().define_variable(parameter, previous_->line);
+        constexpr int max_parameters = 255;
+        ++current_func_frame().func->arity;
+        if (current_func_frame().func->arity > max_parameters) {
+          throw runtime_error{"Cannot have more than " +
+                              std::to_string(max_parameters) + " parameters."};
+        }
+      } while (match(token::comma));
+    }
     consume(token::right_paren, "Expect ')' after function name.");
 
     consume(token::left_brace, "Expect '{' after function name.");
@@ -531,8 +543,8 @@ class compiler {
   };
   using func_frame_vector = std::vector<func_frame>;
 
-  void make_func_frame(int depth) noexcept {
-    func_frames.emplace_back(vm_.main_heap.make_object<function>(), depth);
+  void make_func_frame(const string* name, int depth) noexcept {
+    func_frames.emplace_back(vm_.main_heap.make_object<function>(name), depth);
   }
   void pop_func_frame() noexcept { func_frames.pop_back(); }
   func_frame& current_func_frame() noexcept { return func_frames.back(); }

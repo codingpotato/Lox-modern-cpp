@@ -59,21 +59,21 @@ struct string : object {
 
 struct function : object {
   function() noexcept : object{type::function} {}
-  explicit function(string* n) noexcept : object{type::function}, name{n} {}
+  explicit function(const string* n) noexcept
+      : object{type::function}, name{n} {}
 
   std::string repr() const noexcept override {
-    auto& name_str = name->std_string();
-    if (name_str.empty()) {
+    if (!name) {
       return "<script>";
     }
-    return std::string{"<function: "} + name_str + " > ";
+    return std::string{"<function: "} + name->std_string() + ">";
   }
 
+  int arity = 0;
   chunk code;
 
  private:
-  // int arity_;
-  string* name;
+  const string* name = nullptr;
 };
 
 template <typename T>
