@@ -12,7 +12,13 @@ struct stack {
   stack() noexcept : storage_(Max_size), size_{0} {}
 
   bool empty() const noexcept { return size_ == 0; }
+
   size_t size() const noexcept { return size_; }
+
+  void resize(size_t size) noexcept {
+    ENSURES(size < Max_size);
+    size_ = size;
+  }
 
   template <typename... Args>
   void push(Args&&... args) noexcept {

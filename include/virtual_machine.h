@@ -67,8 +67,8 @@ class virtual_machine {
 
 template <>
 inline void virtual_machine::handle<op_constant>(oprand_t oprand) {
-  ENSURES(oprand < current_code().constant_size());
-  stack_.push(current_code().constant_at(oprand));
+  ENSURES(oprand < current_code().constants().size());
+  stack_.push(current_code().constants()[oprand]);
 }
 
 template <>
@@ -103,9 +103,9 @@ inline void virtual_machine::handle<op_set_local>(oprand_t oprand) {
 
 template <>
 inline void virtual_machine::handle<op_get_global>(oprand_t oprand) {
-  ENSURES(oprand < current_code().constant_size());
-  const auto constant = current_code().constant_at(oprand);
-  const auto name = constant.as<object*>()->as<string>();
+  ENSURES(oprand < current_code().constants().size());
+  const auto constant = current_code().constants()[oprand];
+  const auto name = constant.as_object()->as<string>();
   if (auto value = globals_.get_if(name); value != nullptr) {
     stack_.push(*value);
   } else {
@@ -115,18 +115,18 @@ inline void virtual_machine::handle<op_get_global>(oprand_t oprand) {
 
 template <>
 inline void virtual_machine::handle<op_define_global>(oprand_t oprand) {
-  ENSURES(oprand < current_code().constant_size());
-  const auto constant = current_code().constant_at(oprand);
-  const auto name = constant.as<object*>()->as<string>();
+  ENSURES(oprand < current_code().constants().size());
+  const auto constant = current_code().constants()[oprand];
+  const auto name = constant.as_object()->as<string>();
   auto str = main_heap.make_string(name->std_string());
   globals_.insert(str, stack_.pop());
 }
 
 template <>
 inline void virtual_machine::handle<op_set_global>(oprand_t oprand) {
-  ENSURES(oprand < current_code().constant_size());
-  const auto constant = current_code().constant_at(oprand);
-  const auto name = constant.as<object*>()->as<string>();
+  ENSURES(oprand < current_code().constants().size());
+  const auto constant = current_code().constants()[oprand];
+  const auto name = constant.as_object()->as<string>();
   if (!globals_.set(name, stack_.peek())) {
     throw_undefined_variable(name);
   }
@@ -169,8 +169,8 @@ inline void virtual_machine::handle<op_divide>(oprand_t) {
 
 template <>
 inline void virtual_machine::handle<op_not>(oprand_t) {
-  if (stack_.peek().is<bool>()) {
-    stack_.push(!stack_.pop().as<bool>());
+  if (stack_.peek().is_bool()) {
+    stack_.push(!stack_.pop().as_bool());
   } else {
     throw runtime_error{"Operand must be a boolean value."};
   }
@@ -178,9 +178,9 @@ inline void virtual_machine::handle<op_not>(oprand_t) {
 
 template <>
 inline void virtual_machine::handle<op_negate>(oprand_t) {
-  if (stack_.peek().is<double>()) {
+  if (stack_.peek().is_double()) {
     const auto operand = stack_.pop();
-    const auto result = operand.is<nil>() || !operand.as<bool>();
+    const auto result = operand.is_nil() || !operand.as_bool();
     stack_.push(result);
   } else {
     throw runtime_error{"Operand must be a number value."};
@@ -190,7 +190,7 @@ inline void virtual_machine::handle<op_negate>(oprand_t) {
 template <>
 inline void virtual_machine::handle<op_print>(oprand_t) {
   ENSURES(!stack_.empty());
-  out_ << stack_.pop().repr() << "\n";
+  out_ << to_string(stack_.pop()) << "\n";
 }
 
 template <>
@@ -201,8 +201,8 @@ inline void virtual_machine::handle<op_jump>(oprand_t oprand) {
 template <>
 inline void virtual_machine::handle<op_jump_if_false>(oprand_t oprand) {
   ENSURES(!stack_.empty());
-  if (auto value = stack_.peek(); value.is<bool>()) {
-    if (!value.as<bool>()) {
+  if (auto value = stack_.peek(); value.is_bool()) {
+    if (!value.as_bool()) {
       current_frame().ip += oprand;
     }
   } else {
@@ -218,11 +218,11 @@ inline void virtual_machine::handle<op_loop>(oprand_t oprand) {
 template <>
 inline void virtual_machine::handle<op_call>(oprand_t oprand) {
   int argument_count = oprand;
-  if (auto value = stack_.peek(argument_count); value.is<object*>()) {
-    if (auto obj = value.as<object*>(); obj->is<function>()) {
+  if (auto v = stack_.peek(argument_count); v.is_object()) {
+    if (auto obj = v.as_object(); obj->is<function>()) {
       auto func = obj->as<function>();
       if (argument_count == func->arity) {
-        call_frames.push(func, stack_.size() - argument_count - 1);
+        call_frames.push(func, stack_.size() - argument_count);
       } else {
         throw_incorrect_argument_count(func->arity, argument_count);
       }
@@ -231,7 +231,17 @@ inline void virtual_machine::handle<op_call>(oprand_t oprand) {
 }
 
 template <>
-inline void virtual_machine::handle<op_return>(oprand_t) {}
+inline void virtual_machine::handle<op_return>(oprand_t) {
+  auto result = stack_.pop();
+  auto stack_size = call_frames.peek().start_of_stack;
+  call_frames.pop();
+  if (call_frames.empty()) {
+    stack_.pop();
+  } else {
+    stack_.resize(stack_size);
+    stack_.push(result);
+  }
+}
 
 #define SWITCH_CASE_(opcode, has_oprand_value) \
   case opcode::id:                             \
@@ -242,15 +252,16 @@ inline void virtual_machine::interpret(const function* func) noexcept {
   try {
     stack_.push(func);
     call_frames.push(func);
-    while (call_frames.peek().ip < current_code().instruction_size()) {
+    while (!call_frames.empty() &&
+           call_frames.peek().ip < current_code().instructions().size()) {
       const auto& instr =
-          current_code().instruction_at(call_frames.peek().ip++);
+          current_code().instructions()[call_frames.peek().ip++];
       switch (instr.raw_opcode()) { OPCODES(SWITCH_CASE_) };
     }
   } catch (exception& e) {
     out_ << e.what() << "\n";
     for (size_t distance = 0; distance < call_frames.size(); ++distance) {
-      out_ << call_frames.peek(distance).func->repr() << "\n";
+      out_ << call_frames.peek(distance).func->to_string() << "\n";
     }
   }
 }

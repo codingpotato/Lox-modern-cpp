@@ -72,7 +72,7 @@ struct hash_table {
       auto& current = entries_[index];
       if (current.key_ != nullptr && *current.key_ == str) {
         return current.key_;
-      } else if (current.value_.is<nil>()) {
+      } else if (current.value_.is_nil()) {
         return nullptr;
       }
       index = (index + 1) & capacity_mask_;
@@ -99,7 +99,7 @@ struct hash_table {
     while (true) {
       auto current = &entries[index];
       if (current->key_ == nullptr) {
-        if (current->value_.is<nil>()) {
+        if (current->value_.is_nil()) {
           return tobmstone != nullptr ? tobmstone : current;
         } else {
           if (tobmstone == nullptr) {

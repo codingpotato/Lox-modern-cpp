@@ -9,93 +9,58 @@
 
 namespace lox {
 
-struct nil {};
 struct object;
 
 namespace optimized {
 
 struct value {
-  value() noexcept : bits_{make_nil()} {}
-  value(bool b) noexcept : bits_{make_bool(b)} {}
-  value(double d) noexcept : double_{d} {}
-  value(object* obj) noexcept : bits_{make_object(obj)} {}
-
-  template <typename T>
-  bool is() const {
-    if constexpr (std::is_same_v<T, nil>) {
-      return is_nil();
-    } else if constexpr (std::is_same_v<T, bool>) {
-      return is_bool();
-    } else if constexpr (std::is_same_v<T, double>) {
-      return is_number();
-    } else if constexpr (std::is_same_v<T, object*>) {
-      return is_object();
-    }
-    throw internal_error{"Unknown value type."};
-  }
-
-  template <typename T>
-  const T as() const {
-    if constexpr (std::is_same_v<T, bool>) {
-      ENSURES(is_bool());
-      return (bits_ & (tag_true | qnan)) == (tag_true | qnan);
-    } else if constexpr (std::is_same_v<T, double>) {
-      ENSURES(is_number());
-      return double_;
-    } else if constexpr (std::is_same_v<T, object*>) {
-      ENSURES(is_object());
-      return reinterpret_cast<object*>(bits_ & ~(tag_object | qnan));
-    }
-    throw internal_error{"Unknown value type."};
-  }
-
-  friend bool operator==(const value& lhs, const value& rhs) noexcept {
-    if (lhs.is_nil() && rhs.is_nil()) {
-      return true;
-    }
-    if (lhs.is_bool() && rhs.is_bool()) {
-      return lhs.as<bool>() == rhs.as<bool>();
-    }
-    if (lhs.is_number() && rhs.is_number()) {
-      return lhs.as<double>() == rhs.as<double>();
-    }
-    if (lhs.is_object() && rhs.is_object()) {
-      return lhs.as<object*>() == rhs.as<object*>();
-    }
-    return false;
-  }
-
-  std::string repr() const;
-
- private:
-  using value_t = uint64_t;
-
-  constexpr static value_t qnan = 0x7ffc000000000000;
-  constexpr static value_t tag_nil = 1;
-  constexpr static value_t tag_false = 2;
-  constexpr static value_t tag_true = 3;
-  constexpr static value_t tag_object = 0x8000000000000000;
-
-  constexpr static value_t make_nil() noexcept { return tag_nil | qnan; }
-  constexpr static value_t make_bool(bool b) noexcept {
-    return (b ? tag_true : tag_false) | qnan;
-  }
-  static value_t make_object(object* obj) noexcept {
-    return tag_object | qnan | reinterpret_cast<uint64_t>(obj);
-  }
+  constexpr value() noexcept : bits_{make_nil()} {}
+  constexpr value(bool b) noexcept : bits_{make_bool(b)} {}
+  constexpr value(double d) noexcept : double_{d} {}
+  value(const object* obj) noexcept : bits_{make_object(obj)} {}
 
   constexpr bool is_nil() const noexcept { return bits_ == make_nil(); }
   constexpr bool is_bool() const noexcept {
     return (bits_ & (tag_false | qnan)) == (tag_false | qnan);
   }
-  constexpr bool is_number() const noexcept { return (bits_ & qnan) != qnan; }
+  constexpr bool is_double() const noexcept { return (bits_ & qnan) != qnan; }
   constexpr bool is_object() const noexcept {
     return (bits_ & (tag_object | qnan)) == (tag_object | qnan);
   }
 
+  constexpr bool as_bool() const noexcept {
+    ENSURES(is_bool());
+    return (bits_ & (tag_true | qnan)) == (tag_true | qnan);
+  }
+  constexpr double as_double() const noexcept {
+    ENSURES(is_double());
+    return double_;
+  }
+  const object* as_object() const noexcept {
+    ENSURES(is_object());
+    return reinterpret_cast<object*>(bits_ & ~(tag_object | qnan));
+  }
+
+ private:
+  using storage_t = uint64_t;
+
+  constexpr static storage_t qnan = 0x7ffc000000000000;
+  constexpr static storage_t tag_nil = 1;
+  constexpr static storage_t tag_false = 2;
+  constexpr static storage_t tag_true = 3;
+  constexpr static storage_t tag_object = 0x8000000000000000;
+
+  constexpr static storage_t make_nil() noexcept { return tag_nil | qnan; }
+  constexpr static storage_t make_bool(bool b) noexcept {
+    return (b ? tag_true : tag_false) | qnan;
+  }
+  static storage_t make_object(const object* obj) noexcept {
+    return tag_object | qnan | reinterpret_cast<storage_t>(obj);
+  }
+
   union {
     double double_;
-    value_t bits_;
+    storage_t bits_;
   };
 };
 
@@ -104,61 +69,38 @@ struct value {
 namespace tagged_union {
 
 struct value {
-  value() noexcept : type_{nil_t} {}
-  value(bool b) noexcept : type_{boolean}, boolean_{b} {}
-  value(double d) noexcept : type_{number}, double_{d} {}
-  value(object* o) noexcept : type_{object_t}, object_{o} {}
+  constexpr value() noexcept : id_{id<nil>}, object_{nullptr} {}
+  constexpr value(bool b) noexcept : id_{id<bool>}, bool_{b} {}
+  constexpr value(double d) noexcept : id_{id<double>}, double_{d} {}
+  constexpr value(object* obj) noexcept : id_{id<object>}, object_{obj} {}
 
-  template <typename T>
-  bool is() const {
-    if constexpr (std::is_same_v<T, nil>) {
-      return type_ == nil_t;
-    } else if constexpr (std::is_same_v<T, bool>) {
-      return type_ == boolean;
-    } else if constexpr (std::is_same_v<T, double>) {
-      return type_ == number;
-    } else if constexpr (std::is_same_v<T, object*>) {
-      return type_ == object_t;
-    }
-    throw internal_error{"Unknown value type."};
+  constexpr bool is_nil() const noexcept { return id_ == id<nil>; }
+  constexpr bool is_bool() const noexcept { return id_ == id<bool>; }
+  constexpr bool is_double() const noexcept { return id_ == id<double>; }
+  constexpr bool is_object() const noexcept { return id_ == id<object>; }
+
+  constexpr bool as_bool() const noexcept {
+    ENSURES(is_bool());
+    return bool_;
   }
-
-  template <typename T>
-  const T& as() const {
-    if constexpr (std::is_same_v<T, bool>) {
-      return boolean_;
-    } else if constexpr (std::is_same_v<T, double>) {
-      return double_;
-    } else if constexpr (std::is_same_v<T, object*>) {
-      return object_;
-    }
-    throw internal_error{"Unknown value type."};
+  constexpr double as_double() const noexcept {
+    ENSURES(is_double());
+    return double_;
   }
-
-  friend bool operator==(const value& lhs, const value& rhs) noexcept {
-    if (lhs.type_ == rhs.type_) {
-      switch (lhs.type_) {
-        case nil_t:
-          return true;
-        case boolean:
-          return lhs.boolean_ == rhs.boolean_;
-        case number:
-          return lhs.double_ == rhs.double_;
-        case object_t:
-          return false;
-      }
-    }
-    return false;
+  const object* as_object() const noexcept {
+    ENSURES(is_object());
+    return object_;
   }
-
-  std::string repr() const;
 
  private:
-  enum type_t { nil_t, boolean, number, object_t };
+  struct nil {};
+  using types = type_list<nil, bool, double, object>;
+  template <typename T>
+  constexpr static size_t id = index_of<T, types>::value;
 
-  type_t type_;
+  size_t id_;
   union {
-    bool boolean_;
+    bool bool_;
     double double_;
     object* object_;
   };
@@ -168,29 +110,47 @@ struct value {
 
 using value = optimized::value;
 
-inline value operator+(const value& lhs, const value& rhs) {
-  return lhs.as<double>() + rhs.as<double>();
+inline constexpr bool operator==(const value& lhs, const value& rhs) noexcept {
+  if (lhs.is_nil() && rhs.is_nil()) {
+    return true;
+  }
+  if (lhs.is_bool() && rhs.is_bool()) {
+    return lhs.as_bool() == rhs.as_bool();
+  }
+  if (lhs.is_double() && rhs.is_double()) {
+    return lhs.as_double() == rhs.as_double();
+  }
+  if (lhs.is_object() && rhs.is_object()) {
+    return lhs.as_object() == rhs.as_object();
+  }
+  return false;
 }
 
-inline value operator-(const value& lhs, const value& rhs) {
-  return lhs.as<double>() - rhs.as<double>();
+inline constexpr value operator+(const value& lhs, const value& rhs) noexcept {
+  return lhs.as_double() + rhs.as_double();
 }
 
-inline value operator*(const value& lhs, const value& rhs) {
-  return lhs.as<double>() * rhs.as<double>();
+inline constexpr value operator-(const value& lhs, const value& rhs) noexcept {
+  return lhs.as_double() - rhs.as_double();
 }
 
-inline value operator/(const value& lhs, const value& rhs) {
-  return lhs.as<double>() / rhs.as<double>();
+inline constexpr value operator*(const value& lhs, const value& rhs) noexcept {
+  return lhs.as_double() * rhs.as_double();
 }
 
-inline value operator>(const value& lhs, const value& rhs) {
-  return lhs.as<double>() > rhs.as<double>();
+inline constexpr value operator/(const value& lhs, const value& rhs) noexcept {
+  return lhs.as_double() / rhs.as_double();
 }
 
-inline value operator<(const value& lhs, const value& rhs) {
-  return lhs.as<double>() < rhs.as<double>();
+inline constexpr value operator>(const value& lhs, const value& rhs) noexcept {
+  return lhs.as_double() > rhs.as_double();
 }
+
+inline constexpr value operator<(const value& lhs, const value& rhs) noexcept {
+  return lhs.as_double() < rhs.as_double();
+}
+
+std::string to_string(value v, bool verbose = false) noexcept;
 
 }  // namespace lox
 

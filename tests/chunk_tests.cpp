@@ -13,5 +13,5 @@ TEST_CASE("chunk emplace back") {
 0000  123 op_constant 1.200000
 0001    | op_return
 )";
-  CHECK_EQ(chunk.repr("test chunk"), expected);
+  CHECK_EQ(to_string(chunk, "test chunk"), expected);
 }

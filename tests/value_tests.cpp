@@ -8,23 +8,23 @@
 
 TEST_CASE("nil value") {
   const lox::value v{};
-  CHECK(v.is<lox::nil>());
+  CHECK(v.is_nil());
 }
 
 TEST_CASE("bool value") {
   lox::value v{true};
-  CHECK(v.is<bool>());
-  CHECK(v.as<bool>());
+  CHECK(v.is_bool());
+  CHECK(v.as_bool());
   v = false;
-  CHECK(v.is<bool>());
-  CHECK(!v.as<bool>());
+  CHECK(v.is_bool());
+  CHECK(!v.as_bool());
 }
 
 TEST_CASE("double value") {
   lox::value v{1.0};
-  CHECK(v.is<double>());
-  CHECK_EQ(v.as<double>(), 1);
+  CHECK(v.is_double());
+  CHECK_EQ(v.as_double(), 1);
   v = 2.0;
-  CHECK(v.is<double>());
-  CHECK_EQ(v.as<double>(), 2);
+  CHECK(v.is_double());
+  CHECK_EQ(v.as_double(), 2);
 }

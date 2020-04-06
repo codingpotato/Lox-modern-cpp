@@ -94,7 +94,7 @@ class compiler {
     while (!match(token::eof)) {
       parse_declaration();
     }
-    add_instruction(op_return{});
+    add_return_instruction();
     EXPECTS(func_frames.size() == 1)
     return current_func_frame().func;
   }
@@ -106,7 +106,7 @@ class compiler {
     } else if (match(token::k_var)) {
       parse_var_declaration();
     } else {
-      statement();
+      parse_statement();
     }
   }
 
@@ -137,9 +137,15 @@ class compiler {
 
     consume(token::left_brace, "Expect '{' after function name.");
     parse_block();
+    add_return_instruction();
     auto func = current_func_frame().func;
     pop_func_frame();
     add_instruction(op_constant{}, add_constant(func));
+  }
+
+  void add_return_instruction() noexcept {
+    add_instruction(op_nil{});
+    add_instruction(op_return{});
   }
 
   void parse_var_declaration() {
@@ -162,13 +168,15 @@ class compiler {
     return add_constant(vm_.main_heap.make_string(previous_->lexeme));
   }
 
-  void statement() {
+  void parse_statement() {
     if (match(token::k_print)) {
       print_statement();
     } else if (match(token::k_for)) {
       parse_for();
     } else if (match(token::k_if)) {
       parse_if();
+    } else if (match(token::k_return)) {
+      parse_return();
     } else if (match(token::k_while)) {
       parse_while();
     } else if (match(token::left_brace)) {
@@ -210,7 +218,7 @@ class compiler {
       current_func_frame().patch_jump(body_jump);
     }
 
-    statement();
+    parse_statement();
     add_instruction(op_loop{},
                     current_func_frame().code_distance_from(loop_start));
     if (exit_jump != -1) {
@@ -227,15 +235,28 @@ class compiler {
 
     const auto then_jump_index = add_instruction(op_jump_if_false{});
     add_instruction(op_pop{});
-    statement();
+    parse_statement();
     const auto else_jump_index = add_instruction(op_jump{});
 
     current_func_frame().patch_jump(then_jump_index);
     add_instruction(op_pop{});
     if (match(token::k_else)) {
-      statement();
+      parse_statement();
     }
     current_func_frame().patch_jump(else_jump_index);
+  }
+
+  void parse_return() {
+    if (!current_func_frame().func->name) {
+      throw compile_error{"Cannot return from top-level code."};
+    }
+    if (match(token::semicolon)) {
+      add_return_instruction();
+    } else {
+      parse_expression();
+      consume(token::semicolon, "Expect ';' after return value.");
+      add_instruction(op_return{});
+    }
   }
 
   void parse_while() {
@@ -245,7 +266,7 @@ class compiler {
     consume(token::right_paren, "Expect ')' after condition.");
     const auto exit_jump_index = add_instruction(op_jump_if_false{}, 0);
     add_instruction(op_pop{});
-    statement();
+    parse_statement();
     add_instruction(op_loop{},
                     current_func_frame().code_distance_from(loop_start));
     current_func_frame().patch_jump(exit_jump_index);
@@ -540,7 +561,7 @@ class compiler {
       func->code.set_oprand(jump, current_code_position() - (jump + 1));
     }
     size_t current_code_position() const noexcept {
-      return func->code.instruction_size();
+      return func->code.instructions().size();
     }
     size_t code_distance_from(size_t pos) const noexcept {
       return current_code_position() - pos + 1;

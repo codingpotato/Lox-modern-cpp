@@ -6,27 +6,38 @@
 #include "chunk.h"
 #include "contract.h"
 #include "exception.h"
+#include "type_list.h"
 
 namespace lox {
 
-struct object {
-  enum class type { string, function };
+struct function;
+struct string;
 
-  object(type t) noexcept : type_{t} {}
+struct object {
+  using types = type_list<function, string>;
+  template <typename T>
+  constexpr static size_t id = index_of<T, types>::value;
+
+  explicit object(size_t id) noexcept : id_{id} {}
   virtual ~object() = default;
 
   template <typename T>
-  bool is() const noexcept;
+  bool is() const noexcept {
+    return id_ == id<T>;
+  }
 
   template <typename T>
-  const T* as() const;
+  const T* as() const noexcept {
+    ENSURES(is<T>());
+    return reinterpret_cast<const T*>(this);
+  }
 
-  virtual std::string repr() const noexcept = 0;
+  virtual std::string to_string(bool = false) const noexcept = 0;
 
   object* next = nullptr;
 
  private:
-  type type_;
+  size_t id_;
 };
 
 struct string : object {
@@ -40,13 +51,12 @@ struct string : object {
   }
 
   string(std::string str) noexcept
-      : object{type::string}, str_{std::move(str)}, hash_{hash(str_)} {}
-
-  uint32_t hash() const noexcept { return hash_; }
+      : object{id<string>}, str_{std::move(str)}, hash_{hash(str_)} {}
 
   const std::string& std_string() const noexcept { return str_; }
+  uint32_t hash() const noexcept { return hash_; }
 
-  std::string repr() const noexcept override { return str_; }
+  std::string to_string(bool = false) const noexcept override { return str_; }
 
   friend bool operator==(const string& lhs, const string& rhs) noexcept {
     return lhs.hash_ == rhs.hash_ && lhs.str_ == rhs.str_;
@@ -58,47 +68,19 @@ struct string : object {
 };
 
 struct function : object {
-  function() noexcept : object{type::function} {}
-  explicit function(const string* n) noexcept
-      : object{type::function}, name{n} {}
+  function() noexcept : object{id<function>} {}
+  explicit function(const string* n) noexcept : object{id<function>}, name{n} {}
 
-  std::string repr() const noexcept override {
-    if (!name) {
-      return "<script>";
-    }
-    return "<function: " + name->std_string() + ">";
+  std::string to_string(bool verbose = false) const noexcept override {
+    std::string message =
+        name ? "<function: " + name->std_string() + ">" : "<script>";
+    return verbose ? ::lox::to_string(code, message, 1) : message;
   }
 
   int arity = 0;
   chunk code;
-
- private:
   const string* name = nullptr;
 };
-
-template <typename T>
-inline bool object::is() const noexcept {
-  if constexpr (std::is_same_v<T, string>) {
-    return type_ == type::string;
-  }
-  if constexpr (std::is_same_v<T, function>) {
-    return type_ == type::function;
-  }
-  throw internal_error{"Unknown object type."};
-}
-
-template <typename T>
-inline const T* object::as() const {
-  if constexpr (std::is_same_v<T, string>) {
-    ENSURES(type_ == type::string);
-    return reinterpret_cast<const T*>(this);
-  }
-  if constexpr (std::is_same_v<T, function>) {
-    ENSURES(type_ == type::function);
-    return reinterpret_cast<const T*>(this);
-  }
-  throw internal_error{"Unknown object type."};
-}
 
 }  // namespace lox
 

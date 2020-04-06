@@ -4,44 +4,17 @@
 
 namespace lox {
 
-namespace optimized {
-
-std::string value::repr() const {
-  if (is_nil()) {
-    return "nil";
+std::string to_string(value v, bool verbose) noexcept {
+  if (v.is_bool()) {
+    return v.as_bool() ? "true" : "false";
   }
-  if (is_bool()) {
-    return as<bool>() ? "true" : "false";
+  if (v.is_double()) {
+    return std::to_string(v.as_double());
   }
-  if (is_number()) {
-    return std::to_string(as<double>());
+  if (v.is_object()) {
+    return v.as_object()->to_string(verbose);
   }
-  if (is_object()) {
-    return as<object*>()->repr();
-  }
-  throw internal_error{""};
+  return "nil";
 }
-
-}  // namespace optimized
-
-namespace tagged_union {
-
-std::string value::repr() const {
-  if (is<nil>()) {
-    return "nil";
-  }
-  if (is<bool>()) {
-    return as<bool>() ? "true" : "false";
-  }
-  if (is<double>()) {
-    return std::to_string(as<double>());
-  }
-  if (is<object*>()) {
-    return as<object*>()->repr();
-  }
-  throw internal_error{""};
-}
-
-}  // namespace tagged_union
 
 }  // namespace lox

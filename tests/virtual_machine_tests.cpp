@@ -192,6 +192,18 @@ print areWeHavingItYet;
   CHECK_EQ(run(source), expected);
 }
 
+TEST_CASE("function call") {
+  std::string source{R"(
+fun add(a, b) { 
+  return a + b; 
+}
+print add(1, 2);
+)"};
+  std::string expected{R"(3.000000
+)"};
+  CHECK_EQ(run(source), expected);
+}
+
 TEST_CASE("function call with incorrect number of argumentws") {
   std::string source{R"(
 fun a() { b(); }

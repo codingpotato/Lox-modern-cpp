@@ -12,7 +12,7 @@ TEST_CASE("hash table insert") {
   CHECK(table.contains(&string));
   auto value = table.get_if(&string);
   CHECK(value != nullptr);
-  CHECK_EQ(value->as<double>(), 1);
+  CHECK_EQ(value->as_double(), 1);
 }
 
 TEST_CASE("hash table insert multiple entries") {
@@ -28,7 +28,7 @@ TEST_CASE("hash table insert multiple entries") {
   for (std::size_t i = 0; i < strings.size(); ++i) {
     auto value = table.get_if(&strings[i]);
     CHECK(value != nullptr);
-    CHECK_EQ(value->as<double>(), i);
+    CHECK_EQ(value->as_double(), i);
   }
 }
 
@@ -48,6 +48,6 @@ TEST_CASE("hash table erase") {
   for (std::size_t i = 1; i < strings.size(); i += 2) {
     auto value = table.get_if(&strings[i]);
     CHECK(value != nullptr);
-    CHECK_EQ(value->as<double>(), i);
+    CHECK_EQ(value->as_double(), i);
   }
 }

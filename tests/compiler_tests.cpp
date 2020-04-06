@@ -11,8 +11,8 @@ inline std::string compile(const std::string& message,
   lox::scanner scanner{std::move(source)};
   std::ostringstream oss;
   lox::virtual_machine vm{oss};
-  auto function = lox::compiler{vm}.compile(scanner.scan());
-  return function->code.repr(message);
+  auto func = lox::compiler{vm}.compile(scanner.scan());
+  return to_string(func->code, message);
 }
 
 TEST_CASE("primary") {
@@ -32,31 +32,34 @@ TEST_CASE("primary") {
 0009    | op_pop
 0010    | op_constant "str"
 0011    | op_pop
-0012    3 op_return
+0012    3 op_nil
+0013    | op_return
 )";
   CHECK_EQ(compile("primary", source), expected);
 }
 
 TEST_CASE("function call") {
   const std::string source{R"(
-fun a() { b(); }
-fun b() { c(); }
-fun c() {
-  c("too", "many");
-}
-a();
+fun add(a, b) { return a + b; }
+print add(1, 2);
 )"};
-  const std::string expected = R"(== primary ==
-0000    2 op_constant <function: a>
-0001    | op_define_global a
-0002    3 op_constant <function: b>
-0003    | op_define_global b
-0004    6 op_constant <function: c>
-0005    | op_define_global c
-0006    7 op_get_global a
-0007    | op_call a
-0008    | op_pop
-0009    8 op_return
+  const std::string expected = R"(== function call ==
+0000    2 op_constant <function: add>
+    0000    2 op_get_local 0
+    0001    | op_get_local 1
+    0002    | op_add
+    0003    | op_return
+    0004    | op_nil
+    0005    | op_return
+
+0001    | op_define_global 0
+0002    3 op_get_global 2
+0003    | op_constant 1.000000
+0004    | op_constant 2.000000
+0005    | op_call 2
+0006    | op_print
+0007    4 op_nil
+0008    | op_return
 )";
-  CHECK_EQ(compile("primary", source), expected);
+  CHECK_EQ(compile("function call", source), expected);
 }
