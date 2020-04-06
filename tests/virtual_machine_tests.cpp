@@ -221,3 +221,28 @@ a();
 )"};
   CHECK_EQ(run(source), expected);
 }
+
+TEST_CASE("fib") {
+  std::string source{R"(
+fun fib(n) {
+  if (n < 2) return n;
+  return fib(n - 2) + fib(n - 1);
+}
+print fib(30);
+)"};
+  std::string expected{R"(832040.000000
+)"};
+  CHECK_EQ(run(source), expected);
+}
+
+TEST_CASE("sum function call") {
+  std::string source{R"(
+fun sum(a, b, c) {
+  return a + b + c;
+}
+print 4 + sum(5, 6, 7);
+)"};
+  std::string expected{R"(22.000000
+)"};
+  CHECK_EQ(run(source), expected);
+}

@@ -18,6 +18,7 @@ class virtual_machine {
  public:
   explicit virtual_machine(std::ostream& os) noexcept : out_{os} {}
 
+  template <bool Debug = false>
   inline void interpret(const function* func) noexcept;
 
   template <typename Opcode>
@@ -222,7 +223,7 @@ inline void virtual_machine::handle<op_call>(oprand_t oprand) {
     if (auto obj = v.as_object(); obj->is<function>()) {
       auto func = obj->as<function>();
       if (argument_count == func->arity) {
-        call_frames.push(func, stack_.size() - argument_count);
+        call_frames.push(func, stack_.size() - argument_count - 1);
       } else {
         throw_incorrect_argument_count(func->arity, argument_count);
       }
@@ -248,6 +249,7 @@ inline void virtual_machine::handle<op_return>(oprand_t) {
     handle<opcode>(instr.oprand());            \
     break;
 
+template <bool Debug>
 inline void virtual_machine::interpret(const function* func) noexcept {
   try {
     stack_.push(func);
@@ -257,6 +259,12 @@ inline void virtual_machine::interpret(const function* func) noexcept {
       const auto& instr =
           current_code().instructions()[call_frames.peek().ip++];
       switch (instr.raw_opcode()) { OPCODES(SWITCH_CASE_) };
+      if constexpr (Debug) {
+        for (size_t i = 0; i < stack_.size(); ++i) {
+          out_ << to_string(stack_[i]) << " ";
+        }
+        out_ << "\n";
+      }
     }
   } catch (exception& e) {
     out_ << e.what() << "\n";

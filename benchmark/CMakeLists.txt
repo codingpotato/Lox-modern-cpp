@@ -1,5 +1,11 @@
-set(SOURCE equality.cpp main.cpp hash_table_benchmark.cpp program_benchmark.cpp
-           string_equality.cpp value_benchmark.cpp)
+set(SOURCE
+    equality.cpp
+    fib.cpp
+    main.cpp
+    hash_table_benchmark.cpp
+    program_benchmark.cpp
+    string_equality.cpp
+    value_benchmark.cpp)
 
 add_executable(lox-benchmark ${SOURCE})
 target_include_directories(lox-benchmark PRIVATE ${BENCHMARK_DIR}/include

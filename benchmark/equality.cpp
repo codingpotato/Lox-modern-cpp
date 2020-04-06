@@ -1,9 +1,6 @@
 #include <benchmark/benchmark.h>
 
-#include "compiler.h"
 #include "helper.h"
-#include "scanner.h"
-#include "virtual_machine.h"
 
 static void expression_statement(benchmark::State& state) {
   const std::string source{R"(

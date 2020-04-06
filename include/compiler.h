@@ -90,7 +90,6 @@ class compiler {
     make_func_frame(nullptr, 0);
     tokens_ = std::move(tokens);
     current_ = tokens_.cbegin();
-    current_func_frame().push_local();
     while (!match(token::eof)) {
       parse_declaration();
     }
@@ -502,7 +501,9 @@ class compiler {
 
   struct func_frame {
     explicit func_frame(function* f, int depth) noexcept
-        : func{f}, scope_depth{depth} {}
+        : func{f}, scope_depth{depth} {
+      locals.emplace_back("function object", depth);
+    }
 
     void declare_variable(const std::string& name) {
       if (scope_depth > 0) {
