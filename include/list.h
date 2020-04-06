@@ -7,28 +7,28 @@
 
 namespace lox {
 
-struct list {
-  struct iterator {
-    iterator(object* current) noexcept : current_{current} {}
+struct List {
+  struct Iterator {
+    Iterator(Object* current) noexcept : current_{current} {}
 
-    object* operator->() noexcept { return current_; }
+    Object* operator->() noexcept { return current_; }
 
-    iterator& operator++() noexcept {
+    Iterator& operator++() noexcept {
       current_ = current_->next;
       return *this;
     }
 
-    friend bool operator!=(const iterator& lhs, const iterator& rhs) noexcept {
+    friend bool operator!=(const Iterator& lhs, const Iterator& rhs) noexcept {
       return lhs.current_ != rhs.current_;
     }
 
    private:
-    object* current_;
+    Object* current_;
   };
 
-  list() noexcept : head_{nullptr} {}
+  List() noexcept : head_{nullptr} {}
 
-  ~list() noexcept {
+  ~List() noexcept {
     while (head_) {
       auto current = head_;
       head_ = head_->next;
@@ -36,16 +36,16 @@ struct list {
     }
   }
 
-  iterator begin() const noexcept { return head_; }
-  iterator end() const noexcept { return nullptr; }
+  Iterator begin() const noexcept { return head_; }
+  Iterator end() const noexcept { return nullptr; }
 
-  void insert(object* obj) noexcept {
+  void insert(Object* obj) noexcept {
     obj->next = head_;
     head_ = obj;
   }
 
  private:
-  object* head_;
+  Object* head_;
 };
 
 }  // namespace lox

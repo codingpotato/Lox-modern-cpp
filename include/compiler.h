@@ -7,7 +7,7 @@
 #include "chunk.h"
 #include "exception.h"
 #include "scanner.h"
-#include "virtual_machine.h"
+#include "vm.h"
 
 namespace lox {
 
@@ -84,9 +84,9 @@ struct rules_generator {
 
 class compiler {
  public:
-  explicit compiler(virtual_machine& vm) noexcept : vm_{vm} {}
+  explicit compiler(Vm& vm) noexcept : vm_{vm} {}
 
-  function* compile(token_vector tokens) noexcept {
+  Function* compile(token_vector tokens) noexcept {
     make_func_frame(nullptr, 0);
     tokens_ = std::move(tokens);
     current_ = tokens_.cbegin();
@@ -117,15 +117,15 @@ class compiler {
   }
 
   void parse_function() {
-    make_func_frame(vm_.main_heap.make_string(previous_->lexeme), 1);
+    make_func_frame(vm_.heap().make_string(previous_->lexeme), 1);
     current_func_frame().begin_scope();
     consume(token::left_paren, "Expect '(' after function name.");
     if (!check(token::right_paren)) {
       do {
         auto parameter = parse_variable("Expect parameter name.");
         current_func_frame().define_variable(parameter, previous_->line);
-        ++current_func_frame().func->arity;
-        if (current_func_frame().func->arity > max_function_parameters) {
+        current_func_frame().func->increase_arity();
+        if (current_func_frame().func->arity() > max_function_parameters) {
           throw runtime_error{"Cannot have more than " +
                               std::to_string(max_function_parameters) +
                               " parameters."};
@@ -164,7 +164,7 @@ class compiler {
     if (current_func_frame().scope_depth > 0) {
       return 0;
     }
-    return add_constant(vm_.main_heap.make_string(previous_->lexeme));
+    return add_constant(vm_.heap().make_string(previous_->lexeme));
   }
 
   void parse_statement() {
@@ -246,7 +246,7 @@ class compiler {
   }
 
   void parse_return() {
-    if (!current_func_frame().func->name) {
+    if (!current_func_frame().func->name()) {
       throw compile_error{"Cannot return from top-level code."};
     }
     if (match(token::semicolon)) {
@@ -379,7 +379,7 @@ class compiler {
     auto index_local = current_func_frame().resolve_local(previous_->lexeme);
     int index_global = -1;
     if (index_local == -1) {
-      index_global = add_constant(vm_.main_heap.make_string(previous_->lexeme));
+      index_global = add_constant(vm_.heap().make_string(previous_->lexeme));
     }
     if (can_assign && match(token::equal)) {
       parse_expression();
@@ -402,7 +402,7 @@ class compiler {
   }
   void add_string_constant(bool) {
     add_instruction(op_constant{},
-                    add_constant(vm_.main_heap.make_string(previous_->lexeme)));
+                    add_constant(vm_.heap().make_string(previous_->lexeme)));
   }
 
   void add_literal(bool) {
@@ -500,7 +500,7 @@ class compiler {
   using local_vector = std::vector<local>;
 
   struct func_frame {
-    explicit func_frame(function* f, int depth) noexcept
+    explicit func_frame(Function* f, int depth) noexcept
         : func{f}, scope_depth{depth} {
       locals.emplace_back("function object", depth);
     }
@@ -551,18 +551,18 @@ class compiler {
     template <typename Opcode>
     size_t add_instruction(int line, Opcode opcode,
                            oprand_t oprand = 0) noexcept {
-      return func->code.add_instruction(line, opcode, oprand);
+      return func->code().add_instruction(line, opcode, oprand);
     }
     template <typename... Args>
     size_t add_constant(Args&&... args) noexcept {
-      return func->code.add_constant(std::forward<Args>(args)...);
+      return func->code().add_constant(std::forward<Args>(args)...);
     }
 
     void patch_jump(size_t jump) noexcept {
-      func->code.set_oprand(jump, current_code_position() - (jump + 1));
+      func->code().set_oprand(jump, current_code_position() - (jump + 1));
     }
     size_t current_code_position() const noexcept {
-      return func->code.instructions().size();
+      return func->code().instructions().size();
     }
     size_t code_distance_from(size_t pos) const noexcept {
       return current_code_position() - pos + 1;
@@ -579,14 +579,14 @@ class compiler {
       }
     }
 
-    function* func = nullptr;
+    Function* func = nullptr;
     std::vector<local> locals;
     int scope_depth;
   };
   using func_frame_vector = std::vector<func_frame>;
 
-  void make_func_frame(const string* name, int depth) noexcept {
-    func_frames.emplace_back(vm_.main_heap.make_object<function>(name), depth);
+  void make_func_frame(const String* name, int depth) noexcept {
+    func_frames.emplace_back(vm_.heap().make_object<Function>(name), depth);
   }
   void pop_func_frame() noexcept { func_frames.pop_back(); }
   func_frame& current_func_frame() noexcept { return func_frames.back(); }
@@ -597,7 +597,7 @@ class compiler {
 
   constexpr static int max_function_parameters = 255;
 
-  virtual_machine& vm_;
+  Vm& vm_;
   func_frame_vector func_frames;
   token_vector tokens_;
   token_vector::const_iterator current_;

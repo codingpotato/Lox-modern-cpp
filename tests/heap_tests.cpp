@@ -5,7 +5,7 @@
 #include "heap.h"
 
 TEST_CASE("heap") {
-  lox::heap heap;
+  lox::Heap heap;
   std::string str{"test string"};
   auto obj = heap.make_string(str);
   (void)obj;

@@ -11,15 +11,15 @@
 namespace lox {
 
 struct chunk {
-  using instruction_vector = std::vector<instruction>;
-  using line_vector = std::vector<size_t>;
-  using value_vector = std::vector<value>;
+  using Instruction_vector = std::vector<instruction>;
+  using Line_vector = std::vector<size_t>;
+  using Value_vector = std::vector<Value>;
 
-  const instruction_vector& instructions() const noexcept {
+  const Instruction_vector& instructions() const noexcept {
     return instructions_;
   }
-  const line_vector& lines() const noexcept { return lines_; }
-  const value_vector& constants() const noexcept { return constants_; }
+  const Line_vector& lines() const noexcept { return lines_; }
+  Value_vector& constants() noexcept { return constants_; }
 
   template <typename Opcode>
   size_t add_instruction(int line, Opcode opcode,
@@ -41,16 +41,16 @@ struct chunk {
   }
 
  private:
-  instruction_vector instructions_;
-  line_vector lines_;
-  value_vector constants_;
+  Instruction_vector instructions_;
+  Line_vector lines_;
+  Value_vector constants_;
 };
 
-inline std::string to_string(const chunk& code, const std::string& name,
+inline std::string to_string(chunk& code, const std::string& name,
                              int level = 0) noexcept {
-  const auto& instructions = code.instructions();
-  const auto& lines = code.lines();
-  const auto& constants = code.constants();
+  auto& instructions = code.instructions();
+  auto& lines = code.lines();
+  auto& constants = code.constants();
   std::string result = level == 0 ? "== " + name + " ==\n" : name + "\n";
   for (std::size_t pos = 0; pos < instructions.size(); ++pos) {
     std::ostringstream oss;

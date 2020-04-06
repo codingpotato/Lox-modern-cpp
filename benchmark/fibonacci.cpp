@@ -2,7 +2,7 @@
 
 #include "helper.h"
 
-static void fib(benchmark::State& state) {
+static void fibonacci(benchmark::State& state) {
   const std::string source{R"(
 fun fib(n) {
   if (n < 2) return n;
@@ -14,4 +14,4 @@ print fib(30);
     run(source);
   }
 }
-BENCHMARK(fib);
+BENCHMARK(fibonacci);

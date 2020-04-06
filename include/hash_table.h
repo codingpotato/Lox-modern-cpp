@@ -7,11 +7,11 @@
 
 namespace lox {
 
-struct hash_table {
+struct Hash_table {
  public:
-  hash_table() noexcept : entries_{nullptr}, capacity_mask_{-1}, count_{0} {}
+  Hash_table() noexcept : entries_{nullptr}, capacity_mask_{-1}, count_{0} {}
 
-  ~hash_table() noexcept {
+  ~Hash_table() noexcept {
     if (entries_) {
       delete[] entries_;
     }
@@ -19,60 +19,60 @@ struct hash_table {
 
   int size() const noexcept { return count_; }
 
-  bool insert(string* key, value v) noexcept {
+  bool insert(String* key, Value v) noexcept {
     adjust_capacity();
     auto dest = find_entry(entries_, capacity_mask_, key);
-    if (dest->key_ == nullptr) {
-      dest->key_ = key;
-      dest->value_ = v;
+    if (dest->key == nullptr) {
+      dest->key = key;
+      dest->value = v;
       ++count_;
       return true;
     }
     return false;
   }
 
-  bool contains(const string* key) const noexcept {
+  bool contains(const String* key) const noexcept {
     auto dest = find_entry(entries_, capacity_mask_, key);
-    return dest->key_ != nullptr;
+    return dest->key != nullptr;
   }
 
-  value* get_if(const string* key) const noexcept {
+  Value* get_if(const String* key) const noexcept {
     auto dest = find_entry(entries_, capacity_mask_, key);
-    return dest->key_ ? &dest->value_ : nullptr;
+    return dest->key ? &dest->value : nullptr;
   }
 
-  bool set(const string* key, value v) const noexcept {
+  bool set(const String* key, Value v) const noexcept {
     auto dest = find_entry(entries_, capacity_mask_, key);
-    if (dest->key_) {
-      dest->value_ = v;
+    if (dest->key) {
+      dest->value = v;
       return true;
     }
     return false;
   }
 
-  bool erase(const string* key) noexcept {
+  bool erase(const String* key) noexcept {
     if (count_ == 0) {
       return false;
     }
     auto dest = find_entry(entries_, capacity_mask_, key);
-    if (dest->key_ != nullptr) {
-      dest->key_ = nullptr;
+    if (dest->key != nullptr) {
+      dest->key = nullptr;
       --count_;
       return true;
     }
     return false;
   }
 
-  string* find_string(const std::string& str) noexcept {
+  String* find_string(const std::string& str) noexcept {
     if (count_ == 0) {
       return nullptr;
     }
-    int index = string::hash(str) & capacity_mask_;
+    int index = String::hash(str) & capacity_mask_;
     while (true) {
       auto& current = entries_[index];
-      if (current.key_ != nullptr && *current.key_ == str) {
-        return current.key_;
-      } else if (current.value_.is_nil()) {
+      if (current.key != nullptr && *current.key == str) {
+        return current.key;
+      } else if (current.value.is_nil()) {
         return nullptr;
       }
       index = (index + 1) & capacity_mask_;
@@ -80,9 +80,9 @@ struct hash_table {
   }
 
  private:
-  struct entry {
-    string* key_ = nullptr;
-    value value_;
+  struct Entry {
+    String* key = nullptr;
+    Value value;
   };
 
   constexpr static int capacity_of(int capacity_mask) noexcept {
@@ -92,21 +92,21 @@ struct hash_table {
     return capacity - 1;
   }
 
-  entry* find_entry(entry* entries, int capacity_mask, const string* key) const
+  Entry* find_entry(Entry* entries, int capacity_mask, const String* key) const
       noexcept {
     int index = key->hash() & capacity_mask;
-    entry* tobmstone = nullptr;
+    Entry* tobmstone = nullptr;
     while (true) {
       auto current = &entries[index];
-      if (current->key_ == nullptr) {
-        if (current->value_.is_nil()) {
+      if (current->key == nullptr) {
+        if (current->value.is_nil()) {
           return tobmstone != nullptr ? tobmstone : current;
         } else {
           if (tobmstone == nullptr) {
             tobmstone = current;
           }
         }
-      } else if (current->key_ == key) {
+      } else if (current->key == key) {
         return current;
       }
 
@@ -122,11 +122,11 @@ struct hash_table {
       const auto new_capacity_mask = capacity_mask_of(
           capacity < initial_capacity ? initial_capacity : capacity * 2);
       const auto new_capacity = capacity_of(new_capacity_mask);
-      auto new_entries = new entry[new_capacity];
+      auto new_entries = new Entry[new_capacity];
       for (int index = 0; index <= capacity_mask_; ++index) {
         auto current = &entries_[index];
-        if (current->key_ != nullptr) {
-          auto dest = find_entry(new_entries, new_capacity_mask, current->key_);
+        if (current->key != nullptr) {
+          auto dest = find_entry(new_entries, new_capacity_mask, current->key);
           *dest = *current;
         }
       }
@@ -138,7 +138,7 @@ struct hash_table {
     }
   }
 
-  entry* entries_;
+  Entry* entries_;
   int capacity_mask_;
   int count_;
 };

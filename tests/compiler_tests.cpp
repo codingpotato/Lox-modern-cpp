@@ -4,15 +4,15 @@
 #include <string>
 
 #include "compiler.h"
-#include "virtual_machine.h"
+#include "vm.h"
 
 inline std::string compile(const std::string& message,
                            std::string source) noexcept {
   lox::scanner scanner{std::move(source)};
   std::ostringstream oss;
-  lox::virtual_machine vm{oss};
+  lox::Vm vm{oss};
   auto func = lox::compiler{vm}.compile(scanner.scan());
-  return to_string(func->code, message);
+  return to_string(func->code(), message);
 }
 
 TEST_CASE("compile primary") {

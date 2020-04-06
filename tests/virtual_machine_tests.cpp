@@ -6,12 +6,12 @@
 
 #include "compiler.h"
 #include "scanner.h"
-#include "virtual_machine.h"
+#include "vm.h"
 
 inline std::string run(const std::string& source) {
   lox::scanner scanner{source};
   std::ostringstream oss;
-  lox::virtual_machine vm{oss};
+  lox::Vm vm{oss};
   lox::compiler compiler{vm};
   vm.interpret(compiler.compile(scanner.scan()));
   return oss.str();

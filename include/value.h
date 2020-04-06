@@ -9,15 +9,15 @@
 
 namespace lox {
 
-struct object;
+struct Object;
 
 namespace optimized {
 
-struct value {
-  constexpr value() noexcept : bits_{make_nil()} {}
-  constexpr value(bool b) noexcept : bits_{make_bool(b)} {}
-  constexpr value(double d) noexcept : double_{d} {}
-  value(const object* obj) noexcept : bits_{make_object(obj)} {}
+struct Value {
+  constexpr Value() noexcept : bits_{make_nil()} {}
+  constexpr Value(bool b) noexcept : bits_{make_bool(b)} {}
+  constexpr Value(double d) noexcept : double_{d} {}
+  Value(const Object* obj) noexcept : bits_{make_object(obj)} {}
 
   constexpr bool is_nil() const noexcept { return bits_ == make_nil(); }
   constexpr bool is_bool() const noexcept {
@@ -36,9 +36,9 @@ struct value {
     ENSURES(is_double());
     return double_;
   }
-  const object* as_object() const noexcept {
+  Object* as_object() noexcept {
     ENSURES(is_object());
-    return reinterpret_cast<object*>(bits_ & ~(tag_object | qnan));
+    return reinterpret_cast<Object*>(bits_ & ~(tag_object | qnan));
   }
 
  private:
@@ -54,7 +54,7 @@ struct value {
   constexpr static storage_t make_bool(bool b) noexcept {
     return (b ? tag_true : tag_false) | qnan;
   }
-  static storage_t make_object(const object* obj) noexcept {
+  static storage_t make_object(const Object* obj) noexcept {
     return tag_object | qnan | reinterpret_cast<storage_t>(obj);
   }
 
@@ -68,16 +68,16 @@ struct value {
 
 namespace tagged_union {
 
-struct value {
-  constexpr value() noexcept : id_{id<nil>}, object_{nullptr} {}
-  constexpr value(bool b) noexcept : id_{id<bool>}, bool_{b} {}
-  constexpr value(double d) noexcept : id_{id<double>}, double_{d} {}
-  constexpr value(object* obj) noexcept : id_{id<object>}, object_{obj} {}
+struct Value {
+  constexpr Value() noexcept : id_{id<nil>}, object_{nullptr} {}
+  constexpr Value(bool b) noexcept : id_{id<bool>}, bool_{b} {}
+  constexpr Value(double d) noexcept : id_{id<double>}, double_{d} {}
+  constexpr Value(Object* obj) noexcept : id_{id<Object>}, object_{obj} {}
 
   constexpr bool is_nil() const noexcept { return id_ == id<nil>; }
   constexpr bool is_bool() const noexcept { return id_ == id<bool>; }
   constexpr bool is_double() const noexcept { return id_ == id<double>; }
-  constexpr bool is_object() const noexcept { return id_ == id<object>; }
+  constexpr bool is_object() const noexcept { return id_ == id<Object>; }
 
   constexpr bool as_bool() const noexcept {
     ENSURES(is_bool());
@@ -87,30 +87,30 @@ struct value {
     ENSURES(is_double());
     return double_;
   }
-  const object* as_object() const noexcept {
+  Object* as_object() noexcept {
     ENSURES(is_object());
     return object_;
   }
 
  private:
   struct nil {};
-  using types = type_list<nil, bool, double, object>;
+  using Types = type_list<nil, bool, double, Object>;
   template <typename T>
-  constexpr static size_t id = index_of<T, types>::value;
+  constexpr static size_t id = index_of<T, Types>::value;
 
   size_t id_;
   union {
     bool bool_;
     double double_;
-    object* object_;
+    Object* object_;
   };
 };
 
 }  // namespace tagged_union
 
-using value = optimized::value;
+using Value = optimized::Value;
 
-inline constexpr bool operator==(const value& lhs, const value& rhs) noexcept {
+inline constexpr bool operator==(Value lhs, Value rhs) noexcept {
   if (lhs.is_nil() && rhs.is_nil()) {
     return true;
   }
@@ -126,31 +126,31 @@ inline constexpr bool operator==(const value& lhs, const value& rhs) noexcept {
   return false;
 }
 
-inline constexpr value operator+(const value& lhs, const value& rhs) noexcept {
+inline constexpr Value operator+(const Value& lhs, const Value& rhs) noexcept {
   return lhs.as_double() + rhs.as_double();
 }
 
-inline constexpr value operator-(const value& lhs, const value& rhs) noexcept {
+inline constexpr Value operator-(const Value& lhs, const Value& rhs) noexcept {
   return lhs.as_double() - rhs.as_double();
 }
 
-inline constexpr value operator*(const value& lhs, const value& rhs) noexcept {
+inline constexpr Value operator*(const Value& lhs, const Value& rhs) noexcept {
   return lhs.as_double() * rhs.as_double();
 }
 
-inline constexpr value operator/(const value& lhs, const value& rhs) noexcept {
+inline constexpr Value operator/(const Value& lhs, const Value& rhs) noexcept {
   return lhs.as_double() / rhs.as_double();
 }
 
-inline constexpr value operator>(const value& lhs, const value& rhs) noexcept {
+inline constexpr Value operator>(const Value& lhs, const Value& rhs) noexcept {
   return lhs.as_double() > rhs.as_double();
 }
 
-inline constexpr value operator<(const value& lhs, const value& rhs) noexcept {
+inline constexpr Value operator<(const Value& lhs, const Value& rhs) noexcept {
   return lhs.as_double() < rhs.as_double();
 }
 
-std::string to_string(value v, bool verbose = false) noexcept;
+std::string to_string(Value v, bool verbose = false) noexcept;
 
 }  // namespace lox
 

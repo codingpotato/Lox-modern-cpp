@@ -3,7 +3,7 @@
 #include "compiler.h"
 #include "helper.h"
 #include "scanner.h"
-#include "virtual_machine.h"
+#include "vm.h"
 
 static void sum(benchmark::State& state) {
   std::string source{R"(

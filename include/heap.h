@@ -10,27 +10,27 @@
 
 namespace lox {
 
-struct heap {
+struct Heap {
   template <typename T, typename... Args>
   T* make_object(Args&&... args) noexcept {
     auto obj = new T{std::forward<Args>(args)...};
-    objects.insert(obj);
+    objects_.insert(obj);
     return obj;
   }
 
-  string* make_string(std::string str) noexcept {
-    auto obj = strings.find_string(str);
+  String* make_string(std::string str) noexcept {
+    auto obj = strings_.find_string(str);
     if (!obj) {
-      obj = new string{std::move(str)};
-      objects.insert(obj);
-      strings.insert(obj, value{true});
+      obj = new String{std::move(str)};
+      objects_.insert(obj);
+      strings_.insert(obj, true);
     }
     return obj;
   }
 
  private:
-  list objects;
-  hash_table strings;
+  List objects_;
+  Hash_table strings_;
 };
 
 }  // namespace lox

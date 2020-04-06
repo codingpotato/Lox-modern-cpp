@@ -8,8 +8,8 @@
 namespace lox {
 
 template <typename T, size_t Max_size>
-struct stack {
-  stack() noexcept : storage_(Max_size), size_{0} {}
+struct Stack {
+  Stack() noexcept : storage_(Max_size), size_{0} {}
 
   bool empty() const noexcept { return size_ == 0; }
 

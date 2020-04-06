@@ -3,7 +3,7 @@
 #include "compiler.h"
 #include "helper.h"
 #include "scanner.h"
-#include "virtual_machine.h"
+#include "vm.h"
 
 static void string_expression_statement(benchmark::State& state) {
   const std::string source{R"(

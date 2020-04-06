@@ -1,6 +1,6 @@
 set(SOURCE
     equality.cpp
-    fib.cpp
+    fibonacci.cpp
     main.cpp
     hash_table_benchmark.cpp
     program_benchmark.cpp

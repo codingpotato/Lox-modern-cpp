@@ -10,17 +10,17 @@
 
 namespace lox {
 
-struct function;
+struct Function;
 struct Native_func;
-struct string;
+struct String;
 
-struct object {
-  using types = type_list<function, Native_func, string>;
+struct Object {
+  using Types = type_list<Function, Native_func, String>;
   template <typename T>
-  constexpr static size_t id = index_of<T, types>::value;
+  constexpr static size_t id = index_of<T, Types>::value;
 
-  explicit object(size_t id) noexcept : id_{id} {}
-  virtual ~object() = default;
+  explicit Object(size_t id) noexcept : id_{id} {}
+  virtual ~Object() = default;
 
   template <typename T>
   bool is() const noexcept {
@@ -28,20 +28,20 @@ struct object {
   }
 
   template <typename T>
-  const T* as() const noexcept {
+  T* as() noexcept {
     ENSURES(is<T>());
-    return reinterpret_cast<const T*>(this);
+    return reinterpret_cast<T*>(this);
   }
 
-  virtual std::string to_string(bool = false) const noexcept = 0;
+  virtual std::string to_string(bool = false) noexcept = 0;
 
-  object* next = nullptr;
+  Object* next = nullptr;
 
  private:
   size_t id_;
 };
 
-struct string : object {
+struct String : Object {
   static uint32_t hash(const std::string& str) noexcept {
     uint32_t hash = 2166136261u;
     for (const auto ch : str) {
@@ -51,15 +51,15 @@ struct string : object {
     return hash;
   }
 
-  string(std::string str) noexcept
-      : object{id<string>}, str_{std::move(str)}, hash_{hash(str_)} {}
+  String(std::string str) noexcept
+      : Object{id<String>}, str_{std::move(str)}, hash_{hash(str_)} {}
 
-  const std::string& std_string() const noexcept { return str_; }
+  const std::string& string() const noexcept { return str_; }
   uint32_t hash() const noexcept { return hash_; }
 
-  std::string to_string(bool = false) const noexcept override { return str_; }
+  std::string to_string(bool = false) noexcept override { return str_; }
 
-  friend bool operator==(const string& lhs, const string& rhs) noexcept {
+  friend bool operator==(const String& lhs, const String& rhs) noexcept {
     return lhs.hash_ == rhs.hash_ && lhs.str_ == rhs.str_;
   }
 
@@ -68,36 +68,43 @@ struct string : object {
   uint32_t hash_;
 };
 
-struct function : object {
-  // function() noexcept : object{id<function>} {}
-  explicit function(const string* n) noexcept : object{id<function>}, name{n} {}
+struct Function : Object {
+  explicit Function(const String* str) noexcept
+      : Object{id<Function>}, name_{str} {}
 
-  std::string to_string(bool verbose = false) const noexcept override {
-    std::string message =
-        name ? "<function: " + name->std_string() + ">" : "<script>";
-    return verbose ? ::lox::to_string(code, message, 1) : message;
+  size_t arity() const noexcept { return arity_; }
+  chunk& code() noexcept { return code_; }
+  const String* name() const noexcept { return name_; }
+
+  void increase_arity() noexcept { ++arity_; }
+
+  std::string to_string(bool verbose = false) noexcept override {
+    const std::string message =
+        name_ ? "<function: " + name_->string() + ">" : "<script>";
+    return verbose ? ::lox::to_string(code_, message, 1) : message;
   }
 
-  int arity = 0;
-  chunk code;
-  const string* name = nullptr;
+ private:
+  size_t arity_ = 0;
+  chunk code_;
+  const String* name_;
 };
 
-struct Native_func : object {
-  using Func = value (*)(int arg_count, value* args) noexcept;
+struct Native_func : Object {
+  using Func = Value (*)(int arg_count, Value* args) noexcept;
 
-  Native_func(Func f) noexcept : object{id<Native_func>}, func{f} {}
+  Native_func(Func func) noexcept : Object{id<Native_func>}, func_{func} {}
 
-  value operator()(int arg_count, value* args) const noexcept {
-    return (*func)(arg_count, args);
+  Value operator()(int arg_count, Value* args) const noexcept {
+    return (*func_)(arg_count, args);
   }
 
-  std::string to_string(bool = false) const noexcept override {
+  std::string to_string(bool = false) noexcept override {
     return "<native func>";
   }
 
  private:
-  Func func;
+  Func func_;
 };
 
 }  // namespace lox

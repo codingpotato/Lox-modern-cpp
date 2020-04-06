@@ -4,15 +4,15 @@
 
 namespace lox {
 
-std::string to_string(value v, bool verbose) noexcept {
-  if (v.is_bool()) {
-    return v.as_bool() ? "true" : "false";
+std::string to_string(Value value, bool verbose) noexcept {
+  if (value.is_bool()) {
+    return value.as_bool() ? "true" : "false";
   }
-  if (v.is_double()) {
-    return std::to_string(v.as_double());
+  if (value.is_double()) {
+    return std::to_string(value.as_double());
   }
-  if (v.is_object()) {
-    return v.as_object()->to_string(verbose);
+  if (value.is_object()) {
+    return value.as_object()->to_string(verbose);
   }
   return "nil";
 }

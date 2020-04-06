@@ -7,24 +7,24 @@
 #include "value.h"
 
 TEST_CASE("nil value") {
-  const lox::value v{};
-  CHECK(v.is_nil());
+  const lox::Value value{};
+  CHECK(value.is_nil());
 }
 
 TEST_CASE("bool value") {
-  lox::value v{true};
-  CHECK(v.is_bool());
-  CHECK(v.as_bool());
-  v = false;
-  CHECK(v.is_bool());
-  CHECK(!v.as_bool());
+  lox::Value value{true};
+  CHECK(value.is_bool());
+  CHECK(value.as_bool());
+  value = false;
+  CHECK(value.is_bool());
+  CHECK(!value.as_bool());
 }
 
 TEST_CASE("double value") {
-  lox::value v{1.0};
-  CHECK(v.is_double());
-  CHECK_EQ(v.as_double(), 1);
-  v = 2.0;
-  CHECK(v.is_double());
-  CHECK_EQ(v.as_double(), 2);
+  lox::Value value{1.0};
+  CHECK(value.is_double());
+  CHECK_EQ(value.as_double(), 1);
+  value = 2.0;
+  CHECK(value.is_double());
+  CHECK_EQ(value.as_double(), 2);
 }

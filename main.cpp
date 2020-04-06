@@ -6,14 +6,14 @@
 
 #include "compiler.h"
 #include "scanner.h"
-#include "virtual_machine.h"
+#include "vm.h"
 
 namespace lox {
 
 inline void run(const std::string &source) {
   try {
     scanner scanner{source};
-    virtual_machine vm{std::cout};
+    Vm vm{std::cout};
     vm.interpret(compiler{vm}.compile(scanner.scan()));
   } catch (std::exception &e) {
     std::cout << e.what() << '\n';

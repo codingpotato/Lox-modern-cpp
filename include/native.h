@@ -9,7 +9,7 @@
 
 namespace lox {
 
-inline value clock(int, value*) noexcept {
+inline Value clock(int, Value*) noexcept {
   auto time = std::chrono::duration_cast<std::chrono::microseconds>(
                   std::chrono::steady_clock::now().time_since_epoch())
                   .count();
@@ -19,9 +19,9 @@ inline value clock(int, value*) noexcept {
              .count();
 }
 
-inline void register_natives(hash_table& globals, heap& main_heap) noexcept {
-  globals.insert(main_heap.make_string("clock"),
-                 main_heap.make_object<Native_func>(clock));
+inline void register_natives(Hash_table& globals, Heap& heap) noexcept {
+  globals.insert(heap.make_string("clock"),
+                 heap.make_object<Native_func>(clock));
 }
 
 }  // namespace lox
