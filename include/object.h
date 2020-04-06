@@ -10,12 +10,13 @@
 
 namespace lox {
 
+struct String;
 struct Function;
 struct Native_func;
-struct String;
+struct Closure;
 
 struct Object {
-  using Types = type_list<Function, Native_func, String>;
+  using Types = type_list<String, Function, Native_func, Closure>;
   template <typename T>
   constexpr static size_t id = index_of<T, Types>::value;
 
@@ -105,6 +106,19 @@ struct Native_func : Object {
 
  private:
   Func func_;
+};
+
+struct Closure : Object {
+  Closure(Function* func) noexcept : Object{id<Closure>}, func_{func} {}
+
+  Function* func() noexcept { return func_; }
+
+  std::string to_string(bool = false) noexcept override {
+    return func_->to_string();
+  }
+
+ private:
+  Function* func_;
 };
 
 }  // namespace lox

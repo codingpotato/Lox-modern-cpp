@@ -32,10 +32,10 @@ class Vm {
  private:
   struct Call_frame {
     Call_frame() noexcept {}
-    Call_frame(Function* f, size_t start = 0) noexcept
-        : func{f}, start_of_stack{start} {}
+    Call_frame(Closure* c, size_t start = 0) noexcept
+        : closure{c}, start_of_stack{start} {}
 
-    Function* func = nullptr;
+    Closure* closure = nullptr;
     size_t ip = 0;
     size_t start_of_stack = 0;
   };
@@ -48,7 +48,9 @@ class Vm {
   }
 
   Call_frame& current_frame() noexcept { return call_frames_.peek(); }
-  chunk& current_code() noexcept { return current_frame().func->code(); }
+  chunk& current_code() noexcept {
+    return current_frame().closure->func()->code();
+  }
 
   void throw_undefined_variable(const String* name) const {
     throw runtime_error{"Undefined variable: " + name->string()};
@@ -225,12 +227,13 @@ inline void Vm::handle<op_call>(oprand_t oprand) {
   const auto argument_count = oprand;
   if (auto v = stack_.peek(argument_count); v.is_object()) {
     auto obj = v.as_object();
-    if (obj->is<Function>()) {
-      auto func = obj->as<Function>();
-      if (argument_count == func->arity()) {
-        call_frames_.push(func, stack_.size() - argument_count - 1);
+    if (obj->is<Closure>()) {
+      auto closure = obj->as<Closure>();
+      if (argument_count == closure->func()->arity()) {
+        call_frames_.push(closure, stack_.size() - argument_count - 1);
       } else {
-        throw_incorrect_argument_count(func->arity(), argument_count);
+        throw_incorrect_argument_count(closure->func()->arity(),
+                                       argument_count);
       }
     } else if (obj->is<Native_func>()) {
       const auto func = obj->as<Native_func>();
@@ -240,6 +243,14 @@ inline void Vm::handle<op_call>(oprand_t oprand) {
       stack_.push(result);
     }
   }
+}
+
+template <>
+inline void Vm::handle<op_closure>(oprand_t oprand) {
+  ENSURES(oprand < current_code().constants().size());
+  auto value = current_code().constants()[oprand];
+  auto func = value.as_object()->as<Function>();
+  stack_.push(heap_.make_object<Closure>(func));
 }
 
 template <>
@@ -263,8 +274,9 @@ inline void Vm::handle<op_return>(oprand_t) {
 template <bool Debug>
 inline void Vm::interpret(Function* func) noexcept {
   try {
-    stack_.push(func);
-    call_frames_.push(func);
+    auto closure = heap_.make_object<Closure>(func);
+    stack_.push(closure);
+    call_frames_.push(closure);
     while (!call_frames_.empty() &&
            call_frames_.peek().ip < current_code().instructions().size()) {
       const auto& instr =
@@ -280,7 +292,10 @@ inline void Vm::interpret(Function* func) noexcept {
   } catch (exception& e) {
     out_ << e.what() << "\n";
     for (size_t distance = 0; distance < call_frames_.size(); ++distance) {
-      out_ << call_frames_.peek(distance).func->to_string() << "\n";
+      auto& frame = call_frames_.peek(distance);
+      out_ << "[line " << std::setfill('0') << std::setw(4)
+           << frame.closure->func()->code().lines()[frame.ip] << " in] "
+           << call_frames_.peek(distance).closure->func()->to_string() << "\n";
     }
   }
 }

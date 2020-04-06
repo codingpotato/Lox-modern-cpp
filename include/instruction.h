@@ -22,7 +22,8 @@
                               generator(op_jump_if_false, true)                \
                                   generator(op_loop, true)                     \
                                       generator(op_call, true)                 \
-                                          generator(op_return, false)
+                                          generator(op_closure, true)          \
+                                              generator(op_return, false)
 
 #define FORWARD_DECLARATION(opcode, has_oprand_value) struct opcode;
 

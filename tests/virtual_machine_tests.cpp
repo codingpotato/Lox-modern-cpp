@@ -215,10 +215,10 @@ fun c() {
 a();
 )"};
   std::string expected{R"(Expected 0 arguments but got 2.
-<function: c>
-<function: b>
-<function: a>
-<script>
+[line 0005 in] <function: c>
+[line 0003 in] <function: b>
+[line 0002 in] <function: a>
+[line 0007 in] <script>
 )"};
   CHECK_EQ(run(source), expected);
 }
@@ -260,4 +260,21 @@ print clock();
                       std::chrono::seconds{1})
                       .count();
   CHECK(std::stod(run(source)) == doctest::Approx(expected));
+}
+
+TEST_CASE("closure") {
+  std::string source{R"(
+fun makeClosure() {
+  var local = "local";
+  fun closure() {
+    print local;
+  }
+  return closure;
+}
+var closure = makeClosure();
+closure();
+)"};
+  std::string expected{R"(
+)"};
+  CHECK_EQ(run(source), expected);
 }

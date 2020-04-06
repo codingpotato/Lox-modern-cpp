@@ -139,7 +139,7 @@ class compiler {
     add_return_instruction();
     auto func = current_func_frame().func;
     pop_func_frame();
-    add_instruction(op_constant{}, add_constant(func));
+    add_instruction(op_closure{}, add_constant(func));
   }
 
   void add_return_instruction() noexcept {
