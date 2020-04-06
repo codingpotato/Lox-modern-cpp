@@ -11,10 +11,11 @@
 namespace lox {
 
 struct function;
+struct Native_func;
 struct string;
 
 struct object {
-  using types = type_list<function, string>;
+  using types = type_list<function, Native_func, string>;
   template <typename T>
   constexpr static size_t id = index_of<T, types>::value;
 
@@ -68,7 +69,7 @@ struct string : object {
 };
 
 struct function : object {
-  function() noexcept : object{id<function>} {}
+  // function() noexcept : object{id<function>} {}
   explicit function(const string* n) noexcept : object{id<function>}, name{n} {}
 
   std::string to_string(bool verbose = false) const noexcept override {
@@ -80,6 +81,23 @@ struct function : object {
   int arity = 0;
   chunk code;
   const string* name = nullptr;
+};
+
+struct Native_func : object {
+  using Func = value (*)(int arg_count, value* args) noexcept;
+
+  Native_func(Func f) noexcept : object{id<Native_func>}, func{f} {}
+
+  value operator()(int arg_count, value* args) const noexcept {
+    return (*func)(arg_count, args);
+  }
+
+  std::string to_string(bool = false) const noexcept override {
+    return "<native func>";
+  }
+
+ private:
+  Func func;
 };
 
 }  // namespace lox

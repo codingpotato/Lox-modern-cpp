@@ -8,6 +8,7 @@
 #include "hash_table.h"
 #include "heap.h"
 #include "instruction.h"
+#include "native.h"
 #include "object.h"
 #include "stack.h"
 #include "value.h"
@@ -16,7 +17,9 @@ namespace lox {
 
 class virtual_machine {
  public:
-  explicit virtual_machine(std::ostream& os) noexcept : out_{os} {}
+  explicit virtual_machine(std::ostream& os) noexcept : out_{os} {
+    register_natives(globals_, main_heap);
+  }
 
   template <bool Debug = false>
   inline void interpret(const function* func) noexcept;
@@ -220,13 +223,20 @@ template <>
 inline void virtual_machine::handle<op_call>(oprand_t oprand) {
   int argument_count = oprand;
   if (auto v = stack_.peek(argument_count); v.is_object()) {
-    if (auto obj = v.as_object(); obj->is<function>()) {
+    auto obj = v.as_object();
+    if (obj->is<function>()) {
       auto func = obj->as<function>();
       if (argument_count == func->arity) {
         call_frames.push(func, stack_.size() - argument_count - 1);
       } else {
         throw_incorrect_argument_count(func->arity, argument_count);
       }
+    } else if (obj->is<Native_func>()) {
+      auto func = obj->as<Native_func>();
+      auto result =
+          (*func)(argument_count, &stack_[stack_.size() - argument_count]);
+      stack_.resize(stack_.size() - argument_count - 1);
+      stack_.push(result);
     }
   }
 }

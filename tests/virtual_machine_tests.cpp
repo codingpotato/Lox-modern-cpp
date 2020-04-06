@@ -1,5 +1,6 @@
 #include <doctest/doctest.h>
 
+#include <chrono>
 #include <sstream>
 #include <string>
 
@@ -245,4 +246,18 @@ print 4 + sum(5, 6, 7);
   std::string expected{R"(22.000000
 )"};
   CHECK_EQ(run(source), expected);
+}
+
+TEST_CASE("native clock") {
+  const std::string source{R"(
+print clock();
+)"};
+  auto time = std::chrono::duration_cast<std::chrono::microseconds>(
+                  std::chrono::steady_clock::now().time_since_epoch())
+                  .count();
+  auto expected = static_cast<double>(time) /
+                  std::chrono::duration_cast<std::chrono::microseconds>(
+                      std::chrono::seconds{1})
+                      .count();
+  CHECK(std::stod(run(source)) == doctest::Approx(expected));
 }
