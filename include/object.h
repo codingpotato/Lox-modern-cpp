@@ -16,9 +16,9 @@ struct Native_func;
 struct Closure;
 
 struct Object {
-  using Types = type_list<String, Function, Native_func, Closure>;
+  using Types = Type_list<String, Function, Native_func, Closure>;
   template <typename T>
-  constexpr static size_t id = index_of<T, Types>::value;
+  constexpr static size_t id = Index_of<T, Types>::value;
 
   explicit Object(size_t id) noexcept : id_{id} {}
   virtual ~Object() = default;

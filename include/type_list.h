@@ -10,31 +10,31 @@ namespace lox {
 namespace detail {
 
 template <typename Target, size_t N, typename... Ts>
-struct index_of_impl {};
+struct Index_of_impl {};
 
 template <typename Target, size_t N, typename T, typename... Ts>
-struct index_of_impl<Target, N, T, Ts...> {
-  static constexpr size_t value{index_of_impl<Target, N + 1, Ts...>::value};
+struct Index_of_impl<Target, N, T, Ts...> {
+  static constexpr size_t value{Index_of_impl<Target, N + 1, Ts...>::value};
 };
 
 template <typename Target, size_t N, typename... Ts>
-struct index_of_impl<Target, N, Target, Ts...> {
+struct Index_of_impl<Target, N, Target, Ts...> {
   static constexpr size_t value{N};
 };
 
 }  // namespace detail
 
 template <typename Target, typename... Ts>
-struct index_of {
-  static constexpr size_t value{detail::index_of_impl<Target, 0, Ts...>::value};
+struct Index_of {
+  static constexpr size_t value{detail::Index_of_impl<Target, 0, Ts...>::value};
 };
 
 template <typename... Ts>
-struct type_list {};
+struct Type_list {};
 
 template <typename Target, typename... Ts>
-struct index_of<Target, type_list<Ts...>> {
-  static constexpr size_t value{detail::index_of_impl<Target, 0, Ts...>::value};
+struct Index_of<Target, Type_list<Ts...>> {
+  static constexpr size_t value{detail::Index_of_impl<Target, 0, Ts...>::value};
 };
 
 }  // namespace lox

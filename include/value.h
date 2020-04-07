@@ -69,12 +69,12 @@ struct Value {
 namespace tagged_union {
 
 struct Value {
-  constexpr Value() noexcept : id_{id<nil>}, object_{nullptr} {}
+  constexpr Value() noexcept : id_{id<Nil>}, object_{nullptr} {}
   constexpr Value(bool b) noexcept : id_{id<bool>}, bool_{b} {}
   constexpr Value(double d) noexcept : id_{id<double>}, double_{d} {}
   constexpr Value(Object* obj) noexcept : id_{id<Object>}, object_{obj} {}
 
-  constexpr bool is_nil() const noexcept { return id_ == id<nil>; }
+  constexpr bool is_nil() const noexcept { return id_ == id<Nil>; }
   constexpr bool is_bool() const noexcept { return id_ == id<bool>; }
   constexpr bool is_double() const noexcept { return id_ == id<double>; }
   constexpr bool is_object() const noexcept { return id_ == id<Object>; }
@@ -93,10 +93,10 @@ struct Value {
   }
 
  private:
-  struct nil {};
-  using Types = type_list<nil, bool, double, Object>;
+  struct Nil {};
+  using Types = Type_list<Nil, bool, double, Object>;
   template <typename T>
-  constexpr static size_t id = index_of<T, Types>::value;
+  constexpr static size_t id = Index_of<T, Types>::value;
 
   size_t id_;
   union {

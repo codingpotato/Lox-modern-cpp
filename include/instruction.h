@@ -33,7 +33,7 @@
 
 #define STRUCT(opcode, has_oprand_value)                              \
   struct opcode {                                                     \
-    static constexpr std::size_t id = index_of<opcode, types>::value; \
+    static constexpr std::size_t id = Index_of<opcode, types>::value; \
     static constexpr const char* name = #opcode;                      \
     static constexpr bool has_oprand = has_oprand_value;              \
   };
@@ -46,7 +46,7 @@ namespace lox {
 
 OPCODES(FORWARD_DECLARATION)
 
-using types = type_list<OPCODES(TYPE_LIST_ARGUMENT) void>;
+using types = Type_list<OPCODES(TYPE_LIST_ARGUMENT) void>;
 
 OPCODES(STRUCT)
 
