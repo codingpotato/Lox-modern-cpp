@@ -8,22 +8,24 @@
 #include "contract.h"
 #include "type_list.h"
 
-#define OPCODES(generator)                                                     \
-  generator(op_constant, true) generator(op_nil, false) generator(             \
-      op_true, false) generator(op_false, false) generator(op_pop, false)      \
-      generator(op_get_local, true) generator(op_set_local, true) generator(   \
-          op_get_global, true) generator(op_define_global, true)               \
-          generator(op_set_global, true) generator(op_equal, false) generator( \
-              op_greater, false) generator(op_less, false)                     \
-              generator(op_add, false) generator(op_subtract, false)           \
-                  generator(op_multiply, false) generator(op_divide, false)    \
-                      generator(op_not, false) generator(op_negate, false)     \
-                          generator(op_print, false) generator(op_jump, true)  \
-                              generator(op_jump_if_false, true)                \
-                                  generator(op_loop, true)                     \
-                                      generator(op_call, true)                 \
-                                          generator(op_closure, true)          \
-                                              generator(op_return, false)
+#define OPCODES(generator)                                                   \
+  generator(op_constant, true) generator(op_nil, false) generator(           \
+      op_true, false) generator(op_false, false) generator(op_pop, false)    \
+      generator(op_get_local, true) generator(op_set_local, true) generator( \
+          op_get_global, true) generator(op_define_global, true)             \
+          generator(op_set_global, true) generator(op_get_upvalue, true)     \
+              generator(op_set_upvalue, true) generator(op_equal, false)     \
+                  generator(op_greater, false) generator(op_less, false)     \
+                      generator(op_add, false) generator(op_subtract, false) \
+                          generator(op_multiply, false) generator(           \
+                              op_divide, false) generator(op_not, false)     \
+                              generator(op_negate, false) generator(         \
+                                  op_print, false) generator(op_jump, true)  \
+                                  generator(op_jump_if_false, true)          \
+                                      generator(op_loop, true)               \
+                                          generator(op_call, true)           \
+                                              generator(op_closure, true)    \
+                                                  generator(op_return, false)
 
 #define FORWARD_DECLARATION(opcode, has_oprand_value) struct opcode;
 

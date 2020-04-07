@@ -376,25 +376,57 @@ class compiler {
   }
 
   void add_variable(bool can_assign) {
-    auto index_local = current_func_frame().resolve_local(previous_->lexeme);
-    int index_global = -1;
-    if (index_local == -1) {
-      index_global = add_constant(vm_.heap().make_string(previous_->lexeme));
+    enum Type { local, upvalue, global } type = local;
+    auto index = current_func_frame().resolve_local(previous_->lexeme);
+    if (index == -1) {
+      index = resolve_upvalue(previous_->lexeme, func_frames.size() - 1);
+      if (index != -1) {
+        type = upvalue;
+      } else {
+        type = global;
+        index = add_constant(vm_.heap().make_string(previous_->lexeme));
+      }
     }
     if (can_assign && match(token::equal)) {
       parse_expression();
-      if (index_local == -1) {
-        add_instruction(op_set_global{}, index_global);
-      } else {
-        add_instruction(op_set_local{}, index_local);
+      switch (type) {
+        case local:
+          add_instruction(op_set_local{}, index);
+          break;
+        case upvalue:
+          add_instruction(op_set_upvalue{}, index);
+          break;
+        case global:
+          add_instruction(op_set_global{}, index);
+          break;
       }
     } else {
-      if (index_local == -1) {
-        add_instruction(op_get_global{}, index_global);
-      } else {
-        add_instruction(op_get_local{}, index_local);
+      switch (type) {
+        case local:
+          add_instruction(op_get_local{}, index);
+          break;
+        case upvalue:
+          add_instruction(op_get_upvalue{}, index);
+          break;
+        case global:
+          add_instruction(op_get_global{}, index);
+          break;
       }
     }
+  }
+
+  int resolve_upvalue(const std::string& name, size_t frame_index) noexcept {
+    if (frame_index > 0) {
+      if (auto local = func_frames[frame_index - 1].resolve_local(name);
+          local != -1) {
+        return func_frames[frame_index].add_upvalue(local, true);
+      }
+      if (auto upvalue = resolve_upvalue(name, frame_index - 1);
+          upvalue != -1) {
+        return func_frames[frame_index].add_upvalue(upvalue, true);
+      }
+    }
+    return -1;
   }
 
   void add_number_constant(bool) {
@@ -579,8 +611,24 @@ class compiler {
       }
     }
 
+    int add_upvalue(size_t index, bool is_local) {
+      upvalues.emplace_back(index, is_local);
+      if (upvalues.size() > 256) {
+        throw compile_error{"Too many closure variables in function."};
+      }
+      return upvalues.size() - 1;
+    }
+
+    struct Upvalue {
+      Upvalue(size_t i, bool local) noexcept : index{i}, is_local{local} {}
+
+      size_t index;
+      bool is_local;
+    };
+
     Function* func = nullptr;
     std::vector<local> locals;
+    std::vector<Upvalue> upvalues;
     int scope_depth;
   };
   using func_frame_vector = std::vector<func_frame>;
