@@ -30,7 +30,9 @@ struct Index_of {
 };
 
 template <typename... Ts>
-struct Type_list {};
+struct Type_list {
+  static constexpr size_t size = sizeof...(Ts);
+};
 
 template <typename Target, typename... Ts>
 struct Index_of<Target, Type_list<Ts...>> {

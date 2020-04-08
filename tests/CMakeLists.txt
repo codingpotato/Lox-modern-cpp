@@ -6,6 +6,7 @@ set(TESTS_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/heap_tests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/list_tests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/object_tests.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/opcode_tests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/scanner_tests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/type_list_tests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/value_tests.cpp
