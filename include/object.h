@@ -113,8 +113,8 @@ struct Closure : Object {
 
   Function* func() noexcept { return func_; }
 
-  std::string to_string(bool = false) noexcept override {
-    return func_->to_string();
+  std::string to_string(bool verbose = false) noexcept override {
+    return func_->to_string(verbose);
   }
 
  private:

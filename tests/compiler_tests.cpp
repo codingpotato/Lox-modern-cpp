@@ -47,11 +47,11 @@ else print 0;
 0000    2 OP_Constant 1.000000
 0002    | OP_Constant 0.000000
 0004    | OP_Greater
-0005    | OP_Jump_if_false 7
+0005    | OP_Jump_if_false 7 -> 15
 0008    | OP_Pop
 0009    | OP_Constant 1.000000
 0011    | OP_Print
-0012    | OP_Jump 4
+0012    | OP_Jump 4 -> 19
 0015    | OP_Pop
 0016    3 OP_Constant 0.000000
 0018    | OP_Print
@@ -69,11 +69,11 @@ while (1 > 0) print 1;
 0000    2 OP_Constant 1.000000
 0002    | OP_Constant 0.000000
 0004    | OP_Greater
-0005    | OP_Jump_if_false 7
+0005    | OP_Jump_if_false 7 -> 15
 0008    | OP_Pop
 0009    | OP_Constant 1.000000
 0011    | OP_Print
-0012    | OP_Loop 15
+0012    | OP_Loop 15 -> 0
 0015    | OP_Pop
 0016    3 OP_Nil
 0017    | OP_Return
@@ -87,22 +87,22 @@ fun add(a, b) { return a + b; }
 print add(1, 2);
 )"};
   const std::string expected = R"(== function call ==
-0000    2 op_constant <function: add>
-    0000    2 op_get_local 1
-    0001    | op_get_local 2
-    0002    | op_add
-    0003    | op_return
-    0004    | op_nil
-    0005    | op_return
+0000    2 OP_Closure <function: add>
+    0000    2 OP_Get_local 1
+    0002    | OP_Get_local 2
+    0004    | OP_Add
+    0005    | OP_Return
+    0006    | OP_Nil
+    0007    | OP_Return
 
-0001    | op_define_global 0
-0002    3 op_get_global 2
-0003    | op_constant 1.000000
-0004    | op_constant 2.000000
-0005    | op_call 2
-0006    | op_print
-0007    4 op_nil
-0008    | op_return
+0002    | OP_Define_global 0
+0004    3 OP_Get_global 2
+0006    | OP_Constant 1.000000
+0008    | OP_Constant 2.000000
+0010    | OP_Call 2
+0012    | OP_Print
+0013    4 OP_Nil
+0014    | OP_Return
 )";
   CHECK_EQ(compile("function call", source), expected);
 }
@@ -116,38 +116,38 @@ fun fib(n) {
 print fib(30);
 )"};
   const std::string expected = R"(== fib ==
-0000    5 op_constant <function: fib>
-    0000    3 op_get_local 1
-    0001    | op_constant 2.000000
-    0002    | op_less
-    0003    | op_jump_if_false 4
-    0004    | op_pop
-    0005    | op_get_local 1
-    0006    | op_return
-    0007    | op_jump 1
-    0008    | op_pop
-    0009    4 op_get_global 1
-    0010    | op_get_local 1
-    0011    | op_constant 2.000000
-    0012    | op_subtract
-    0013    | op_call 1
-    0014    | op_get_global 3
-    0015    | op_get_local 1
-    0016    | op_constant 1.000000
-    0017    | op_subtract
-    0018    | op_call 1
-    0019    | op_add
-    0020    | op_return
-    0021    5 op_nil
-    0022    | op_return
+0000    5 OP_Closure <function: fib>
+    0000    3 OP_Get_local 1
+    0002    | OP_Constant 2.000000
+    0004    | OP_Less
+    0005    | OP_Jump_if_false 7 -> 15
+    0008    | OP_Pop
+    0009    | OP_Get_local 1
+    0011    | OP_Return
+    0012    | OP_Jump 1 -> 16
+    0015    | OP_Pop
+    0016    4 OP_Get_global 1
+    0018    | OP_Get_local 1
+    0020    | OP_Constant 2.000000
+    0022    | OP_Subtract
+    0023    | OP_Call 1
+    0025    | OP_Get_global 3
+    0027    | OP_Get_local 1
+    0029    | OP_Constant 1.000000
+    0031    | OP_Subtract
+    0032    | OP_Call 1
+    0034    | OP_Add
+    0035    | OP_Return
+    0036    5 OP_Nil
+    0037    | OP_Return
 
-0001    | op_define_global 0
-0002    6 op_get_global 2
-0003    | op_constant 30.000000
-0004    | op_call 1
-0005    | op_print
-0006    7 op_nil
-0007    | op_return
+0002    | OP_Define_global 0
+0004    6 OP_Get_global 2
+0006    | OP_Constant 30.000000
+0008    | OP_Call 1
+0010    | OP_Print
+0011    7 OP_Nil
+0012    | OP_Return
 )";
   CHECK_EQ(compile("fib", source), expected);
 }

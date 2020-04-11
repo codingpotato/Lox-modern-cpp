@@ -56,6 +56,28 @@ struct Chunk {
   Value_vector constants_;
 };
 
+template <typename Instruction>
+inline std::string to_string(const Chunk& chunk, size_t pos,
+                             const Instruction& instr) noexcept {
+  std::ostringstream oss;
+  oss << instr.name;
+  if constexpr (std::is_same_v<Instruction, instruction::Constant> ||
+                std::is_same_v<Instruction, instruction::Closure>) {
+    const auto& constants = chunk.constants();
+    ENSURES(instr.operand() < constants.size());
+    oss << " " << to_string(constants[instr.operand()], true);
+  } else if constexpr (Instruction::size > sizeof(Bytecode)) {
+    oss << " " << instr.operand();
+    if constexpr (std::is_same_v<Instruction, instruction::Jump> ||
+                  std::is_same_v<Instruction, instruction::Jump_if_false>) {
+      oss << " -> " << pos + instruction::Jump::size + instr.operand();
+    } else if constexpr (std::is_same_v<Instruction, instruction::Loop>) {
+      oss << " -> " << pos + instruction::Loop::size - instr.operand();
+    }
+  }
+  return oss.str();
+}
+
 inline std::string to_string(const Chunk& chunk, const std::string& name,
                              int level = 0) noexcept {
   const auto& code = chunk.code();
@@ -73,19 +95,8 @@ inline std::string to_string(const Chunk& chunk, const std::string& name,
     }
     result += oss.str();
     instruction::visit(code, pos, [&](const auto& instr) {
+      result += to_string(chunk, pos, instr);
       pos += instr.size;
-      std::ostringstream oss;
-      oss << instr.name;
-      using Instruction =
-          std::remove_cv_t<std::remove_reference_t<decltype(instr)>>;
-      if constexpr (std::is_same_v<Instruction, instruction::Constant>) {
-        const auto& constants = chunk.constants();
-        ENSURES(instr.operand() < constants.size());
-        oss << " " << to_string(constants[instr.operand()], true);
-      } else if constexpr (Instruction::size > sizeof(Bytecode)) {
-        oss << " " << instr.operand();
-      }
-      result += oss.str();
     });
     result += "\n";
   }
