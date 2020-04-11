@@ -44,20 +44,39 @@ if (1 > 0) print 1;
 else print 0;
 )"};
   const std::string expected = R"(== primary ==
-0000    1 OP_Constant 1.000000
-0002    | OP_Pop
-0003    | OP_Constant 2.000000
-0005    | OP_Pop
-0006    | OP_Nil
-0007    | OP_Pop
-0008    2 OP_True
-0009    | OP_Pop
-0010    | OP_False
-0011    | OP_Pop
-0012    | OP_Constant "str"
-0014    | OP_Pop
-0015    3 OP_Nil
-0016    | OP_Return
+0000    2 OP_Constant 1.000000
+0002    | OP_Constant 0.000000
+0004    | OP_Greater
+0005    | OP_Jump_if_false 7
+0008    | OP_Pop
+0009    | OP_Constant 1.000000
+0011    | OP_Print
+0012    | OP_Jump 4
+0015    | OP_Pop
+0016    3 OP_Constant 0.000000
+0018    | OP_Print
+0019    4 OP_Nil
+0020    | OP_Return
+)";
+  CHECK_EQ(compile("primary", source), expected);
+}
+
+TEST_CASE("compile while statement") {
+  const std::string source{R"(
+while (1 > 0) print 1;
+)"};
+  const std::string expected = R"(== primary ==
+0000    2 OP_Constant 1.000000
+0002    | OP_Constant 0.000000
+0004    | OP_Greater
+0005    | OP_Jump_if_false 7
+0008    | OP_Pop
+0009    | OP_Constant 1.000000
+0011    | OP_Print
+0012    | OP_Loop 15
+0015    | OP_Pop
+0016    3 OP_Nil
+0017    | OP_Return
 )";
   CHECK_EQ(compile("primary", source), expected);
 }

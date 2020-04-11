@@ -20,14 +20,16 @@ struct Chunk {
 
   template <typename Instruction>
   size_t add(size_t line) noexcept {
+    auto pos = code_.size();
     code_.push_back(Instruction::opcode);
     lines_.push_back(line);
     ENSURES(code_.size() == lines_.size());
-    return code_.size() - 1;
+    return pos;
   }
 
   template <typename Instruction>
   size_t add(size_t operand, size_t line) noexcept {
+    auto pos = code_.size();
     code_.push_back(Instruction::opcode);
     lines_.push_back(line);
     auto operand_count = Instruction::add_operand(code_, operand);
@@ -35,7 +37,7 @@ struct Chunk {
       lines_.push_back(line);
     }
     ENSURES(code_.size() == lines_.size());
-    return code_.size() - 1;
+    return pos;
   }
 
   template <typename... Args>

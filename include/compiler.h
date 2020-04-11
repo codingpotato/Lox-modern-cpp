@@ -212,13 +212,13 @@ class compiler {
       add<instruction::Pop>();
       consume(token::right_paren, "Expect ')' after for clauses.");
       add<instruction::Loop>(
-          current_func_frame().code_distance_from(loop_start));
+          current_func_frame().loop_distance_from(loop_start));
       loop_start = increament_start;
       current_func_frame().patch_jump(body_jump);
     }
 
     parse_statement();
-    add<instruction::Loop>(current_func_frame().code_distance_from(loop_start));
+    add<instruction::Loop>(current_func_frame().loop_distance_from(loop_start));
     if (exit_jump != -1) {
       current_func_frame().patch_jump(exit_jump);
       add<instruction::Pop>();
@@ -265,7 +265,7 @@ class compiler {
     const auto exit_jump_index = add<instruction::Jump_if_false>(0);
     add<instruction::Pop>();
     parse_statement();
-    add<instruction::Loop>(current_func_frame().code_distance_from(loop_start));
+    add<instruction::Loop>(current_func_frame().loop_distance_from(loop_start));
     current_func_frame().patch_jump(exit_jump_index);
     add<instruction::Pop>();
   }
@@ -595,13 +595,14 @@ class compiler {
     }
 
     void patch_jump(size_t jump) noexcept {
-      func->chunk().paych_jump(jump, current_code_position() - (jump + 1));
+      func->chunk().paych_jump(
+          jump, current_code_position() - jump - instruction::Short::size);
     }
     size_t current_code_position() const noexcept {
       return func->chunk().code().size();
     }
-    size_t code_distance_from(size_t pos) const noexcept {
-      return current_code_position() - pos + 1;
+    size_t loop_distance_from(size_t pos) const noexcept {
+      return current_code_position() + instruction::Loop::size - pos;
     }
 
     void push_local() noexcept { locals.emplace_back("", 0); }
