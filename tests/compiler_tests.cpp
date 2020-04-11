@@ -12,7 +12,7 @@ inline std::string compile(const std::string& message,
   std::ostringstream oss;
   lox::Vm vm{oss};
   auto func = lox::compiler{vm}.compile(scanner.scan());
-  return to_string(func->code(), message);
+  return to_string(func->chunk(), message);
 }
 
 TEST_CASE("compile primary") {
@@ -20,20 +20,44 @@ TEST_CASE("compile primary") {
   true; false; "str";
 )"};
   const std::string expected = R"(== primary ==
-0000    1 op_constant 1.000000
-0001    | op_pop
-0002    | op_constant 2.000000
-0003    | op_pop
-0004    | op_nil
-0005    | op_pop
-0006    2 op_true
-0007    | op_pop
-0008    | op_false
-0009    | op_pop
-0010    | op_constant "str"
-0011    | op_pop
-0012    3 op_nil
-0013    | op_return
+0000    1 OP_Constant 1.000000
+0002    | OP_Pop
+0003    | OP_Constant 2.000000
+0005    | OP_Pop
+0006    | OP_Nil
+0007    | OP_Pop
+0008    2 OP_True
+0009    | OP_Pop
+0010    | OP_False
+0011    | OP_Pop
+0012    | OP_Constant "str"
+0014    | OP_Pop
+0015    3 OP_Nil
+0016    | OP_Return
+)";
+  CHECK_EQ(compile("primary", source), expected);
+}
+
+TEST_CASE("compile if statement") {
+  const std::string source{R"(
+if (1 > 0) print 1;
+else print 0;
+)"};
+  const std::string expected = R"(== primary ==
+0000    1 OP_Constant 1.000000
+0002    | OP_Pop
+0003    | OP_Constant 2.000000
+0005    | OP_Pop
+0006    | OP_Nil
+0007    | OP_Pop
+0008    2 OP_True
+0009    | OP_Pop
+0010    | OP_False
+0011    | OP_Pop
+0012    | OP_Constant "str"
+0014    | OP_Pop
+0015    3 OP_Nil
+0016    | OP_Return
 )";
   CHECK_EQ(compile("primary", source), expected);
 }

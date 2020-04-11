@@ -3,15 +3,16 @@
 #include <string>
 
 #include "chunk.h"
+#include "instruction.h"
 
-TEST_CASE("chunk emplace back") {
-  lox::chunk chunk;
+TEST_CASE("add instructions") {
+  lox::Chunk chunk;
   auto constant = chunk.add_constant(1.2);
-  chunk.add_instruction(123, lox::op_constant{}, constant);
-  chunk.add_instruction(123, lox::op_return{});
-  std::string expected = R"(== test chunk ==
-0000  123 op_constant 1.200000
-0001    | op_return
+  chunk.add<lox::instruction::Constant>(constant, 123);
+  chunk.add<lox::instruction::Return>(123);
+  std::string expected = R"(== test ==
+0000  123 OP_Constant 1.200000
+0002    | OP_Return
 )";
-  CHECK_EQ(to_string(chunk, "test chunk"), expected);
+  CHECK_EQ(to_string(chunk, "test"), expected);
 }

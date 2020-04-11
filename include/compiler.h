@@ -139,12 +139,12 @@ class compiler {
     add_return_instruction();
     auto func = current_func_frame().func;
     pop_func_frame();
-    add_instruction(op_closure{}, add_constant(func));
+    add<instruction::Closure>(add_constant(func));
   }
 
   void add_return_instruction() noexcept {
-    add_instruction(op_nil{});
-    add_instruction(op_return{});
+    add<instruction::Nil>();
+    add<instruction::Return>();
   }
 
   void parse_var_declaration() {
@@ -152,7 +152,7 @@ class compiler {
     if (match(token::equal)) {
       parse_expression();
     } else {
-      add_instruction(op_nil{});
+      add<instruction::Nil>();
     }
     consume(token::semicolon, "Expect ';' after variable declaration.");
     current_func_frame().define_variable(name, previous_->line);
@@ -201,28 +201,27 @@ class compiler {
     if (!match(token::semicolon)) {
       parse_expression();
       consume(token::semicolon, "Expect ';' after loop condition.");
-      exit_jump = add_instruction(op_jump_if_false{});
-      add_instruction(op_pop{});
+      exit_jump = add<instruction::Jump_if_false>(0);
+      add<instruction::Pop>();
     }
 
     if (!match(token::right_paren)) {
-      auto body_jump = add_instruction(op_jump{});
+      auto body_jump = add<instruction::Jump>(0);
       auto increament_start = current_func_frame().current_code_position();
       parse_expression();
-      add_instruction(op_pop{});
+      add<instruction::Pop>();
       consume(token::right_paren, "Expect ')' after for clauses.");
-      add_instruction(op_loop{},
-                      current_func_frame().code_distance_from(loop_start));
+      add<instruction::Loop>(
+          current_func_frame().code_distance_from(loop_start));
       loop_start = increament_start;
       current_func_frame().patch_jump(body_jump);
     }
 
     parse_statement();
-    add_instruction(op_loop{},
-                    current_func_frame().code_distance_from(loop_start));
+    add<instruction::Loop>(current_func_frame().code_distance_from(loop_start));
     if (exit_jump != -1) {
       current_func_frame().patch_jump(exit_jump);
-      add_instruction(op_pop{});
+      add<instruction::Pop>();
     }
     current_func_frame().end_scope(previous_->line);
   }
@@ -232,13 +231,13 @@ class compiler {
     parse_expression();
     consume(token::right_paren, "Expect ')' after condition.");
 
-    const auto then_jump_index = add_instruction(op_jump_if_false{});
-    add_instruction(op_pop{});
+    const auto then_jump_index = add<instruction::Jump_if_false>(0);
+    add<instruction::Pop>();
     parse_statement();
-    const auto else_jump_index = add_instruction(op_jump{});
+    const auto else_jump_index = add<instruction::Jump>(0);
 
     current_func_frame().patch_jump(then_jump_index);
-    add_instruction(op_pop{});
+    add<instruction::Pop>();
     if (match(token::k_else)) {
       parse_statement();
     }
@@ -254,7 +253,7 @@ class compiler {
     } else {
       parse_expression();
       consume(token::semicolon, "Expect ';' after return value.");
-      add_instruction(op_return{});
+      add<instruction::Return>();
     }
   }
 
@@ -263,13 +262,12 @@ class compiler {
     consume(token::left_paren, "Expect '(' after 'while'.");
     parse_expression();
     consume(token::right_paren, "Expect ')' after condition.");
-    const auto exit_jump_index = add_instruction(op_jump_if_false{}, 0);
-    add_instruction(op_pop{});
+    const auto exit_jump_index = add<instruction::Jump_if_false>(0);
+    add<instruction::Pop>();
     parse_statement();
-    add_instruction(op_loop{},
-                    current_func_frame().code_distance_from(loop_start));
+    add<instruction::Loop>(current_func_frame().code_distance_from(loop_start));
     current_func_frame().patch_jump(exit_jump_index);
-    add_instruction(op_pop{});
+    add<instruction::Pop>();
   }
 
   void parse_block() {
@@ -282,13 +280,13 @@ class compiler {
   void print_statement() {
     parse_expression();
     consume(token::semicolon, "Expect ';' after value.");
-    add_instruction(op_print{});
+    add<instruction::Print>();
   }
 
   void expression_statement() {
     parse_expression();
     consume(token::semicolon, "Expect ';' after value.");
-    add_instruction(op_pop{});
+    add<instruction::Pop>();
   }
 
   void parse_expression() { parse_precedence(precedence::p_assignment); }
@@ -299,44 +297,44 @@ class compiler {
         static_cast<precedence::precedence>(p_rules_[op_type].prec + 1));
     switch (op_type) {
       case token::bang_equal:
-        add_instruction(op_equal{});
-        add_instruction(op_not{});
+        add<instruction::Equal>();
+        add<instruction::Not>();
         break;
       case token::equal_equal:
-        add_instruction(op_equal{});
+        add<instruction::Equal>();
         break;
       case token::greater:
-        add_instruction(op_greater{});
+        add<instruction::Greater>();
         break;
       case token::greater_equal:
-        add_instruction(op_less{});
-        add_instruction(op_not{});
+        add<instruction::Less>();
+        add<instruction::Not>();
         break;
       case token::less:
-        add_instruction(op_less{});
+        add<instruction::Less>();
         break;
       case token::less_equal:
-        add_instruction(op_greater{});
-        add_instruction(op_not{});
+        add<instruction::Greater>();
+        add<instruction::Not>();
         break;
       case token::plus:
-        add_instruction(op_add{});
+        add<instruction::Add>();
         break;
       case token::minus:
-        add_instruction(op_subtract{});
+        add<instruction::Subtract>();
         break;
       case token::star:
-        add_instruction(op_multiply{});
+        add<instruction::Multiply>();
         break;
       case token::slash:
-        add_instruction(op_divide{});
+        add<instruction::Divide>();
         break;
       default:
         break;
     }
   }
 
-  void parse_call(bool) { add_instruction(op_call{}, argument_list()); }
+  void parse_call(bool) { add<instruction::Call>(argument_list()); }
 
   size_t argument_list() {
     size_t count = 0;
@@ -365,10 +363,10 @@ class compiler {
     parse_precedence(precedence::p_unary);
     switch (op_type) {
       case token::bang:
-        add_instruction(op_not{});
+        add<instruction::Not>();
         break;
       case token::minus:
-        add_instruction(op_negate{});
+        add<instruction::Nagate>();
         break;
       default:
         break;
@@ -391,25 +389,25 @@ class compiler {
       parse_expression();
       switch (type) {
         case local:
-          add_instruction(op_set_local{}, index);
+          add<instruction::Set_local>(index);
           break;
         case upvalue:
-          add_instruction(op_set_upvalue{}, index);
+          add<instruction::Set_upvalue>(index);
           break;
         case global:
-          add_instruction(op_set_global{}, index);
+          add<instruction::Set_global>(index);
           break;
       }
     } else {
       switch (type) {
         case local:
-          add_instruction(op_get_local{}, index);
+          add<instruction::Get_local>(index);
           break;
         case upvalue:
-          add_instruction(op_get_upvalue{}, index);
+          add<instruction::Get_upvalue>(index);
           break;
         case global:
-          add_instruction(op_get_global{}, index);
+          add<instruction::Get_global>(index);
           break;
       }
     }
@@ -430,23 +428,23 @@ class compiler {
   }
 
   void add_number_constant(bool) {
-    add_instruction(op_constant{}, add_constant(std::stod(previous_->lexeme)));
+    add<instruction::Constant>(add_constant(std::stod(previous_->lexeme)));
   }
   void add_string_constant(bool) {
-    add_instruction(op_constant{},
-                    add_constant(vm_.heap().make_string(previous_->lexeme)));
+    add<instruction::Constant>(
+        add_constant(vm_.heap().make_string(previous_->lexeme)));
   }
 
   void add_literal(bool) {
     switch (previous_->type) {
       case token::k_nil:
-        add_instruction(op_nil{});
+        add<instruction::Nil>();
         break;
       case token::k_false:
-        add_instruction(op_false{});
+        add<instruction::False>();
         break;
       case token::k_true:
-        add_instruction(op_true{});
+        add<instruction::True>();
         break;
       default:
         throw internal_error{"Unknow literal."};
@@ -454,17 +452,17 @@ class compiler {
   }
 
   void parse_and(bool) {
-    const auto end_jump_index = add_instruction(op_jump_if_false{}, 0);
-    add_instruction(op_pop{});
+    const auto end_jump_index = add<instruction::Jump_if_false>(0);
+    add<instruction::Pop>();
     parse_precedence(precedence::p_and);
     current_func_frame().patch_jump(end_jump_index);
   }
 
   void parse_or(bool) {
-    const auto else_jump_index = add_instruction(op_jump_if_false{}, 0);
-    const auto end_jump_index = add_instruction(op_jump{}, 0);
+    const auto else_jump_index = add<instruction::Jump_if_false>(0);
+    const auto end_jump_index = add<instruction::Jump>(0);
     current_func_frame().patch_jump(else_jump_index);
-    add_instruction(op_pop{});
+    add<instruction::Pop>();
     parse_precedence(precedence::p_or);
     current_func_frame().patch_jump(end_jump_index);
   }
@@ -513,10 +511,13 @@ class compiler {
     return false;
   }
 
-  template <typename Opcode>
-  size_t add_instruction(Opcode opcode, oprand_t oprand = 0) noexcept {
-    return current_func_frame().add_instruction(previous_->line, opcode,
-                                                oprand);
+  template <typename Instruction>
+  size_t add() noexcept {
+    return current_func_frame().add<Instruction>(previous_->line);
+  }
+  template <typename Instruction>
+  size_t add(size_t operand) noexcept {
+    return current_func_frame().add<Instruction>(operand, previous_->line);
   }
   template <typename... Args>
   size_t add_constant(Args&&... args) noexcept {
@@ -556,7 +557,7 @@ class compiler {
       if (scope_depth > 0) {
         latest_local_initialized();
       } else {
-        add_instruction(line, op_define_global{}, name);
+        add<instruction::Define_global>(name, line);
       }
     }
 
@@ -580,21 +581,24 @@ class compiler {
       return -1;
     }
 
-    template <typename Opcode>
-    size_t add_instruction(int line, Opcode opcode,
-                           oprand_t oprand = 0) noexcept {
-      return func->code().add_instruction(line, opcode, oprand);
+    template <typename Instruction>
+    size_t add(int line) noexcept {
+      return func->chunk().add<Instruction>(line);
+    }
+    template <typename Instruction>
+    size_t add(size_t operand, int line) noexcept {
+      return func->chunk().add<Instruction>(operand, line);
     }
     template <typename... Args>
     size_t add_constant(Args&&... args) noexcept {
-      return func->code().add_constant(std::forward<Args>(args)...);
+      return func->chunk().add_constant(std::forward<Args>(args)...);
     }
 
     void patch_jump(size_t jump) noexcept {
-      func->code().set_oprand(jump, current_code_position() - (jump + 1));
+      func->chunk().paych_jump(jump, current_code_position() - (jump + 1));
     }
     size_t current_code_position() const noexcept {
-      return func->code().instructions().size();
+      return func->chunk().code().size();
     }
     size_t code_distance_from(size_t pos) const noexcept {
       return current_code_position() - pos + 1;
@@ -606,7 +610,7 @@ class compiler {
     void end_scope(int line) noexcept {
       --scope_depth;
       while (!locals.empty() && locals.back().depth > scope_depth) {
-        add_instruction(line, op_pop{});
+        add<instruction::Pop>(line);
         locals.pop_back();
       }
     }

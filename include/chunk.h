@@ -1,7 +1,7 @@
 #ifndef LOX_CHUNK_H
 #define LOX_CHUNK_H
 
-#include <sstream>
+#include <iomanip>
 #include <string>
 #include <vector>
 
@@ -10,24 +10,32 @@
 
 namespace lox {
 
-struct chunk {
-  using Instruction_vector = std::vector<instruction>;
-  using Line_vector = std::vector<size_t>;
-  using Value_vector = std::vector<Value>;
+using Line_vector = std::vector<size_t>;
+using Value_vector = std::vector<Value>;
 
-  const Instruction_vector& instructions() const noexcept {
-    return instructions_;
-  }
+struct Chunk {
+  const Bytecode_vector& code() const noexcept { return code_; }
   const Line_vector& lines() const noexcept { return lines_; }
-  Value_vector& constants() noexcept { return constants_; }
+  const Value_vector constants() const noexcept { return constants_; }
 
-  template <typename Opcode>
-  size_t add_instruction(int line, Opcode opcode,
-                         oprand_t oprand = 0) noexcept {
-    instructions_.emplace_back(instruction{opcode, oprand});
-    lines_.emplace_back(line);
-    EXPECTS(lines_.size() == instructions_.size());
-    return instructions_.size() - 1;
+  template <typename Instruction>
+  size_t add(size_t line) noexcept {
+    code_.push_back(Instruction::opcode);
+    lines_.push_back(line);
+    ENSURES(code_.size() == lines_.size());
+    return code_.size() - 1;
+  }
+
+  template <typename Instruction>
+  size_t add(size_t operand, size_t line) noexcept {
+    code_.push_back(Instruction::opcode);
+    lines_.push_back(line);
+    auto operand_count = Instruction::add_operand(code_, operand);
+    for (size_t i = 0; i < operand_count; ++i) {
+      lines_.push_back(line);
+    }
+    ENSURES(code_.size() == lines_.size());
+    return code_.size() - 1;
   }
 
   template <typename... Args>
@@ -36,23 +44,23 @@ struct chunk {
     return constants_.size() - 1;
   }
 
-  void set_oprand(size_t pos, oprand_t oprand) noexcept {
-    instructions_[pos].set_oprand(oprand);
+  void paych_jump(size_t pos, size_t operand) noexcept {
+    instruction::Short::set_operand(code_, pos, operand);
   }
 
  private:
-  Instruction_vector instructions_;
+  Bytecode_vector code_;
   Line_vector lines_;
   Value_vector constants_;
 };
 
-inline std::string to_string(chunk& code, const std::string& name,
+inline std::string to_string(const Chunk& chunk, const std::string& name,
                              int level = 0) noexcept {
-  auto& instructions = code.instructions();
-  auto& lines = code.lines();
-  auto& constants = code.constants();
+  const auto& code = chunk.code();
+  const auto& lines = chunk.lines();
   std::string result = level == 0 ? "== " + name + " ==\n" : name + "\n";
-  for (std::size_t pos = 0; pos < instructions.size(); ++pos) {
+  size_t pos = 0;
+  while (pos < code.size()) {
     std::ostringstream oss;
     oss << std::string(level * 4, ' ') << std::setfill('0') << std::setw(4)
         << pos << " ";
@@ -62,17 +70,22 @@ inline std::string to_string(chunk& code, const std::string& name,
       oss << "   | ";
     }
     result += oss.str();
-    result += instructions[pos].visit([&](auto opcode, auto oprand) {
+    instruction::visit(code, pos, [&](const auto& instr) {
+      pos += instr.size;
       std::ostringstream oss;
-      oss << opcode.name;
-      if constexpr (std::is_same_v<decltype(opcode), op_constant>) {
-        ENSURES(oprand < constants.size());
-        oss << " " << to_string(constants[oprand], true);
-      } else if (opcode.has_oprand) {
-        oss << " " << oprand;
+      oss << instr.name;
+      using Instruction =
+          std::remove_cv_t<std::remove_reference_t<decltype(instr)>>;
+      if constexpr (std::is_same_v<Instruction, instruction::Constant>) {
+        const auto& constants = chunk.constants();
+        ENSURES(instr.operand() < constants.size());
+        oss << " " << to_string(constants[instr.operand()], true);
+      } else if constexpr (Instruction::size > sizeof(Bytecode)) {
+        oss << " " << instr.operand();
       }
-      return oss.str();
-    }) + "\n";
+      result += oss.str();
+    });
+    result += "\n";
   }
   return result;
 }

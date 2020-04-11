@@ -1,96 +1,136 @@
 #ifndef LOX_INSTRUCTION_H
 #define LOX_INSTRUCTION_H
 
-#include <iomanip>
-#include <sstream>
-#include <string>
+#include <vector>
 
 #include "contract.h"
 #include "type_list.h"
 
-#define OPCODES(generator)                                                   \
-  generator(op_constant, true) generator(op_nil, false) generator(           \
-      op_true, false) generator(op_false, false) generator(op_pop, false)    \
-      generator(op_get_local, true) generator(op_set_local, true) generator( \
-          op_get_global, true) generator(op_define_global, true)             \
-          generator(op_set_global, true) generator(op_get_upvalue, true)     \
-              generator(op_set_upvalue, true) generator(op_equal, false)     \
-                  generator(op_greater, false) generator(op_less, false)     \
-                      generator(op_add, false) generator(op_subtract, false) \
-                          generator(op_multiply, false) generator(           \
-                              op_divide, false) generator(op_not, false)     \
-                              generator(op_negate, false) generator(         \
-                                  op_print, false) generator(op_jump, true)  \
-                                  generator(op_jump_if_false, true)          \
-                                      generator(op_loop, true)               \
-                                          generator(op_call, true)           \
-                                              generator(op_closure, true)    \
-                                                  generator(op_return, false)
-
-#define FORWARD_DECLARATION(opcode, has_oprand_value) struct opcode;
-
-#define TYPE_LIST_ARGUMENT(opcode, has_oprand_value) opcode,
-
-#define STRUCT(opcode, has_oprand_value)                              \
-  struct opcode {                                                     \
-    static constexpr std::size_t id = Index_of<opcode, types>::value; \
-    static constexpr const char* name = #opcode;                      \
-    static constexpr bool has_oprand = has_oprand_value;              \
-  };
-
-#define SWITCH_CASE(opcode, has_oprand_value) \
-  case opcode::id:                            \
-    return std::forward<Visitor>(visitor)(opcode{}, oprand());
-
 namespace lox {
 
-OPCODES(FORWARD_DECLARATION)
+using Bytecode = uint8_t;
+using Bytecode_vector = std::vector<Bytecode>;
 
-using types = Type_list<OPCODES(TYPE_LIST_ARGUMENT) void>;
+namespace instruction {
 
-OPCODES(STRUCT)
+struct Base {
+  Base(const Bytecode_vector& code, size_t pos) noexcept
+      : code_{code}, pos_{pos} {}
 
-using oprand_t = unsigned int;
-
-struct instruction {
-  template <typename Opcode>
-  constexpr instruction(Opcode, oprand_t oprand = 0) noexcept
-      : raw_data_{raw_data_of<Opcode>(oprand)} {}
-
-  template <typename Visitor>
-  auto visit(Visitor&& visitor) const {
-    switch (raw_opcode()) { OPCODES(SWITCH_CASE) }
-    throw internal_error("Unknow opcode.");
-  }
-
-  constexpr std::size_t raw_opcode() const noexcept {
-    return raw_data_ >> oprand_bits;
-  }
-
-  constexpr oprand_t oprand() const noexcept { return raw_data_ & oprand_mask; }
-  void set_oprand(oprand_t oprand) noexcept {
-    ENSURES(oprand <= oprand_mask);
-    raw_data_ &= ~oprand_mask;
-    raw_data_ |= oprand & oprand_mask;
-  }
-
- private:
-  using raw_data_t = unsigned int;
-
-  constexpr static unsigned int char_bits = 8;
-  constexpr static unsigned int opcode_bits = 8;
-  constexpr static unsigned int oprand_bits =
-      sizeof(raw_data_t) * char_bits - opcode_bits;
-  constexpr static unsigned int oprand_mask = (1 << oprand_bits) - 1;
-
-  template <typename Opcode>
-  static constexpr raw_data_t raw_data_of(oprand_t oprand) noexcept {
-    ENSURES(oprand <= oprand_mask);
-    return Opcode::id << oprand_bits | oprand;
-  }
-
-  raw_data_t raw_data_;
+ protected:
+  const Bytecode_vector& code_;
+  size_t pos_;
 };
+
+struct Simple : Base {
+  using Base::Base;
+
+  static constexpr size_t size = sizeof(Bytecode);
+};
+
+struct Byte : Base {
+  using Base::Base;
+
+  static size_t add_operand(Bytecode_vector& code, size_t operand) noexcept {
+    ENSURES(operand < UINT8_MAX);
+    code.push_back(operand);
+    return size - sizeof(Bytecode);
+  }
+
+  size_t operand() const noexcept { return code_[pos_ + 1]; }
+
+  static constexpr size_t size = sizeof(Bytecode) * 2;
+};
+
+struct Short : Base {
+  using Base::Base;
+
+  static size_t add_operand(Bytecode_vector& code, size_t operand) noexcept {
+    ENSURES(operand < UINT16_MAX);
+    code.push_back(operand >> 8);
+    code.push_back(operand & 0xff);
+    return size - sizeof(Bytecode);
+  }
+
+  static size_t set_operand(Bytecode_vector& code, size_t pos,
+                            size_t operand) noexcept {
+    ENSURES(operand < UINT16_MAX);
+    code[pos + 1] = operand >> 8;
+    code[pos + 2] = operand & 0xff;
+    return size - sizeof(Bytecode);
+  }
+
+  size_t operand() const noexcept {
+    return (code_[pos_ + 1] << 8) | code_[pos_ + 2];
+  }
+
+  static constexpr size_t size = sizeof(Bytecode) + sizeof(Bytecode) * 2;
+};
+
+// clang-format off
+#define INSTRUCTIONS(generator)           \
+  generator(Constant, Byte)               \
+  generator(Nil, Simple)                  \
+  generator(True, Simple)                 \
+  generator(False, Simple)                \
+  generator(Pop, Simple)                  \
+  generator(Get_local, Byte)              \
+  generator(Set_local, Byte)              \
+  generator(Get_global, Byte)             \
+  generator(Define_global, Byte)          \
+  generator(Set_global, Byte)             \
+  generator(Get_upvalue, Byte)            \
+  generator(Set_upvalue, Byte)            \
+  generator(Equal, Simple)                \
+  generator(Greater, Simple)              \
+  generator(Less, Simple)                 \
+  generator(Add, Simple)                  \
+  generator(Subtract, Simple)             \
+  generator(Multiply, Simple)             \
+  generator(Divide, Simple)               \
+  generator(Not, Simple)                  \
+  generator(Nagate, Simple)               \
+  generator(Print, Simple)                \
+  generator(Jump, Short)                  \
+  generator(Jump_if_false, Short)         \
+  generator(Loop, Short)                  \
+  generator(Call, Byte)                   \
+  generator(Closure, Byte)                \
+  generator(Return, Simple)
+// clang-format on
+
+#define FORWARD_DECLARATION(instruction, base) struct instruction;
+
+INSTRUCTIONS(FORWARD_DECLARATION)
+
+#define TYPE_LIST_ARGUMENT(instruction, base) instruction,
+
+using Types = Type_list<INSTRUCTIONS(TYPE_LIST_ARGUMENT) void>;
+static_assert(Types::size < UINT8_MAX);
+
+#define STRUCT(instruction, base)                                         \
+  struct instruction : base {                                             \
+    instruction(const Bytecode_vector& code, size_t pos) noexcept         \
+        : base{code, pos} {                                               \
+      ENSURES(code[pos] == instruction::opcode);                          \
+    }                                                                     \
+                                                                          \
+    static constexpr size_t opcode = Index_of<instruction, Types>::value; \
+    static constexpr const char* name = "OP_" #instruction;               \
+  };
+
+INSTRUCTIONS(STRUCT)
+
+#define VISIT_CASE(instruction, base) \
+  case instruction::opcode:           \
+    return std::forward<Visitor>(visitor)(instruction{code, pos});
+
+template <typename Visitor>
+void visit(const Bytecode_vector& code, size_t pos, Visitor&& visitor) {
+  switch (code[pos]) { INSTRUCTIONS(VISIT_CASE) }
+}
+
+}  // namespace instruction
 
 }  // namespace lox
 

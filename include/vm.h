@@ -26,8 +26,10 @@ class Vm {
   template <bool Debug = false>
   inline void interpret(Function* func) noexcept;
 
-  template <typename Opcode>
-  void handle(oprand_t) {}
+  template <typename Instruction>
+  void handle(const Instruction&) {
+    throw internal_error{"Need implement."};
+  }
 
  private:
   struct Call_frame {
@@ -48,8 +50,8 @@ class Vm {
   }
 
   Call_frame& current_frame() noexcept { return call_frames_.peek(); }
-  chunk& current_code() noexcept {
-    return current_frame().closure->func()->code();
+  Chunk& current_code() noexcept {
+    return current_frame().closure->func()->chunk();
   }
 
   void throw_undefined_variable(const String* name) const {
@@ -73,45 +75,45 @@ class Vm {
 };
 
 template <>
-inline void Vm::handle<op_constant>(oprand_t oprand) {
-  ENSURES(oprand < current_code().constants().size());
-  stack_.push(current_code().constants()[oprand]);
+inline void Vm::handle(const instruction::Constant& constant) {
+  ENSURES(constant.operand() < current_code().constants().size());
+  stack_.push(current_code().constants()[constant.operand()]);
 }
 
 template <>
-inline void Vm::handle<op_nil>(oprand_t) {
+inline void Vm::handle(const instruction::Nil&) {
   stack_.push();
 }
 
 template <>
-inline void Vm::handle<op_false>(oprand_t) {
+inline void Vm::handle(const instruction::False&) {
   stack_.push(false);
 }
 
 template <>
-inline void Vm::handle<op_true>(oprand_t) {
+inline void Vm::handle(const instruction::True&) {
   stack_.push(true);
 }
 
 template <>
-inline void Vm::handle<op_pop>(oprand_t) {
+inline void Vm::handle(const instruction::Pop&) {
   stack_.pop();
 }
 
 template <>
-inline void Vm::handle<op_get_local>(oprand_t oprand) {
-  stack_.push(stack_[current_frame().start_of_stack + oprand]);
+inline void Vm::handle(const instruction::Get_local& get_local) {
+  stack_.push(stack_[current_frame().start_of_stack + get_local.operand()]);
 }
 
 template <>
-inline void Vm::handle<op_set_local>(oprand_t oprand) {
-  stack_[current_frame().start_of_stack + oprand] = stack_.peek();
+inline void Vm::handle(const instruction::Set_local& set_local) {
+  stack_[current_frame().start_of_stack + set_local.operand()] = stack_.peek();
 }
 
 template <>
-inline void Vm::handle<op_get_global>(oprand_t oprand) {
-  ENSURES(oprand < current_code().constants().size());
-  auto constant = current_code().constants()[oprand];
+inline void Vm::handle(const instruction::Get_global& get_global) {
+  ENSURES(get_global.operand() < current_code().constants().size());
+  auto constant = current_code().constants()[get_global.operand()];
   auto name = constant.as_object()->as<String>();
   if (auto value = globals_.get_if(name); value != nullptr) {
     stack_.push(*value);
@@ -121,18 +123,18 @@ inline void Vm::handle<op_get_global>(oprand_t oprand) {
 }
 
 template <>
-inline void Vm::handle<op_define_global>(oprand_t oprand) {
-  ENSURES(oprand < current_code().constants().size());
-  auto constant = current_code().constants()[oprand];
+inline void Vm::handle(const instruction::Define_global& define_global) {
+  ENSURES(define_global.operand() < current_code().constants().size());
+  auto constant = current_code().constants()[define_global.operand()];
   auto name = constant.as_object()->as<String>();
   auto str = heap_.make_string(name->string());
   globals_.insert(str, stack_.pop());
 }
 
 template <>
-inline void Vm::handle<op_set_global>(oprand_t oprand) {
-  ENSURES(oprand < current_code().constants().size());
-  auto constant = current_code().constants()[oprand];
+inline void Vm::handle(const instruction::Set_global& set_global) {
+  ENSURES(set_global.operand() < current_code().constants().size());
+  auto constant = current_code().constants()[set_global.operand()];
   auto name = constant.as_object()->as<String>();
   if (!globals_.set(name, stack_.peek())) {
     throw_undefined_variable(name);
@@ -140,42 +142,42 @@ inline void Vm::handle<op_set_global>(oprand_t oprand) {
 }
 
 template <>
-inline void Vm::handle<op_equal>(oprand_t) {
+inline void Vm::handle(const instruction::Equal&) {
   binary([](const auto& left, const auto& right) { return left == right; });
 }
 
 template <>
-inline void Vm::handle<op_greater>(oprand_t) {
+inline void Vm::handle(const instruction::Greater&) {
   binary([](const auto& left, const auto& right) { return left > right; });
 }
 
 template <>
-inline void Vm::handle<op_less>(oprand_t) {
+inline void Vm::handle(const instruction::Less&) {
   binary([](const auto& left, const auto& right) { return left < right; });
 }
 
 template <>
-inline void Vm::handle<op_add>(oprand_t) {
+inline void Vm::handle(const instruction::Add&) {
   binary([](const auto& left, const auto& right) { return left + right; });
 }
 
 template <>
-inline void Vm::handle<op_subtract>(oprand_t) {
+inline void Vm::handle(const instruction::Subtract&) {
   binary([](const auto& left, const auto& right) { return left - right; });
 }
 
 template <>
-inline void Vm::handle<op_multiply>(oprand_t) {
+inline void Vm::handle(const instruction::Multiply&) {
   binary([](const auto& left, const auto& right) { return left * right; });
 }
 
 template <>
-inline void Vm::handle<op_divide>(oprand_t) {
+inline void Vm::handle(const instruction::Divide&) {
   binary([](const auto& left, const auto& right) { return left / right; });
 }
 
 template <>
-inline void Vm::handle<op_not>(oprand_t) {
+inline void Vm::handle(const instruction::Not&) {
   if (stack_.peek().is_bool()) {
     stack_.push(!stack_.pop().as_bool());
   } else {
@@ -184,7 +186,7 @@ inline void Vm::handle<op_not>(oprand_t) {
 }
 
 template <>
-inline void Vm::handle<op_negate>(oprand_t) {
+inline void Vm::handle(const instruction::Nagate&) {
   if (stack_.peek().is_double()) {
     const auto operand = stack_.pop();
     const auto result = operand.is_nil() || !operand.as_bool();
@@ -195,22 +197,22 @@ inline void Vm::handle<op_negate>(oprand_t) {
 }
 
 template <>
-inline void Vm::handle<op_print>(oprand_t) {
+inline void Vm::handle(const instruction::Print&) {
   ENSURES(!stack_.empty());
   out_ << to_string(stack_.pop()) << "\n";
 }
 
 template <>
-inline void Vm::handle<op_jump>(oprand_t oprand) {
-  current_frame().ip += oprand;
+inline void Vm::handle(const instruction::Jump& jump) {
+  current_frame().ip += jump.operand();
 }
 
 template <>
-inline void Vm::handle<op_jump_if_false>(oprand_t oprand) {
+inline void Vm::handle(const instruction::Jump_if_false& jump_if_false) {
   ENSURES(!stack_.empty());
   if (auto value = stack_.peek(); value.is_bool()) {
     if (!value.as_bool()) {
-      current_frame().ip += oprand;
+      current_frame().ip += jump_if_false.operand();
     }
   } else {
     throw runtime_error{"Operand must be a boolean value."};
@@ -218,13 +220,13 @@ inline void Vm::handle<op_jump_if_false>(oprand_t oprand) {
 }
 
 template <>
-inline void Vm::handle<op_loop>(oprand_t oprand) {
-  current_frame().ip -= oprand;
+inline void Vm::handle(const instruction::Loop& loop) {
+  current_frame().ip -= loop.operand();
 }
 
 template <>
-inline void Vm::handle<op_call>(oprand_t oprand) {
-  const auto argument_count = oprand;
+inline void Vm::handle(const instruction::Call& call) {
+  const auto argument_count = call.operand();
   if (auto v = stack_.peek(argument_count); v.is_object()) {
     auto obj = v.as_object();
     if (obj->is<Closure>()) {
@@ -246,15 +248,15 @@ inline void Vm::handle<op_call>(oprand_t oprand) {
 }
 
 template <>
-inline void Vm::handle<op_closure>(oprand_t oprand) {
-  ENSURES(oprand < current_code().constants().size());
-  auto value = current_code().constants()[oprand];
+inline void Vm::handle(const instruction::Closure& closure) {
+  ENSURES(closure.operand() < current_code().constants().size());
+  auto value = current_code().constants()[closure.operand()];
   auto func = value.as_object()->as<Function>();
   stack_.push(heap_.make_object<Closure>(func));
 }
 
 template <>
-inline void Vm::handle<op_return>(oprand_t) {
+inline void Vm::handle(const instruction::Return&) {
   auto result = stack_.pop();
   auto stack_size = call_frames_.peek().start_of_stack;
   call_frames_.pop();
@@ -278,10 +280,12 @@ inline void Vm::interpret(Function* func) noexcept {
     stack_.push(closure);
     call_frames_.push(closure);
     while (!call_frames_.empty() &&
-           call_frames_.peek().ip < current_code().instructions().size()) {
-      const auto& instr =
-          current_code().instructions()[call_frames_.peek().ip++];
-      switch (instr.raw_opcode()) { OPCODES(SWITCH_CASE_) };
+           call_frames_.peek().ip < current_code().code().size()) {
+      instruction::visit(current_code().code(), call_frames_.peek().ip,
+                         [&](const auto& instruction) {
+                           call_frames_.peek().ip += instruction.size;
+                           handle(instruction);
+                         });
       if constexpr (Debug) {
         for (size_t i = 0; i < stack_.size(); ++i) {
           out_ << to_string(stack_[i]) << " ";
@@ -294,7 +298,7 @@ inline void Vm::interpret(Function* func) noexcept {
     for (size_t distance = 0; distance < call_frames_.size(); ++distance) {
       auto& frame = call_frames_.peek(distance);
       out_ << "[line " << std::setfill('0') << std::setw(4)
-           << frame.closure->func()->code().lines()[frame.ip] << " in] "
+           << frame.closure->func()->chunk().lines()[frame.ip] << " in] "
            << call_frames_.peek(distance).closure->func()->to_string() << "\n";
     }
   }

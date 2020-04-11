@@ -74,7 +74,7 @@ struct Function : Object {
       : Object{id<Function>}, name_{str} {}
 
   size_t arity() const noexcept { return arity_; }
-  chunk& code() noexcept { return code_; }
+  Chunk& chunk() noexcept { return chunk_; }
   const String* name() const noexcept { return name_; }
 
   void increase_arity() noexcept { ++arity_; }
@@ -82,12 +82,12 @@ struct Function : Object {
   std::string to_string(bool verbose = false) noexcept override {
     const std::string message =
         name_ ? "<function: " + name_->string() + ">" : "<script>";
-    return verbose ? ::lox::to_string(code_, message, 1) : message;
+    return verbose ? ::lox::to_string(chunk_, message, 1) : message;
   }
 
  private:
   size_t arity_ = 0;
-  chunk code_;
+  Chunk chunk_;
   const String* name_;
 };
 
