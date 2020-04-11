@@ -28,7 +28,7 @@ class Vm {
 
   template <typename Instruction>
   void handle(const Instruction&) {
-    throw internal_error{"Need implement."};
+    EXPECTS(false);
   }
 
  private:
@@ -126,8 +126,8 @@ template <>
 inline void Vm::handle(const instruction::Define_global& define_global) {
   ENSURES(define_global.operand() < current_chunk().constants().size());
   auto constant = current_chunk().constants()[define_global.operand()];
-  auto name = constant.as_object()->as<String>();
-  auto str = heap_.make_string(name->string());
+  const auto name = constant.as_object()->as<String>();
+  const auto str = heap_.make_string(name->string());
   globals_.insert(str, stack_.pop());
 }
 
@@ -135,7 +135,7 @@ template <>
 inline void Vm::handle(const instruction::Set_global& set_global) {
   ENSURES(set_global.operand() < current_chunk().constants().size());
   auto constant = current_chunk().constants()[set_global.operand()];
-  auto name = constant.as_object()->as<String>();
+  const auto name = constant.as_object()->as<String>();
   if (!globals_.set(name, stack_.peek())) {
     throw_undefined_variable(name);
   }
@@ -189,8 +189,7 @@ template <>
 inline void Vm::handle(const instruction::Nagate&) {
   if (stack_.peek().is_double()) {
     const auto operand = stack_.pop();
-    const auto result = operand.is_nil() || !operand.as_bool();
-    stack_.push(result);
+    stack_.push(operand.is_nil() || !operand.as_bool());
   } else {
     throw runtime_error{"Operand must be a number value."};
   }
