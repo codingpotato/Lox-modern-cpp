@@ -99,31 +99,31 @@ struct Short : Base {
   generator(Return, Simple)
 // clang-format on
 
-#define FORWARD_DECLARATION(instruction, base) struct instruction;
+#define FORWARD_DECLARATION(instr, base) struct instr;
 
 INSTRUCTIONS(FORWARD_DECLARATION)
 
-#define TYPE_LIST_ARGUMENT(instruction, base) instruction,
+#define TYPE_LIST_ARGUMENT(instr, base) instr,
 
 using Types = Type_list<INSTRUCTIONS(TYPE_LIST_ARGUMENT) void>;
 static_assert(Types::size < UINT8_MAX);
 
-#define STRUCT(instruction, base)                                         \
-  struct instruction : base {                                             \
-    instruction(const Bytecode_vector& code, size_t pos) noexcept         \
-        : base{code, pos} {                                               \
-      ENSURES(code[pos] == instruction::opcode);                          \
-    }                                                                     \
-                                                                          \
-    static constexpr size_t opcode = Index_of<instruction, Types>::value; \
-    static constexpr const char* name = "OP_" #instruction;               \
+#define STRUCT(instr, base)                                         \
+  struct instr : base {                                             \
+    instr(const Bytecode_vector& code, size_t pos) noexcept         \
+        : base{code, pos} {                                         \
+      ENSURES(code[pos] == instruction::opcode);                    \
+    }                                                               \
+                                                                    \
+    static constexpr size_t opcode = Index_of<instr, Types>::value; \
+    static constexpr const char* name = "OP_" #instr;               \
   };
 
 INSTRUCTIONS(STRUCT)
 
-#define VISIT_CASE(instruction, base) \
-  case instruction::opcode:           \
-    return std::forward<Visitor>(visitor)(instruction{code, pos});
+#define VISIT_CASE(instr, base) \
+  case instr::opcode:           \
+    return std::forward<Visitor>(visitor)(instr{code, pos});
 
 template <typename Visitor>
 void visit(const Bytecode_vector& code, size_t pos, Visitor&& visitor) {

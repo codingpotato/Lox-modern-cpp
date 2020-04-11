@@ -16,7 +16,7 @@ using Value_vector = std::vector<Value>;
 struct Chunk {
   const Bytecode_vector& code() const noexcept { return code_; }
   const Line_vector& lines() const noexcept { return lines_; }
-  const Value_vector constants() const noexcept { return constants_; }
+  const Value_vector& constants() const noexcept { return constants_; }
 
   template <typename Instruction>
   size_t add(size_t line) noexcept {

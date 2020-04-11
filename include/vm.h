@@ -50,7 +50,7 @@ class Vm {
   }
 
   Call_frame& current_frame() noexcept { return call_frames_.peek(); }
-  Chunk& current_code() noexcept {
+  Chunk& current_chunk() noexcept {
     return current_frame().closure->func()->chunk();
   }
 
@@ -76,8 +76,8 @@ class Vm {
 
 template <>
 inline void Vm::handle(const instruction::Constant& constant) {
-  ENSURES(constant.operand() < current_code().constants().size());
-  stack_.push(current_code().constants()[constant.operand()]);
+  ENSURES(constant.operand() < current_chunk().constants().size());
+  stack_.push(current_chunk().constants()[constant.operand()]);
 }
 
 template <>
@@ -112,8 +112,8 @@ inline void Vm::handle(const instruction::Set_local& set_local) {
 
 template <>
 inline void Vm::handle(const instruction::Get_global& get_global) {
-  ENSURES(get_global.operand() < current_code().constants().size());
-  auto constant = current_code().constants()[get_global.operand()];
+  ENSURES(get_global.operand() < current_chunk().constants().size());
+  auto constant = current_chunk().constants()[get_global.operand()];
   auto name = constant.as_object()->as<String>();
   if (auto value = globals_.get_if(name); value != nullptr) {
     stack_.push(*value);
@@ -124,8 +124,8 @@ inline void Vm::handle(const instruction::Get_global& get_global) {
 
 template <>
 inline void Vm::handle(const instruction::Define_global& define_global) {
-  ENSURES(define_global.operand() < current_code().constants().size());
-  auto constant = current_code().constants()[define_global.operand()];
+  ENSURES(define_global.operand() < current_chunk().constants().size());
+  auto constant = current_chunk().constants()[define_global.operand()];
   auto name = constant.as_object()->as<String>();
   auto str = heap_.make_string(name->string());
   globals_.insert(str, stack_.pop());
@@ -133,8 +133,8 @@ inline void Vm::handle(const instruction::Define_global& define_global) {
 
 template <>
 inline void Vm::handle(const instruction::Set_global& set_global) {
-  ENSURES(set_global.operand() < current_code().constants().size());
-  auto constant = current_code().constants()[set_global.operand()];
+  ENSURES(set_global.operand() < current_chunk().constants().size());
+  auto constant = current_chunk().constants()[set_global.operand()];
   auto name = constant.as_object()->as<String>();
   if (!globals_.set(name, stack_.peek())) {
     throw_undefined_variable(name);
@@ -249,8 +249,8 @@ inline void Vm::handle(const instruction::Call& call) {
 
 template <>
 inline void Vm::handle(const instruction::Closure& closure) {
-  ENSURES(closure.operand() < current_code().constants().size());
-  auto value = current_code().constants()[closure.operand()];
+  ENSURES(closure.operand() < current_chunk().constants().size());
+  auto value = current_chunk().constants()[closure.operand()];
   auto func = value.as_object()->as<Function>();
   stack_.push(heap_.make_object<Closure>(func));
 }
@@ -268,10 +268,13 @@ inline void Vm::handle(const instruction::Return&) {
   }
 }
 
-#define SWITCH_CASE_(opcode, has_oprand_value) \
-  case opcode::id:                             \
-    handle<opcode>(instr.oprand());            \
-    break;
+#define INTERPRET_CASE(instr_struct, base)                                \
+  case instruction::instr_struct::opcode: {                               \
+    auto instr = instruction::instr_struct{code, call_frames_.peek().ip}; \
+    call_frames_.peek().ip += instr.size;                                 \
+    handle(instr);                                                        \
+    break;                                                                \
+  }
 
 template <bool Debug>
 inline void Vm::interpret(Function* func) noexcept {
@@ -280,12 +283,9 @@ inline void Vm::interpret(Function* func) noexcept {
     stack_.push(closure);
     call_frames_.push(closure);
     while (!call_frames_.empty() &&
-           call_frames_.peek().ip < current_code().code().size()) {
-      instruction::visit(current_code().code(), call_frames_.peek().ip,
-                         [&](const auto& instruction) {
-                           call_frames_.peek().ip += instruction.size;
-                           handle(instruction);
-                         });
+           call_frames_.peek().ip < current_chunk().code().size()) {
+      const auto& code = current_chunk().code();
+      switch (code[call_frames_.peek().ip]) { INSTRUCTIONS(INTERPRET_CASE) }
       if constexpr (Debug) {
         for (size_t i = 0; i < stack_.size(); ++i) {
           out_ << to_string(stack_[i]) << " ";
