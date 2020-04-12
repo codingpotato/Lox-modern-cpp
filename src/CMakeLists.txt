@@ -1,4 +1,4 @@
-set(SOURCES value.cpp)
+set(SOURCES chunk.cpp value.cpp)
 
 add_library(lox-core ${SOURCES})
 target_include_directories(lox-core PUBLIC ${DOCTEST_DIR}

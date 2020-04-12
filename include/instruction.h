@@ -22,13 +22,13 @@ struct Base {
   size_t pos_;
 };
 
-struct Simple : Base {
+struct Simple_instruction : Base {
   using Base::Base;
 
   static constexpr size_t size = sizeof(Bytecode);
 };
 
-struct Byte : Base {
+struct Byte_instruction : Base {
   using Base::Base;
 
   static size_t add_operand(Bytecode_vector& code, size_t operand) noexcept {
@@ -42,7 +42,11 @@ struct Byte : Base {
   static constexpr size_t size = sizeof(Bytecode) * 2;
 };
 
-struct Short : Base {
+struct Constant_instruction : Byte_instruction {
+  using Byte_instruction::Byte_instruction;
+};
+
+struct Short_instruction : Base {
   using Base::Base;
 
   static size_t add_operand(Bytecode_vector& code, size_t operand) noexcept {
@@ -68,35 +72,35 @@ struct Short : Base {
 };
 
 // clang-format off
-#define INSTRUCTIONS(generator)           \
-  generator(Constant, Byte)               \
-  generator(Nil, Simple)                  \
-  generator(True, Simple)                 \
-  generator(False, Simple)                \
-  generator(Pop, Simple)                  \
-  generator(Get_local, Byte)              \
-  generator(Set_local, Byte)              \
-  generator(Get_global, Byte)             \
-  generator(Define_global, Byte)          \
-  generator(Set_global, Byte)             \
-  generator(Get_upvalue, Byte)            \
-  generator(Set_upvalue, Byte)            \
-  generator(Equal, Simple)                \
-  generator(Greater, Simple)              \
-  generator(Less, Simple)                 \
-  generator(Add, Simple)                  \
-  generator(Subtract, Simple)             \
-  generator(Multiply, Simple)             \
-  generator(Divide, Simple)               \
-  generator(Not, Simple)                  \
-  generator(Nagate, Simple)               \
-  generator(Print, Simple)                \
-  generator(Jump, Short)                  \
-  generator(Jump_if_false, Short)         \
-  generator(Loop, Short)                  \
-  generator(Call, Byte)                   \
-  generator(Closure, Byte)                \
-  generator(Return, Simple)
+#define INSTRUCTIONS(generator)                     \
+  generator(Constant, Constant_instruction)         \
+  generator(Nil, Simple_instruction)                \
+  generator(True, Simple_instruction)               \
+  generator(False, Simple_instruction)              \
+  generator(Pop, Simple_instruction)                \
+  generator(Get_local, Byte_instruction)            \
+  generator(Set_local, Byte_instruction)            \
+  generator(Get_global, Constant_instruction)       \
+  generator(Define_global, Constant_instruction)    \
+  generator(Set_global, Constant_instruction)       \
+  generator(Get_upvalue, Byte_instruction)          \
+  generator(Set_upvalue, Byte_instruction)          \
+  generator(Equal, Simple_instruction)              \
+  generator(Greater, Simple_instruction)            \
+  generator(Less, Simple_instruction)               \
+  generator(Add, Simple_instruction)                \
+  generator(Subtract, Simple_instruction)           \
+  generator(Multiply, Simple_instruction)           \
+  generator(Divide, Simple_instruction)             \
+  generator(Not, Simple_instruction)                \
+  generator(Nagate, Simple_instruction)             \
+  generator(Print, Simple_instruction)              \
+  generator(Jump, Short_instruction)                \
+  generator(Jump_if_false, Short_instruction)       \
+  generator(Loop, Short_instruction)                \
+  generator(Call, Byte_instruction)                 \
+  generator(Closure, Constant_instruction)          \
+  generator(Return, Simple_instruction)
 // clang-format on
 
 #define FORWARD_DECLARATION(instr, base) struct instr;
@@ -112,7 +116,7 @@ static_assert(Types::size < UINT8_MAX);
   struct instr : base {                                             \
     instr(const Bytecode_vector& code, size_t pos) noexcept         \
         : base{code, pos} {                                         \
-      ENSURES(code[pos] == instruction::opcode);                    \
+      ENSURES(code[pos] == instr::opcode);                          \
     }                                                               \
                                                                     \
     static constexpr size_t opcode = Index_of<instr, Types>::value; \

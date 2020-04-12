@@ -14,9 +14,10 @@ struct String;
 struct Function;
 struct Native_func;
 struct Closure;
+struct Upvalue;
 
 struct Object {
-  using Types = Type_list<String, Function, Native_func, Closure>;
+  using Types = Type_list<String, Function, Native_func, Closure, Upvalue>;
   template <typename T>
   constexpr static size_t id = Index_of<T, Types>::value;
 
@@ -77,13 +78,15 @@ struct Function : Object {
   Chunk& chunk() noexcept { return chunk_; }
   const String* name() const noexcept { return name_; }
 
-  void increase_arity() noexcept { ++arity_; }
+  void inc_arity() noexcept { ++arity_; }
 
   std::string to_string(bool verbose = false) noexcept override {
     const std::string message =
         name_ ? "<function: " + name_->string() + ">" : "<script>";
     return verbose ? ::lox::to_string(chunk_, message, 1) : message;
   }
+
+  size_t upvalue_count = 0;
 
  private:
   size_t arity_ = 0;
@@ -109,7 +112,10 @@ struct Native_func : Object {
 };
 
 struct Closure : Object {
-  Closure(Function* func) noexcept : Object{id<Closure>}, func_{func} {}
+  Closure(Function* func) noexcept
+      : Object{id<Closure>},
+        upvalues{func->upvalue_count, nullptr},
+        func_{func} {}
 
   Function* func() noexcept { return func_; }
 
@@ -117,8 +123,22 @@ struct Closure : Object {
     return func_->to_string(verbose);
   }
 
+  std::vector<Upvalue*> upvalues;
+
  private:
   Function* func_;
+};
+
+struct Upvalue : Object {
+  explicit Upvalue(Value* value) noexcept
+      : Object{id<Upvalue>}, value_{value} {}
+
+  Value* value() noexcept { return value_; }
+
+  std::string to_string(bool = false) noexcept override { return "upvalue"; }
+
+ private:
+  Value* value_;
 };
 
 }  // namespace lox

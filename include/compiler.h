@@ -124,7 +124,7 @@ class compiler {
       do {
         auto parameter = parse_variable("Expect parameter name.");
         current_func_frame().define_variable(parameter, previous_->line);
-        current_func_frame().func->increase_arity();
+        current_func_frame().func->inc_arity();
         if (current_func_frame().func->arity() > max_function_parameters) {
           throw runtime_error{"Cannot have more than " +
                               std::to_string(max_function_parameters) +
@@ -138,8 +138,13 @@ class compiler {
     parse_block();
     add_return_instruction();
     auto func = current_func_frame().func;
+    auto upvalues = std::move(current_func_frame().upvalues);
     pop_func_frame();
     add<instruction::Closure>(add_constant(func));
+    for (auto upvalue : upvalues) {
+      add(upvalue.is_local ? 1 : 0);
+      add(upvalue.index);
+    }
   }
 
   void add_return_instruction() noexcept {
@@ -169,7 +174,7 @@ class compiler {
 
   void parse_statement() {
     if (match(token::k_print)) {
-      print_statement();
+      parse_print();
     } else if (match(token::k_for)) {
       parse_for();
     } else if (match(token::k_if)) {
@@ -277,7 +282,7 @@ class compiler {
     consume(token::right_brace, "Expect '}' after block.");
   }
 
-  void print_statement() {
+  void parse_print() {
     parse_expression();
     consume(token::semicolon, "Expect ';' after value.");
     add<instruction::Print>();
@@ -421,7 +426,7 @@ class compiler {
       }
       if (auto upvalue = resolve_upvalue(name, frame_index - 1);
           upvalue != -1) {
-        return func_frames[frame_index].add_upvalue(upvalue, true);
+        return func_frames[frame_index].add_upvalue(upvalue, false);
       }
     }
     return -1;
@@ -519,6 +524,9 @@ class compiler {
   size_t add(size_t operand) noexcept {
     return current_func_frame().add<Instruction>(operand, previous_->line);
   }
+  void add(Bytecode bytecode) noexcept {
+    current_func_frame().add(bytecode, previous_->line);
+  }
   template <typename... Args>
   size_t add_constant(Args&&... args) noexcept {
     return current_func_frame().add_constant(std::forward<Args>(args)...);
@@ -589,14 +597,17 @@ class compiler {
     size_t add(size_t operand, int line) noexcept {
       return func->chunk().add<Instruction>(operand, line);
     }
+    void add(Bytecode bytecode, int line) noexcept {
+      func->chunk().add(bytecode, line);
+    }
     template <typename... Args>
     size_t add_constant(Args&&... args) noexcept {
       return func->chunk().add_constant(std::forward<Args>(args)...);
     }
 
     void patch_jump(size_t jump) noexcept {
-      func->chunk().paych_jump(
-          jump, current_code_position() - jump - instruction::Short::size);
+      func->chunk().paych_jump(jump, current_code_position() - jump -
+                                         instruction::Short_instruction::size);
     }
     size_t current_code_position() const noexcept {
       return func->chunk().code().size();
@@ -616,12 +627,18 @@ class compiler {
       }
     }
 
-    int add_upvalue(size_t index, bool is_local) {
-      upvalues.emplace_back(index, is_local);
-      if (upvalues.size() > 256) {
+    size_t add_upvalue(size_t index, bool is_local) {
+      for (size_t i = 0; i < upvalues.size(); ++i) {
+        if (upvalues[i].index == index && upvalues[i].is_local == is_local) {
+          return i;
+        }
+      }
+      if (upvalues.size() == UINT8_MAX) {
         throw compile_error{"Too many closure variables in function."};
       }
-      return upvalues.size() - 1;
+      upvalues.emplace_back(index, is_local);
+      func->upvalue_count = upvalues.size();
+      return func->upvalue_count - 1;
     }
 
     struct Upvalue {
@@ -630,10 +647,11 @@ class compiler {
       size_t index;
       bool is_local;
     };
+    using Upvalue_vector = std::vector<Upvalue>;
 
     Function* func = nullptr;
     std::vector<local> locals;
-    std::vector<Upvalue> upvalues;
+    Upvalue_vector upvalues;
     int scope_depth;
   };
   using func_frame_vector = std::vector<func_frame>;

@@ -3,17 +3,7 @@
 #include <ostream>
 #include <string>
 
-#include "compiler.h"
-#include "vm.h"
-
-inline std::string compile(const std::string& message,
-                           std::string source) noexcept {
-  lox::scanner scanner{std::move(source)};
-  std::ostringstream oss;
-  lox::Vm vm{oss};
-  auto func = lox::compiler{vm}.compile(scanner.scan());
-  return to_string(func->chunk(), message);
-}
+#include "helper.h"
 
 TEST_CASE("compile primary") {
   const std::string source{R"(1; 2; nil;
@@ -35,7 +25,7 @@ TEST_CASE("compile primary") {
 0015    3 OP_Nil
 0016    | OP_Return
 )";
-  CHECK_EQ(compile("primary", source), expected);
+  CHECK_EQ(compile(source, "primary"), expected);
 }
 
 TEST_CASE("compile if statement") {
@@ -43,7 +33,7 @@ TEST_CASE("compile if statement") {
 if (1 > 0) print 1;
 else print 0;
 )"};
-  const std::string expected = R"(== primary ==
+  const std::string expected = R"(== if ==
 0000    2 OP_Constant 1.000000
 0002    | OP_Constant 0.000000
 0004    | OP_Greater
@@ -58,14 +48,14 @@ else print 0;
 0019    4 OP_Nil
 0020    | OP_Return
 )";
-  CHECK_EQ(compile("primary", source), expected);
+  CHECK_EQ(compile(source, "if"), expected);
 }
 
 TEST_CASE("compile while statement") {
   const std::string source{R"(
 while (1 > 0) print 1;
 )"};
-  const std::string expected = R"(== primary ==
+  const std::string expected = R"(== while ==
 0000    2 OP_Constant 1.000000
 0002    | OP_Constant 0.000000
 0004    | OP_Greater
@@ -78,7 +68,7 @@ while (1 > 0) print 1;
 0016    3 OP_Nil
 0017    | OP_Return
 )";
-  CHECK_EQ(compile("primary", source), expected);
+  CHECK_EQ(compile(source, "while"), expected);
 }
 
 TEST_CASE("compile function call") {
@@ -94,9 +84,9 @@ print add(1, 2);
     0005    | OP_Return
     0006    | OP_Nil
     0007    | OP_Return
-
-0002    | OP_Define_global 0
-0004    3 OP_Get_global 2
+        upvalues: 
+0002    | OP_Define_global add
+0004    3 OP_Get_global add
 0006    | OP_Constant 1.000000
 0008    | OP_Constant 2.000000
 0010    | OP_Call 2
@@ -104,7 +94,7 @@ print add(1, 2);
 0013    4 OP_Nil
 0014    | OP_Return
 )";
-  CHECK_EQ(compile("function call", source), expected);
+  CHECK_EQ(compile(source, "function call"), expected);
 }
 
 TEST_CASE("compile fib") {
@@ -126,12 +116,12 @@ print fib(30);
     0011    | OP_Return
     0012    | OP_Jump 1 -> 16
     0015    | OP_Pop
-    0016    4 OP_Get_global 1
+    0016    4 OP_Get_global fib
     0018    | OP_Get_local 1
     0020    | OP_Constant 2.000000
     0022    | OP_Subtract
     0023    | OP_Call 1
-    0025    | OP_Get_global 3
+    0025    | OP_Get_global fib
     0027    | OP_Get_local 1
     0029    | OP_Constant 1.000000
     0031    | OP_Subtract
@@ -140,14 +130,14 @@ print fib(30);
     0035    | OP_Return
     0036    5 OP_Nil
     0037    | OP_Return
-
-0002    | OP_Define_global 0
-0004    6 OP_Get_global 2
+        upvalues: 
+0002    | OP_Define_global fib
+0004    6 OP_Get_global fib
 0006    | OP_Constant 30.000000
 0008    | OP_Call 1
 0010    | OP_Print
 0011    7 OP_Nil
 0012    | OP_Return
 )";
-  CHECK_EQ(compile("fib", source), expected);
+  CHECK_EQ(compile(source, "fib"), expected);
 }

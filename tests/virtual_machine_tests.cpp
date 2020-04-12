@@ -8,12 +8,13 @@
 #include "scanner.h"
 #include "vm.h"
 
+template <bool Debug = false>
 inline std::string run(const std::string& source) {
   lox::scanner scanner{source};
   std::ostringstream oss;
   lox::Vm vm{oss};
   lox::compiler compiler{vm};
-  vm.interpret(compiler.compile(scanner.scan()));
+  vm.interpret<Debug>(compiler.compile(scanner.scan()));
   return oss.str();
 }
 
@@ -260,21 +261,4 @@ print clock();
                       std::chrono::seconds{1})
                       .count();
   CHECK(std::stod(run(source)) == doctest::Approx(expected));
-}
-
-TEST_CASE("closure") {
-  std::string source{R"(
-fun makeClosure() {
-  var local = "local";
-  fun closure() {
-    print local;
-  }
-  return closure;
-}
-var closure = makeClosure();
-closure();
-)"};
-  std::string expected{R"(
-)"};
-  CHECK_EQ(run(source), expected);
 }

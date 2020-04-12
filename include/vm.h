@@ -142,6 +142,20 @@ inline void Vm::handle(const instruction::Set_global& set_global) {
 }
 
 template <>
+inline void Vm::handle(const instruction::Get_upvalue& get_upvalue) {
+  auto slot = get_upvalue.operand();
+  ENSURES(slot < current_frame().closure->upvalues.size());
+  stack_.push(*current_frame().closure->upvalues[slot]->value());
+}
+
+template <>
+inline void Vm::handle(const instruction::Set_upvalue& set_upvalue) {
+  auto slot = set_upvalue.operand();
+  ENSURES(slot < current_frame().closure->upvalues.size());
+  *current_frame().closure->upvalues[slot]->value() = stack_.peek();
+}
+
+template <>
 inline void Vm::handle(const instruction::Equal&) {
   binary([](const auto& left, const auto& right) { return left == right; });
 }
@@ -239,7 +253,9 @@ inline void Vm::handle(const instruction::Call& call) {
     } else if (obj->is<Native_func>()) {
       const auto func = obj->as<Native_func>();
       const auto result =
-          (*func)(argument_count, &stack_[stack_.size() - argument_count]);
+          (*func)(argument_count, argument_count > 0
+                                      ? &stack_[stack_.size() - argument_count]
+                                      : nullptr);
       stack_.resize(stack_.size() - argument_count - 1);
       stack_.push(result);
     }
@@ -247,17 +263,30 @@ inline void Vm::handle(const instruction::Call& call) {
 }
 
 template <>
-inline void Vm::handle(const instruction::Closure& closure) {
-  ENSURES(closure.operand() < current_chunk().constants().size());
-  auto value = current_chunk().constants()[closure.operand()];
+inline void Vm::handle(const instruction::Closure& closure_instr) {
+  ENSURES(closure_instr.operand() < current_chunk().constants().size());
+  auto value = current_chunk().constants()[closure_instr.operand()];
   auto func = value.as_object()->as<Function>();
-  stack_.push(heap_.make_object<Closure>(func));
+  auto closure = heap_.make_object<Closure>(func);
+  stack_.push(closure);
+  const auto& code = current_chunk().code();
+  auto pos = current_frame().ip;
+  for (size_t i = 0; i < func->upvalue_count; ++i) {
+    auto is_local = code[pos++];
+    auto index = code[pos++];
+    if (is_local) {
+      auto value = &stack_[current_frame().start_of_stack + index];
+      closure->upvalues[i] = heap_.make_object<Upvalue>(value);
+    } else {
+      closure->upvalues[i] = current_frame().closure->upvalues[index];
+    }
+  }
 }
 
 template <>
 inline void Vm::handle(const instruction::Return&) {
   auto result = stack_.pop();
-  auto stack_size = call_frames_.peek().start_of_stack;
+  auto stack_size = current_frame().start_of_stack;
   call_frames_.pop();
   if (call_frames_.empty()) {
     stack_.pop();
@@ -267,12 +296,12 @@ inline void Vm::handle(const instruction::Return&) {
   }
 }
 
-#define INTERPRET_CASE(instr_struct, base)                                \
-  case instruction::instr_struct::opcode: {                               \
-    auto instr = instruction::instr_struct{code, call_frames_.peek().ip}; \
-    call_frames_.peek().ip += instr.size;                                 \
-    handle(instr);                                                        \
-    break;                                                                \
+#define INTERPRET_CASE(instr_struct, base)                            \
+  case instruction::instr_struct::opcode: {                           \
+    auto instr = instruction::instr_struct{code, current_frame().ip}; \
+    current_frame().ip += instr.size;                                 \
+    handle(instr);                                                    \
+    break;                                                            \
   }
 
 template <bool Debug>
@@ -282,9 +311,9 @@ inline void Vm::interpret(Function* func) noexcept {
     stack_.push(closure);
     call_frames_.push(closure);
     while (!call_frames_.empty() &&
-           call_frames_.peek().ip < current_chunk().code().size()) {
+           current_frame().ip < current_chunk().code().size()) {
       const auto& code = current_chunk().code();
-      switch (code[call_frames_.peek().ip]) { INSTRUCTIONS(INTERPRET_CASE) }
+      switch (code[current_frame().ip]) { INSTRUCTIONS(INTERPRET_CASE) }
       if constexpr (Debug) {
         for (size_t i = 0; i < stack_.size(); ++i) {
           out_ << to_string(stack_[i]) << " ";

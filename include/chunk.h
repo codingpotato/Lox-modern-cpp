@@ -23,7 +23,7 @@ struct Chunk {
     auto pos = code_.size();
     code_.push_back(Instruction::opcode);
     lines_.push_back(line);
-    ENSURES(code_.size() == lines_.size());
+    EXPECTS(code_.size() == lines_.size());
     return pos;
   }
 
@@ -36,8 +36,14 @@ struct Chunk {
     for (size_t i = 0; i < operand_count; ++i) {
       lines_.push_back(line);
     }
-    ENSURES(code_.size() == lines_.size());
+    EXPECTS(code_.size() == lines_.size());
     return pos;
+  }
+
+  void add(Bytecode bytecode, size_t line) noexcept {
+    code_.push_back(bytecode);
+    lines_.push_back(line);
+    EXPECTS(code_.size() == lines_.size());
   }
 
   template <typename... Args>
@@ -47,7 +53,7 @@ struct Chunk {
   }
 
   void paych_jump(size_t pos, size_t operand) noexcept {
-    instruction::Short::set_operand(code_, pos, operand);
+    instruction::Short_instruction::set_operand(code_, pos, operand);
   }
 
  private:
@@ -56,13 +62,16 @@ struct Chunk {
   Value_vector constants_;
 };
 
+std::string upvalues_to_string(const Chunk& chunk, size_t pos,
+                               const instruction::Closure& closure) noexcept;
+
 template <typename Instruction>
 inline std::string to_string(const Chunk& chunk, size_t pos,
                              const Instruction& instr) noexcept {
   std::ostringstream oss;
   oss << instr.name;
-  if constexpr (std::is_same_v<Instruction, instruction::Constant> ||
-                std::is_same_v<Instruction, instruction::Closure>) {
+  if constexpr (std::is_base_of_v<instruction::Constant_instruction,
+                                  Instruction>) {
     const auto& constants = chunk.constants();
     ENSURES(instr.operand() < constants.size());
     oss << " " << to_string(constants[instr.operand()], true);
@@ -74,6 +83,9 @@ inline std::string to_string(const Chunk& chunk, size_t pos,
     } else if constexpr (std::is_same_v<Instruction, instruction::Loop>) {
       oss << " -> " << pos + instruction::Loop::size - instr.operand();
     }
+  }
+  if constexpr (std::is_same_v<Instruction, instruction::Closure>) {
+    oss << "        upvalues: " + upvalues_to_string(chunk, pos, instr);
   }
   return oss.str();
 }
