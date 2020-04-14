@@ -270,10 +270,9 @@ inline void Vm::handle(const instruction::Closure& closure_instr) {
   auto closure = heap_.make_object<Closure>(func);
   stack_.push(closure);
   const auto& code = current_chunk().code();
-  auto pos = current_frame().ip;
   for (size_t i = 0; i < func->upvalue_count; ++i) {
-    auto is_local = code[pos++];
-    auto index = code[pos++];
+    auto is_local = code[++current_frame().ip];
+    auto index = code[++current_frame().ip];
     if (is_local) {
       auto value = &stack_[current_frame().start_of_stack + index];
       closure->upvalues[i] = heap_.make_object<Upvalue>(value);

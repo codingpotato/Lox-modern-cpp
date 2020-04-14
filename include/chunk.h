@@ -62,11 +62,11 @@ struct Chunk {
   Value_vector constants_;
 };
 
-std::string upvalues_to_string(const Chunk& chunk, size_t pos,
+std::string upvalues_to_string(const Chunk& chunk, size_t& pos,
                                const instruction::Closure& closure) noexcept;
 
 template <typename Instruction>
-inline std::string to_string(const Chunk& chunk, size_t pos,
+inline std::string to_string(const Chunk& chunk, size_t& pos,
                              const Instruction& instr) noexcept {
   std::ostringstream oss;
   oss << instr.name;

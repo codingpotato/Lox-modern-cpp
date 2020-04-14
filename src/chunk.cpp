@@ -6,7 +6,7 @@
 
 namespace lox {
 
-std::string upvalues_to_string(const Chunk& chunk, size_t pos,
+std::string upvalues_to_string(const Chunk& chunk, size_t& pos,
                                const instruction::Closure& closure) noexcept {
   std::string result;
   auto start = pos + instruction::Closure::size;
@@ -18,6 +18,7 @@ std::string upvalues_to_string(const Chunk& chunk, size_t pos,
     result += std::string{" "} + (is_local ? "local" : "upvalue") + " " +
               std::to_string(index) + ",";
   }
+  pos += func->upvalue_count;
   return result;
 }
 
