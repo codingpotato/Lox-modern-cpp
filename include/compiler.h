@@ -606,8 +606,8 @@ class compiler {
     }
 
     void patch_jump(size_t jump) noexcept {
-      func->chunk().paych_jump(jump, current_code_position() - jump -
-                                         instruction::Short_instruction::size);
+      func->chunk().patch_jump(jump, current_code_position() - jump -
+                                         instruction::Jump_instruction::size);
     }
     size_t current_code_position() const noexcept {
       return func->chunk().code().size();

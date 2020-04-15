@@ -52,8 +52,8 @@ struct Chunk {
     return constants_.size() - 1;
   }
 
-  void paych_jump(size_t pos, size_t operand) noexcept {
-    instruction::Short_instruction::set_operand(code_, pos, operand);
+  void patch_jump(size_t pos, size_t operand) noexcept {
+    instruction::Jump_instruction::set_operand(&code_[pos], operand);
   }
 
  private:

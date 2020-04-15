@@ -295,12 +295,12 @@ inline void Vm::handle(const instruction::Return&) {
   }
 }
 
-#define INTERPRET_CASE(instr_struct, base)                            \
-  case instruction::instr_struct::opcode: {                           \
-    auto instr = instruction::instr_struct{code, current_frame().ip}; \
-    current_frame().ip += instr.size;                                 \
-    handle(instr);                                                    \
-    break;                                                            \
+#define INTERPRET_CASE(instr_struct, base)                             \
+  case instruction::instr_struct::opcode: {                            \
+    auto instr = instruction::instr_struct{&code[current_frame().ip]}; \
+    current_frame().ip += instr.size;                                  \
+    handle(instr);                                                     \
+    break;                                                             \
   }
 
 template <bool Debug>
