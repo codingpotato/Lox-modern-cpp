@@ -140,11 +140,7 @@ class compiler {
     auto func = current_func_frame().func;
     auto upvalues = std::move(current_func_frame().upvalues);
     pop_func_frame();
-    add<instruction::Closure>(add_constant(func));
-    for (auto upvalue : upvalues) {
-      add(upvalue.is_local ? 1 : 0);
-      add(upvalue.index);
-    }
+    add<instruction::Closure>(add_constant(func), upvalues);
   }
 
   void add_return_instruction() noexcept {
@@ -524,8 +520,11 @@ class compiler {
   size_t add(size_t operand) noexcept {
     return current_func_frame().add<Instruction>(operand, previous_->line);
   }
-  void add(Bytecode bytecode) noexcept {
-    current_func_frame().add(bytecode, previous_->line);
+  template <typename Instruction>
+  size_t add(size_t operand,
+             const typename Instruction::Upvalue_vector& upvalues) noexcept {
+    return current_func_frame().add<Instruction>(operand, upvalues,
+                                                 previous_->line);
   }
   template <typename... Args>
   size_t add_constant(Args&&... args) noexcept {
@@ -597,8 +596,11 @@ class compiler {
     size_t add(size_t operand, int line) noexcept {
       return func->chunk().add<Instruction>(operand, line);
     }
-    void add(Bytecode bytecode, int line) noexcept {
-      func->chunk().add(bytecode, line);
+    template <typename Instruction>
+    size_t add(size_t operand,
+               const typename Instruction::Upvalue_vector& upvalues,
+               int line) noexcept {
+      return func->chunk().add<Instruction>(operand, upvalues, line);
     }
     template <typename... Args>
     size_t add_constant(Args&&... args) noexcept {
@@ -641,17 +643,9 @@ class compiler {
       return func->upvalue_count - 1;
     }
 
-    struct Upvalue {
-      Upvalue(size_t i, bool local) noexcept : index{i}, is_local{local} {}
-
-      size_t index;
-      bool is_local;
-    };
-    using Upvalue_vector = std::vector<Upvalue>;
-
     Function* func = nullptr;
     std::vector<local> locals;
-    Upvalue_vector upvalues;
+    instruction::Closure::Upvalue_vector upvalues;
     int scope_depth;
   };
   using func_frame_vector = std::vector<func_frame>;

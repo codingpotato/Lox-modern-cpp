@@ -28,12 +28,14 @@ struct Simple_instruction : Base {
 struct Byte_instruction : Base {
   using Base::Base;
 
+  static constexpr size_t index_operad = 1;
+
   static size_t add_operand(Bytecode_vector& code, size_t operand) noexcept {
     ENSURES(operand <= UINT8_MAX);
     code.push_back(operand);
     return size - sizeof(Bytecode);
   }
-  size_t operand() const noexcept { return code_[1]; }
+  size_t operand() const noexcept { return code_[index_operad]; }
 
   static constexpr size_t size = sizeof(Bytecode) + sizeof(Bytecode);
 };
@@ -45,33 +47,64 @@ struct Constant_instruction : Byte_instruction {
 struct Jump_instruction : Base {
   using Base::Base;
 
-  static constexpr size_t index_high_byte_operand = 1;
-  static constexpr size_t index_low_byte_operand = 2;
+  static constexpr size_t index_operad_high_byte = 1;
+  static constexpr size_t index_operand_low_byte = 2;
 
   static size_t add_operand(Bytecode_vector& code, size_t operand) noexcept {
     ENSURES(operand <= UINT16_MAX);
-    code.push_back(operand >> 8);
-    code.push_back(operand & 0xff);
+    code.push_back(high_byte_of(operand));
+    code.push_back(low_byte_of(operand));
     return size - sizeof(Bytecode);
   }
 
-  static size_t set_operand(Bytecode* code, size_t operand) noexcept {
+  static void set_operand(Bytecode* code, size_t operand) noexcept {
     ENSURES(operand < UINT16_MAX);
-    code[index_high_byte_operand] = operand >> 8;
-    code[index_low_byte_operand] = operand & 0xff;
-    return size - sizeof(Bytecode);
+    code[index_operad_high_byte] = high_byte_of(operand);
+    code[index_operand_low_byte] = low_byte_of(operand);
   }
 
   size_t operand() const noexcept {
-    return (code_[index_high_byte_operand] << 8) |
-           code_[index_low_byte_operand];
+    return (code_[index_operad_high_byte] << 8) | code_[index_operand_low_byte];
   }
 
   static constexpr size_t size = sizeof(Bytecode) + sizeof(Bytecode) * 2;
+
+ private:
+  static Bytecode high_byte_of(size_t operand) noexcept { return operand >> 8; }
+  static Bytecode low_byte_of(size_t operand) noexcept {
+    return operand & 0xff;
+  }
 };
 
 struct Closure_instruction : Constant_instruction {
+  struct Upvalue {
+    Upvalue(bool is_l, size_t i) noexcept
+        : is_local{static_cast<Bytecode>(is_l ? 1 : 0)},
+          index{static_cast<Bytecode>(i)} {
+      ENSURES(i < UINT8_MAX);
+    }
+    Bytecode is_local;
+    Bytecode index;
+  };
+  using Upvalue_vector = std::vector<Upvalue>;
+
   using Constant_instruction::Constant_instruction;
+
+  static constexpr size_t index_of_upvalues = 2;
+
+  static size_t add_operand(Bytecode_vector& code, size_t operand,
+                            const Upvalue_vector& upvalues) noexcept {
+    const auto size = Constant_instruction::add_operand(code, operand);
+    for (const auto& upvalue : upvalues) {
+      code.push_back(upvalue.is_local);
+      code.push_back(upvalue.index);
+    }
+    return size + upvalues.size() * 2;
+  }
+
+  const Bytecode* upvalues() const noexcept {
+    return &code_[index_of_upvalues];
+  }
 };
 
 // clang-format off

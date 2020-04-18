@@ -32,18 +32,28 @@ struct Chunk {
     auto pos = code_.size();
     code_.push_back(Instruction::opcode);
     lines_.push_back(line);
-    auto operand_count = Instruction::add_operand(code_, operand);
-    for (size_t i = 0; i < operand_count; ++i) {
+    const auto bytecode_count = Instruction::add_operand(code_, operand);
+    for (size_t i = 0; i < bytecode_count; ++i) {
       lines_.push_back(line);
     }
     EXPECTS(code_.size() == lines_.size());
     return pos;
   }
 
-  void add(Bytecode bytecode, size_t line) noexcept {
-    code_.push_back(bytecode);
+  template <typename Instruction>
+  size_t add(size_t operand,
+             const typename Instruction::Upvalue_vector& upvalues,
+             size_t line) noexcept {
+    auto pos = code_.size();
+    code_.push_back(Instruction::opcode);
     lines_.push_back(line);
+    const auto bytecode_count =
+        Instruction::add_operand(code_, operand, upvalues);
+    for (size_t i = 0; i < bytecode_count; ++i) {
+      lines_.push_back(line);
+    }
     EXPECTS(code_.size() == lines_.size());
+    return pos;
   }
 
   template <typename... Args>
