@@ -240,11 +240,12 @@ struct scanner {
     }
   }
 
-  token::type_t check_keyword(int distance, const std::string& rest,
+  token::type_t check_keyword(int start, const std::string& rest,
                               token::type_t type) const noexcept {
-    auto first = start_ + distance;
-    auto last = start_ + distance + rest.size();
-    if (std::equal(first, last, rest.cbegin(), rest.cend())) {
+    auto first = start_ + start;
+    auto last = start_ + start + rest.size();
+    if (current_ == last &&
+        std::equal(first, last, rest.cbegin(), rest.cend())) {
       return type;
     }
     return token::identifier;

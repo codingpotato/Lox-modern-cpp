@@ -81,7 +81,7 @@ struct Closure_instruction : Constant_instruction {
     Upvalue(size_t index, bool is_local) noexcept
         : index{static_cast<Bytecode>(index)},
           is_local{static_cast<Bytecode>(is_local ? 1 : 0)} {
-      ENSURES(i < UINT8_MAX);
+      ENSURES(index < UINT8_MAX);
     }
     Bytecode index;
     Bytecode is_local;
