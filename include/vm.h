@@ -153,7 +153,7 @@ inline void Vm::handle(const instruction::Set_global& set_global) {
 
 template <>
 inline void Vm::handle(const instruction::Get_upvalue& get_upvalue) {
-  auto slot = get_upvalue.operand();
+  const auto slot = get_upvalue.operand();
   ENSURES(slot < current_frame().closure->upvalues.size());
   stack_.push(*current_frame().closure->upvalues[slot]->location);
 }
