@@ -179,6 +179,13 @@ struct scanner {
   }
 
   token make_token(token::type_t type) const noexcept {
+    if (type == token::string) {
+      // remove ""
+      ENSURES(std::distance(start_, current_) >= 1);
+      return {type,
+              {start_ + 1, start_ + std::distance(start_, current_) - 1},
+              line_};
+    }
     return {type, {start_, current_}, line_};
   }
 

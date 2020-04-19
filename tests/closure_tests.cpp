@@ -24,10 +24,10 @@ var g;
 f();
 g();
 )"};
-  std::string expected{R"("local"
-"after f"
-"after f"
-"after g"
+  std::string expected{R"(local
+after f
+after f
+after g
 )"};
   CHECK_EQ(run(source), expected);
 }
@@ -45,8 +45,8 @@ var a = "global";
 }
 print a;
 )"};
-  std::string expected{R"("inner"
-"assigned"
+  std::string expected{R"(inner
+assigned
 )"};
   CHECK_EQ(run(source), expected);
 }
@@ -63,7 +63,7 @@ fun foo(param) {
 foo("param");
 f();
 )"};
-  std::string expected{R"("param"
+  std::string expected{R"(param
 )"};
   CHECK_EQ(run(source), expected);
 }
@@ -81,8 +81,8 @@ fun f() {
 }
 f();
 )"};
-  std::string expected{R"("b"
-"a"
+  std::string expected{R"(b
+a
 )"};
   CHECK_EQ(run(source), expected);
 }
@@ -99,7 +99,7 @@ var f;
 }
 f();
 )"};
-  std::string expected{R"("local"
+  std::string expected{R"(local
 )"};
   CHECK_EQ(run(source), expected);
 }
@@ -127,9 +127,9 @@ fun f1() {
 f1();
 f();
 )"};
-  std::string expected{R"("a"
-"b"
-"c"
+  std::string expected{R"(a
+b
+c
 )"};
   CHECK_EQ(run(source), expected);
 }
@@ -144,7 +144,7 @@ TEST_CASE("open closure in function") {
   f();
 }
 )"};
-  std::string expected{R"("local"
+  std::string expected{R"(local
 )"};
   CHECK_EQ(run(source), expected);
 }
@@ -162,8 +162,8 @@ var f;
 }
 f();
 )"};
-  std::string expected{R"("a"
-"a"
+  std::string expected{R"(a
+a
 )"};
   CHECK_EQ(run(source), expected);
 }
@@ -183,7 +183,7 @@ TEST_CASE("reuse closure slot") {
   }
 }
 )"};
-  std::string expected{R"("a"
+  std::string expected{R"(a
 )"};
   CHECK_EQ(run(source), expected);
 }
@@ -203,9 +203,9 @@ TEST_CASE("shadow closure with local") {
   f();
 }
 )"};
-  std::string expected{R"("closure"
-"shadow"
-"closure"
+  std::string expected{R"(closure
+shadow
+closure
 )"};
   CHECK_EQ(run(source), expected);
 }
@@ -220,7 +220,7 @@ TEST_CASE("unused closure") {
 }
 print "ok";
 )"};
-  std::string expected{R"("ok"
+  std::string expected{R"(ok
 )"};
   CHECK_EQ(run(source), expected);
 }
@@ -245,7 +245,7 @@ var closure;
   print closure();
 }
 )"};
-  std::string expected{R"("a"
+  std::string expected{R"(a
 )"};
   CHECK_EQ(run(source), expected);
 }

@@ -11,8 +11,8 @@ var c = a = "var";
 print a;
 print c;
 )"};
-  const std::string expected{R"("var"
-"var"
+  const std::string expected{R"(var
+var
 )"};
   CHECK_EQ(run(source), expected);
 }
@@ -26,10 +26,10 @@ print a;
 print a = "arg";
 print a;
 )"};
-  const std::string expected{R"("before"
-"after"
-"arg"
-"arg"
+  const std::string expected{R"(before
+after
+arg
+arg
 )"};
   CHECK_EQ(run(source), expected);
 }
@@ -44,10 +44,10 @@ TEST_CASE("local assignment") {
     print a;
 }
 )"};
-  const std::string expected{R"("before"
-"after"
-"arg"
-"arg"
+  const std::string expected{R"(before
+after
+arg
+arg
 )"};
   CHECK_EQ(run(source), expected);
 }

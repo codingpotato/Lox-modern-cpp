@@ -20,7 +20,7 @@ TEST_CASE("compile primary") {
 0009    | OP_Pop
 0010    | OP_False
 0011    | OP_Pop
-0012    | OP_Constant "str"
+0012    | OP_Constant str
 0014    | OP_Pop
 0015    3 OP_Nil
 0016    | OP_Return
