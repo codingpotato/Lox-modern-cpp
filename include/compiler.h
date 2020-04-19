@@ -418,6 +418,7 @@ class compiler {
     if (frame_index > 0) {
       if (auto local = func_frames[frame_index - 1].resolve_local(name);
           local != -1) {
+        func_frames[frame_index - 1].locals[local].is_captured = true;
         return func_frames[frame_index].add_upvalue(local, true);
       }
       if (auto upvalue = resolve_upvalue(name, frame_index - 1);
@@ -532,10 +533,12 @@ class compiler {
   }
 
   struct local {
-    local(std::string n, int d) noexcept : name{std::move(n)}, depth{d} {}
+    local(std::string name, int depth) noexcept
+        : name{std::move(name)}, depth{depth} {}
 
     std::string name;
     int depth;
+    bool is_captured = false;
   };
   using local_vector = std::vector<local>;
 
@@ -624,7 +627,11 @@ class compiler {
     void end_scope(int line) noexcept {
       --scope_depth;
       while (!locals.empty() && locals.back().depth > scope_depth) {
-        add<instruction::Pop>(line);
+        if (const auto& local = locals.back(); local.is_captured) {
+          add<instruction::Close_upvalue>(line);
+        } else {
+          add<instruction::Pop>(line);
+        }
         locals.pop_back();
       }
     }

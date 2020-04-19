@@ -1,51 +1,64 @@
 #ifndef LOX_LIST_H
 #define LOX_LIST_H
 
-#include <utility>
+#include <iterator>
 
-#include "object.h"
+#include "contract.h"
 
 namespace lox {
 
-struct List {
-  struct Iterator {
-    Iterator(Object* current) noexcept : current_{current} {}
+template <typename Node, bool Owened = true>
+class List {
+ public:
+  class Iterator : public std::iterator<std::forward_iterator_tag, Node> {
+   public:
+    Iterator(Node* current) noexcept : current{current} {}
 
-    Object* operator->() noexcept { return current_; }
+    operator Node*() noexcept { return current; }
+    Node* operator->() noexcept { return current; }
 
     Iterator& operator++() noexcept {
-      current_ = current_->next;
+      ENSURES(current);
+      current = current->next;
       return *this;
     }
 
     friend bool operator!=(const Iterator& lhs, const Iterator& rhs) noexcept {
-      return lhs.current_ != rhs.current_;
+      return lhs.current != rhs.current;
     }
 
    private:
-    Object* current_;
+    Node* current;
   };
 
-  List() noexcept : head_{nullptr} {}
-
   ~List() noexcept {
-    while (head_) {
-      auto current = head_;
-      head_ = head_->next;
-      delete current;
+    if constexpr (Owened) {
+      while (head) {
+        const auto current = head;
+        head = head->next;
+        delete current;
+      }
     }
   }
 
-  Iterator begin() const noexcept { return head_; }
+  bool empty() const noexcept { return head == nullptr; }
+
+  Iterator begin() const noexcept { return head; }
   Iterator end() const noexcept { return nullptr; }
 
-  void insert(Object* obj) noexcept {
-    obj->next = head_;
-    head_ = obj;
+  void insert(Node* node, Node* after = nullptr) noexcept {
+    ENSURES(node);
+    if (after) {
+      node->next = after->next;
+      after->next = node;
+    } else {
+      node->next = head;
+      head = node;
+    }
   }
 
  private:
-  Object* head_;
+  Node* head = nullptr;
 };
 
 }  // namespace lox

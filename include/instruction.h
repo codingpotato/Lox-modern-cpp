@@ -136,6 +136,7 @@ struct Closure_instruction : Constant_instruction {
   generator(Loop, Jump_instruction)                 \
   generator(Call, Byte_instruction)                 \
   generator(Closure, Closure_instruction)           \
+  generator(Close_upvalue, Simple_instruction)      \
   generator(Return, Simple_instruction)
 // clang-format on
 

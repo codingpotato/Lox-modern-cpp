@@ -41,6 +41,11 @@ struct Stack {
     return storage_[size_ - distance - 1];
   }
 
+  const T& back() const noexcept {
+    ENSURES(size_ > 0);
+    return storage_[size_ - 1];
+  }
+
  private:
   std::vector<T> storage_;
   size_t size_;

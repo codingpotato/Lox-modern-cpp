@@ -130,15 +130,14 @@ struct Closure : Object {
 };
 
 struct Upvalue : Object {
-  explicit Upvalue(Value* value) noexcept
-      : Object{id<Upvalue>}, value_{value} {}
-
-  Value* value() noexcept { return value_; }
+  explicit Upvalue(Value* location) noexcept
+      : Object{id<Upvalue>}, location{location} {}
 
   std::string to_string(bool = false) noexcept override { return "upvalue"; }
 
- private:
-  Value* value_;
+  Value* location;
+  Value closed;
+  Upvalue* next = nullptr;
 };
 
 }  // namespace lox

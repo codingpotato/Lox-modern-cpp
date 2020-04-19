@@ -54,6 +54,16 @@ class Vm {
     return current_frame().closure->func()->chunk();
   }
 
+  void close_upvalues(const Value* last) noexcept {
+    const auto& open_upvalues = heap_.get_open_upvalues();
+    for (auto it = open_upvalues.begin(); it != open_upvalues.end(); ++it) {
+      if (it->location >= last) {
+        it->closed = *it->location;
+        it->location = &it->closed;
+      }
+    }
+  }
+
   void throw_undefined_variable(const String* name) const {
     throw runtime_error{"Undefined variable: " + name->string()};
   }
@@ -145,14 +155,14 @@ template <>
 inline void Vm::handle(const instruction::Get_upvalue& get_upvalue) {
   auto slot = get_upvalue.operand();
   ENSURES(slot < current_frame().closure->upvalues.size());
-  stack_.push(*current_frame().closure->upvalues[slot]->value());
+  stack_.push(*current_frame().closure->upvalues[slot]->location);
 }
 
 template <>
 inline void Vm::handle(const instruction::Set_upvalue& set_upvalue) {
   auto slot = set_upvalue.operand();
   ENSURES(slot < current_frame().closure->upvalues.size());
-  *current_frame().closure->upvalues[slot]->value() = stack_.peek();
+  *current_frame().closure->upvalues[slot]->location = stack_.peek();
 }
 
 template <>
@@ -275,7 +285,7 @@ inline void Vm::handle(const instruction::Closure& closure_instr) {
     auto index = upvalues[i * 2 + 1];
     if (is_local) {
       auto value = &stack_[current_frame().start_of_stack + index];
-      closure->upvalues[i] = heap_.make_object<Upvalue>(value);
+      closure->upvalues[i] = heap_.make_upvalue(value);
     } else {
       closure->upvalues[i] = current_frame().closure->upvalues[index];
     }
@@ -284,9 +294,16 @@ inline void Vm::handle(const instruction::Closure& closure_instr) {
 }
 
 template <>
+inline void Vm::handle(const instruction::Close_upvalue&) {
+  close_upvalues(&stack_.back());
+  stack_.pop();
+}
+
+template <>
 inline void Vm::handle(const instruction::Return&) {
   auto result = stack_.pop();
   auto stack_size = current_frame().start_of_stack;
+  close_upvalues(&stack_[current_frame().start_of_stack]);
   call_frames_.pop();
   if (call_frames_.empty()) {
     stack_.pop();
