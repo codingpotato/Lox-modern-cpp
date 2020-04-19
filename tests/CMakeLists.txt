@@ -12,4 +12,5 @@ set(TESTS_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/type_list_tests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/value_tests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/virtual_machine_tests.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/while_tests.cpp
     PARENT_SCOPE)
