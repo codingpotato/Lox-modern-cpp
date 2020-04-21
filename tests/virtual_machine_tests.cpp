@@ -4,19 +4,7 @@
 #include <sstream>
 #include <string>
 
-#include "compiler.h"
-#include "scanner.h"
-#include "vm.h"
-
-template <bool Debug = false>
-inline std::string run(const std::string& source) {
-  lox::scanner scanner{source};
-  std::ostringstream oss;
-  lox::Vm vm{oss};
-  lox::compiler compiler{vm};
-  vm.interpret<Debug>(compiler.compile(scanner.scan()));
-  return oss.str();
-}
+#include "helper.h"
 
 TEST_CASE("binary") {
   const std::string source{"print 1 + 2;"};

@@ -6,8 +6,8 @@
 
 #include "chunk.h"
 #include "exception.h"
+#include "heap.h"
 #include "scanner.h"
-#include "vm.h"
 
 namespace lox {
 
@@ -84,7 +84,7 @@ struct rules_generator {
 
 class compiler {
  public:
-  explicit compiler(Vm& vm) noexcept : vm_{vm} {}
+  explicit compiler(Heap& heap) noexcept : heap{&heap} {}
 
   Function* compile(token_vector tokens) noexcept {
     make_func_frame(nullptr, 0);
@@ -117,7 +117,7 @@ class compiler {
   }
 
   void parse_function() {
-    make_func_frame(vm_.heap().make_string(previous_->lexeme), 1);
+    make_func_frame(heap->make_string(previous_->lexeme), 1);
     current_func_frame().begin_scope();
     consume(token::left_paren, "Expect '(' after function name.");
     if (!check(token::right_paren)) {
@@ -165,7 +165,7 @@ class compiler {
     if (current_func_frame().scope_depth > 0) {
       return 0;
     }
-    return add_constant(vm_.heap().make_string(previous_->lexeme));
+    return add_constant(heap->make_string(previous_->lexeme));
   }
 
   void parse_statement() {
@@ -383,7 +383,7 @@ class compiler {
         type = upvalue;
       } else {
         type = global;
-        index = add_constant(vm_.heap().make_string(previous_->lexeme));
+        index = add_constant(heap->make_string(previous_->lexeme));
       }
     }
     if (can_assign && match(token::equal)) {
@@ -434,7 +434,7 @@ class compiler {
   }
   void add_string_constant(bool) {
     add<instruction::Constant>(
-        add_constant(vm_.heap().make_string(previous_->lexeme)));
+        add_constant(heap->make_string(previous_->lexeme)));
   }
 
   void add_literal(bool) {
@@ -658,7 +658,7 @@ class compiler {
   using func_frame_vector = std::vector<func_frame>;
 
   void make_func_frame(const String* name, int depth) noexcept {
-    func_frames.emplace_back(vm_.heap().make_object<Function>(name), depth);
+    func_frames.emplace_back(heap->make_object<Function>(name), depth);
   }
   void pop_func_frame() noexcept { func_frames.pop_back(); }
   func_frame& current_func_frame() noexcept { return func_frames.back(); }
@@ -669,7 +669,7 @@ class compiler {
 
   constexpr static int max_function_parameters = 255;
 
-  Vm& vm_;
+  Heap* heap;
   func_frame_vector func_frames;
   token_vector tokens_;
   token_vector::const_iterator current_;

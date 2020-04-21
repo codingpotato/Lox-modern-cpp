@@ -12,7 +12,7 @@ inline void run(std::string source) noexcept {
   lox::scanner scanner{std::move(source)};
   std::ostringstream oss;
   lox::Vm vm{oss};
-  lox::compiler compiler{vm};
+  lox::compiler compiler{vm.heap()};
   vm.interpret(compiler.compile(scanner.scan()));
 }
 

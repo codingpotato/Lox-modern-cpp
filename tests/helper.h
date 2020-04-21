@@ -15,7 +15,7 @@ inline std::string compile(std::string source,
   lox::scanner scanner{std::move(source)};
   std::ostringstream oss;
   lox::Vm vm{oss};
-  auto func = lox::compiler{vm}.compile(scanner.scan());
+  auto func = lox::compiler{vm.heap()}.compile(scanner.scan());
   return lox::to_string(func->chunk(), message);
 }
 
@@ -24,7 +24,7 @@ inline std::string run(std::string source) noexcept {
   lox::scanner scanner{std::move(source)};
   std::ostringstream oss;
   lox::Vm vm{oss};
-  auto func = lox::compiler{vm}.compile(scanner.scan());
+  auto func = lox::compiler{vm.heap()}.compile(scanner.scan());
   vm.interpret<Debug>(func);
   return oss.str();
 }
