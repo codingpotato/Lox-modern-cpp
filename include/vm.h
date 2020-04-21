@@ -50,9 +50,6 @@ class Vm {
   }
 
   Call_frame& current_frame() noexcept { return call_frames_.peek(); }
-  Chunk& current_chunk() noexcept {
-    return current_frame().closure->func()->chunk();
-  }
 
   void close_upvalues(const Value* last) noexcept {
     const auto& open_upvalues = heap_.get_open_upvalues();
@@ -62,6 +59,17 @@ class Vm {
         it->location = &it->closed;
       }
     }
+  }
+
+  void call_closure(Closure* closure, size_t argument_count) noexcept {
+    if (!call_frames_.empty()) {
+      current_frame().ip = ip;
+    }
+    call_frames_.push(closure, stack_.size() - argument_count - 1);
+    const auto& chunk = closure->func()->chunk();
+    code = &chunk.code();
+    constants = &chunk.constants();
+    ip = 0;
   }
 
   void throw_undefined_variable(const String* name) const {
@@ -82,12 +90,16 @@ class Vm {
   Stack<Value, max_stack_size> stack_;
   Hash_table globals_;
   Heap heap_;
+  const Bytecode_vector* code = nullptr;
+  const Value_vector* constants = nullptr;
+  size_t ip = 0;
 };
 
 template <>
 inline void Vm::handle(const instruction::Constant& constant) {
-  ENSURES(constant.operand() < current_chunk().constants().size());
-  stack_.push(current_chunk().constants()[constant.operand()]);
+  ENSURES(constants != nullptr);
+  ENSURES(constant.operand() < constants->size());
+  stack_.push((*constants)[constant.operand()]);
 }
 
 template <>
@@ -122,8 +134,9 @@ inline void Vm::handle(const instruction::Set_local& set_local) {
 
 template <>
 inline void Vm::handle(const instruction::Get_global& get_global) {
-  ENSURES(get_global.operand() < current_chunk().constants().size());
-  auto constant = current_chunk().constants()[get_global.operand()];
+  ENSURES(constants != nullptr);
+  ENSURES(get_global.operand() < constants->size());
+  auto constant = (*constants)[get_global.operand()];
   auto name = constant.as_object()->as<String>();
   if (auto value = globals_.get_if(name); value != nullptr) {
     stack_.push(*value);
@@ -134,8 +147,9 @@ inline void Vm::handle(const instruction::Get_global& get_global) {
 
 template <>
 inline void Vm::handle(const instruction::Define_global& define_global) {
-  ENSURES(define_global.operand() < current_chunk().constants().size());
-  auto constant = current_chunk().constants()[define_global.operand()];
+  ENSURES(constants != nullptr);
+  ENSURES(define_global.operand() < constants->size());
+  auto constant = (*constants)[define_global.operand()];
   const auto name = constant.as_object()->as<String>();
   const auto str = heap_.make_string(name->string());
   globals_.insert(str, stack_.pop());
@@ -143,8 +157,9 @@ inline void Vm::handle(const instruction::Define_global& define_global) {
 
 template <>
 inline void Vm::handle(const instruction::Set_global& set_global) {
-  ENSURES(set_global.operand() < current_chunk().constants().size());
-  auto constant = current_chunk().constants()[set_global.operand()];
+  ENSURES(constants != nullptr);
+  ENSURES(set_global.operand() < constants->size());
+  auto constant = (*constants)[set_global.operand()];
   const auto name = constant.as_object()->as<String>();
   if (!globals_.set(name, stack_.peek())) {
     throw_undefined_variable(name);
@@ -227,7 +242,7 @@ inline void Vm::handle(const instruction::Print&) {
 
 template <>
 inline void Vm::handle(const instruction::Jump& jump) {
-  current_frame().ip += jump.operand();
+  ip += jump.operand();
 }
 
 template <>
@@ -235,7 +250,7 @@ inline void Vm::handle(const instruction::Jump_if_false& jump_if_false) {
   ENSURES(!stack_.empty());
   if (auto value = stack_.peek(); value.is_bool()) {
     if (!value.as_bool()) {
-      current_frame().ip += jump_if_false.operand();
+      ip += jump_if_false.operand();
     }
   } else {
     throw runtime_error{"Operand must be a boolean value."};
@@ -244,7 +259,7 @@ inline void Vm::handle(const instruction::Jump_if_false& jump_if_false) {
 
 template <>
 inline void Vm::handle(const instruction::Loop& loop) {
-  current_frame().ip -= loop.operand();
+  ip -= loop.operand();
 }
 
 template <>
@@ -255,7 +270,7 @@ inline void Vm::handle(const instruction::Call& call) {
     if (obj->is<Closure>()) {
       auto closure = obj->as<Closure>();
       if (argument_count == closure->func()->arity()) {
-        call_frames_.push(closure, stack_.size() - argument_count - 1);
+        call_closure(closure, argument_count);
       } else {
         throw_incorrect_argument_count(closure->func()->arity(),
                                        argument_count);
@@ -274,8 +289,9 @@ inline void Vm::handle(const instruction::Call& call) {
 
 template <>
 inline void Vm::handle(const instruction::Closure& closure_instr) {
-  ENSURES(closure_instr.operand() < current_chunk().constants().size());
-  auto value = current_chunk().constants()[closure_instr.operand()];
+  ENSURES(constants != nullptr);
+  ENSURES(closure_instr.operand() < constants->size());
+  auto value = (*constants)[closure_instr.operand()];
   auto func = value.as_object()->as<Function>();
   auto closure = heap_.make_object<Closure>(func);
   stack_.push(closure);
@@ -290,7 +306,7 @@ inline void Vm::handle(const instruction::Closure& closure_instr) {
       closure->upvalues[i] = current_frame().closure->upvalues[index];
     }
   }
-  current_frame().ip += func->upvalue_count * 2;
+  ip += func->upvalue_count * 2;
 }
 
 template <>
@@ -310,13 +326,17 @@ inline void Vm::handle(const instruction::Return&) {
   } else {
     stack_.resize(stack_size);
     stack_.push(result);
+    const auto& chunk = current_frame().closure->func()->chunk();
+    code = &chunk.code();
+    constants = &chunk.constants();
+    ip = current_frame().ip;
   }
 }
 
 #define INTERPRET_CASE(instr_struct, base)                             \
   case instruction::instr_struct::opcode: {                            \
-    auto instr = instruction::instr_struct{&code[current_frame().ip]}; \
-    current_frame().ip += instr.size;                                  \
+    auto instr = instruction::instr_struct{&(*code)[ip]};              \
+    ip += instr.size;                                                  \
     handle(instr);                                                     \
     break;                                                             \
   }
@@ -326,11 +346,9 @@ inline void Vm::interpret(Function* func) noexcept {
   try {
     auto closure = heap_.make_object<Closure>(func);
     stack_.push(closure);
-    call_frames_.push(closure);
-    while (!call_frames_.empty() &&
-           current_frame().ip < current_chunk().code().size()) {
-      const auto& code = current_chunk().code();
-      switch (code[current_frame().ip]) { INSTRUCTIONS(INTERPRET_CASE) }
+    call_closure(closure, 0);
+    while (ip < code->size() && !call_frames_.empty()) {
+      switch ((*code)[ip]) { INSTRUCTIONS(INTERPRET_CASE) }
       if constexpr (Debug) {
         for (size_t i = 0; i < stack_.size(); ++i) {
           out_ << to_string(stack_[i]) << " ";
