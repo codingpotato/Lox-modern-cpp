@@ -3,6 +3,7 @@ set(TESTS_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/chunk_tests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/closure_tests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/compiler_tests.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/for_tests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/hash_table_tests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/heap_tests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/list_tests.cpp

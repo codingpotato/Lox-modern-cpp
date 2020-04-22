@@ -225,10 +225,9 @@ inline void Vm::handle(const instruction::Not&) {
 }
 
 template <>
-inline void Vm::handle(const instruction::Nagate&) {
+inline void Vm::handle(const instruction::Negate&) {
   if (stack_.peek().is_double()) {
-    const auto operand = stack_.pop();
-    stack_.push(operand.is_nil() || !operand.as_bool());
+    stack_.push(-stack_.pop().as_double());
   } else {
     throw runtime_error{"Operand must be a number value."};
   }
@@ -333,12 +332,12 @@ inline void Vm::handle(const instruction::Return&) {
   }
 }
 
-#define INTERPRET_CASE(instr_struct, base)                             \
-  case instruction::instr_struct::opcode: {                            \
-    auto instr = instruction::instr_struct{&(*code)[ip]};              \
-    ip += instr.size;                                                  \
-    handle(instr);                                                     \
-    break;                                                             \
+#define INTERPRET_CASE(instr_struct, base)                \
+  case instruction::instr_struct::opcode: {               \
+    auto instr = instruction::instr_struct{&(*code)[ip]}; \
+    ip += instr.size;                                     \
+    handle(instr);                                        \
+    break;                                                \
   }
 
 template <bool Debug>

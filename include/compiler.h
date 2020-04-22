@@ -367,7 +367,7 @@ class compiler {
         add<instruction::Not>();
         break;
       case token::minus:
-        add<instruction::Nagate>();
+        add<instruction::Negate>();
         break;
       default:
         break;

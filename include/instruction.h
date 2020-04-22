@@ -129,7 +129,7 @@ struct Closure_instruction : Constant_instruction {
   generator(Multiply, Simple_instruction)           \
   generator(Divide, Simple_instruction)             \
   generator(Not, Simple_instruction)                \
-  generator(Nagate, Simple_instruction)             \
+  generator(Negate, Simple_instruction)             \
   generator(Print, Simple_instruction)              \
   generator(Jump, Jump_instruction)                 \
   generator(Jump_if_false, Jump_instruction)        \
