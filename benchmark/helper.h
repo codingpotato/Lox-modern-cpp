@@ -4,16 +4,12 @@
 #include <ostream>
 #include <string>
 
-#include "compiler.h"
-#include "scanner.h"
 #include "vm.h"
 
 inline void run(std::string source) noexcept {
-  lox::scanner scanner{std::move(source)};
   std::ostringstream oss;
-  lox::Vm vm{oss};
-  lox::compiler compiler{vm.heap()};
-  vm.interpret(compiler.compile(scanner.scan()));
+  lox::VM vm{oss};
+  vm.interpret(std::move(source));
 }
 
 #endif

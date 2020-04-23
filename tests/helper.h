@@ -14,18 +14,16 @@ inline std::string compile(std::string source,
                            const std::string& message) noexcept {
   lox::scanner scanner{std::move(source)};
   std::ostringstream oss;
-  lox::Vm vm{oss};
+  lox::VM vm{oss};
   auto func = lox::compiler{vm.heap()}.compile(scanner.scan());
   return lox::to_string(func->chunk(), message);
 }
 
 template <bool Debug = false>
 inline std::string run(std::string source) noexcept {
-  lox::scanner scanner{std::move(source)};
   std::ostringstream oss;
-  lox::Vm vm{oss};
-  auto func = lox::compiler{vm.heap()}.compile(scanner.scan());
-  vm.interpret<Debug>(func);
+  lox::VM vm{oss};
+  vm.interpret<Debug>(std::move(source));
   return oss.str();
 }
 

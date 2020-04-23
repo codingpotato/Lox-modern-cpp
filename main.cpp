@@ -10,11 +10,10 @@
 
 namespace lox {
 
-inline void run(const std::string &source) {
+inline void run(std::string source) {
   try {
-    scanner scanner{source};
-    Vm vm{std::cout};
-    vm.interpret(compiler{vm.heap()}.compile(scanner.scan()));
+    VM vm{std::cout};
+    vm.interpret(std::move(source));
   } catch (std::exception &e) {
     std::cout << e.what() << '\n';
   }
