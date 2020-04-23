@@ -2,7 +2,7 @@
 
 #include "helper.h"
 
-TEST_CASE("scope") {
+TEST_CASE("for: scope") {
   std::string source{R"(
 {
   var i = "before";
@@ -29,7 +29,7 @@ after
   CHECK_EQ(run(source), expected);
 }
 
-TEST_CASE("syntax") {
+TEST_CASE("for: syntax") {
   std::string source{R"(
 for (var c = 0; c < 3;) print c = c + 1;
 
@@ -79,7 +79,7 @@ done
   CHECK_EQ(run(source), expected);
 }
 
-TEST_CASE("return inside") {
+TEST_CASE("for: return inside") {
   std::string source{R"(
 fun f() {
   for (;;) {
@@ -94,7 +94,7 @@ print f();
   CHECK_EQ(run(source), expected);
 }
 
-TEST_CASE("return closure") {
+TEST_CASE("for: return closure") {
   std::string source{R"(
 fun f() {
   for (;;) {
