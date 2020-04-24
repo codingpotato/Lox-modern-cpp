@@ -38,6 +38,7 @@ struct Object {
   virtual std::string to_string(bool = false) noexcept = 0;
 
   Object* next = nullptr;
+  bool is_marked = false;
 
  private:
   size_t id_;

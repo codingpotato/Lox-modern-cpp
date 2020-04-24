@@ -31,6 +31,11 @@ struct Stack {
     return storage_[pos];
   }
 
+  const T& operator[](size_t pos) const noexcept {
+    ENSURES(pos < size_);
+    return storage_[pos];
+  }
+
   const T& pop() noexcept {
     ENSURES(size_ > 0);
     return storage_[--size_];

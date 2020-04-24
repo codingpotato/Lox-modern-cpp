@@ -6,6 +6,7 @@
 
 #include "compiler.h"
 #include "exception.h"
+#include "gc.h"
 #include "hash_table.h"
 #include "heap.h"
 #include "instruction.h"
@@ -19,11 +20,11 @@ namespace lox {
 
 class VM {
  public:
-  explicit VM(std::ostream& os) noexcept : out{&os} {
+  explicit VM(std::ostream& os) noexcept : out{&os}, gc{stack_, heap_} {
     register_natives(globals_, heap_);
   }
 
-  Heap& heap() noexcept { return heap_; }
+  Heap<>& heap() noexcept { return heap_; }
 
   template <bool Debug = false>
   inline void interpret(std::string source) noexcept;
@@ -91,10 +92,11 @@ class VM {
   Stack<Call_frame, max_frame_size> call_frames_;
   Stack<Value, max_stack_size> stack_;
   Hash_table globals_;
-  Heap heap_;
+  Heap<> heap_;
   const Bytecode_vector* code = nullptr;
   const Value_vector* constants = nullptr;
   size_t ip = 0;
+  GC<max_stack_size> gc;
 };
 
 template <>
@@ -350,7 +352,7 @@ inline void VM::interpret(std::string source) noexcept {
     auto closure = heap_.make_object<Closure>(func);
     stack_.push(closure);
     call_closure(closure, 0);
-    while (ip < code->size() && !call_frames_.empty()) {
+    while (ip < code->size()) {
       switch ((*code)[ip]) { INSTRUCTIONS(INTERPRET_CASE) }
       if constexpr (Debug) {
         for (size_t i = 0; i < stack_.size(); ++i) {

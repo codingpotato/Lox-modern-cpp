@@ -84,7 +84,7 @@ struct rules_generator {
 
 class compiler {
  public:
-  explicit compiler(Heap& heap) noexcept : heap{&heap} {}
+  explicit compiler(Heap<>& heap) noexcept : heap{&heap} {}
 
   Function* compile(token_vector tokens) noexcept {
     make_func_frame(nullptr, 0);
@@ -669,7 +669,7 @@ class compiler {
 
   constexpr static int max_function_parameters = 255;
 
-  Heap* heap;
+  Heap<>* heap;
   func_frame_vector func_frames;
   token_vector tokens_;
   token_vector::const_iterator current_;
