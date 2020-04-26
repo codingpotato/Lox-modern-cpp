@@ -82,9 +82,18 @@ struct rules_generator {
 
 }  // namespace precedence
 
-class compiler {
+class Compiler {
  public:
-  explicit compiler(Heap<>& heap) noexcept : heap{&heap} {}
+  explicit Compiler(Heap<>& heap) noexcept : heap{&heap} {}
+
+  template <typename Visitor>
+  void for_each_func(Visitor&& visitor) const noexcept {
+    for (const auto& func_frame : func_frames) {
+      if (func_frame.func) {
+        visitor(func_frame.func);
+      }
+    }
+  }
 
   Function* compile(token_vector tokens) noexcept {
     make_func_frame(nullptr, 0);
@@ -125,7 +134,7 @@ class compiler {
         auto parameter = parse_variable("Expect parameter name.");
         current_func_frame().define_variable(parameter, previous_->line);
         current_func_frame().func->inc_arity();
-        if (current_func_frame().func->arity() > max_function_parameters) {
+        if (current_func_frame().func->get_arity() > max_function_parameters) {
           throw runtime_error{"Cannot have more than " +
                               std::to_string(max_function_parameters) +
                               " parameters."};
@@ -246,7 +255,7 @@ class compiler {
   }
 
   void parse_return() {
-    if (!current_func_frame().func->name()) {
+    if (!current_func_frame().func->get_name()) {
       throw compile_error{"Cannot return from top-level code."};
     }
     if (match(token::semicolon)) {
@@ -593,29 +602,30 @@ class compiler {
 
     template <typename Instruction>
     size_t add(int line) noexcept {
-      return func->chunk().add<Instruction>(line);
+      return func->get_chunk().add<Instruction>(line);
     }
     template <typename Instruction>
     size_t add(size_t operand, int line) noexcept {
-      return func->chunk().add<Instruction>(operand, line);
+      return func->get_chunk().add<Instruction>(operand, line);
     }
     template <typename Instruction>
     size_t add(size_t operand,
                const typename Instruction::Upvalue_vector& upvalues,
                int line) noexcept {
-      return func->chunk().add<Instruction>(operand, upvalues, line);
+      return func->get_chunk().add<Instruction>(operand, upvalues, line);
     }
     template <typename... Args>
     size_t add_constant(Args&&... args) noexcept {
-      return func->chunk().add_constant(std::forward<Args>(args)...);
+      return func->get_chunk().add_constant(std::forward<Args>(args)...);
     }
 
     void patch_jump(size_t jump) noexcept {
-      func->chunk().patch_jump(jump, current_code_position() - jump -
-                                         instruction::Jump_instruction::size);
+      func->get_chunk().patch_jump(
+          jump,
+          current_code_position() - jump - instruction::Jump_instruction::size);
     }
     size_t current_code_position() const noexcept {
-      return func->chunk().code().size();
+      return func->get_chunk().code().size();
     }
     size_t loop_distance_from(size_t pos) const noexcept {
       return current_code_position() + instruction::Loop::size - pos;
@@ -657,15 +667,15 @@ class compiler {
   };
   using func_frame_vector = std::vector<func_frame>;
 
-  void make_func_frame(const String* name, int depth) noexcept {
+  void make_func_frame(String* name, int depth) noexcept {
     func_frames.emplace_back(heap->make_object<Function>(name), depth);
   }
   void pop_func_frame() noexcept { func_frames.pop_back(); }
   func_frame& current_func_frame() noexcept { return func_frames.back(); }
 
-  friend precedence::rules_generator<compiler>;
-  constexpr static precedence::rules<compiler> p_rules_ =
-      precedence::rules_generator<compiler>::make_rules();
+  friend precedence::rules_generator<Compiler>;
+  constexpr static precedence::rules<Compiler> p_rules_ =
+      precedence::rules_generator<Compiler>::make_rules();
 
   constexpr static int max_function_parameters = 255;
 

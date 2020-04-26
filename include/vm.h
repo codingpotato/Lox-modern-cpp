@@ -20,7 +20,8 @@ namespace lox {
 
 class VM {
  public:
-  explicit VM(std::ostream& os) noexcept : out{&os}, gc{stack_, heap_} {
+  explicit VM(std::ostream& os) noexcept
+      : out{&os}, gc{stack_, heap_, globals_, call_frames_} {
     register_natives(globals_, heap_);
   }
 
@@ -69,14 +70,14 @@ class VM {
       current_frame().ip = ip;
     }
     call_frames_.push(closure, stack_.size() - argument_count - 1);
-    const auto& chunk = closure->func()->chunk();
+    const auto& chunk = closure->get_func()->get_chunk();
     code = &chunk.code();
     constants = &chunk.constants();
     ip = 0;
   }
 
   void throw_undefined_variable(const String* name) const {
-    throw runtime_error{"Undefined variable: " + name->string()};
+    throw runtime_error{"Undefined variable: " + name->get_string()};
   }
 
   void throw_incorrect_argument_count(int arity, int argument_count) const {
@@ -96,7 +97,7 @@ class VM {
   const Bytecode_vector* code = nullptr;
   const Value_vector* constants = nullptr;
   size_t ip = 0;
-  GC<max_stack_size> gc;
+  GC<Stack<Value, max_stack_size>, Stack<Call_frame, max_frame_size>> gc;
 };
 
 template <>
@@ -155,7 +156,7 @@ inline void VM::handle(const instruction::Define_global& define_global) {
   ENSURES(define_global.operand() < constants->size());
   auto constant = (*constants)[define_global.operand()];
   const auto name = constant.as_object()->as<String>();
-  const auto str = heap_.make_string(name->string());
+  const auto str = heap_.make_string(name->get_string());
   globals_.insert(str, stack_.pop());
 }
 
@@ -173,15 +174,15 @@ inline void VM::handle(const instruction::Set_global& set_global) {
 template <>
 inline void VM::handle(const instruction::Get_upvalue& get_upvalue) {
   const auto slot = get_upvalue.operand();
-  ENSURES(slot < current_frame().closure->upvalues.size());
-  stack_.push(*current_frame().closure->upvalues[slot]->location);
+  ENSURES(slot < current_frame().closure->get_upvalues().size());
+  stack_.push(*current_frame().closure->get_upvalues()[slot]->location);
 }
 
 template <>
 inline void VM::handle(const instruction::Set_upvalue& set_upvalue) {
   auto slot = set_upvalue.operand();
-  ENSURES(slot < current_frame().closure->upvalues.size());
-  *current_frame().closure->upvalues[slot]->location = stack_.peek();
+  ENSURES(slot < current_frame().closure->get_upvalues().size());
+  *current_frame().closure->get_upvalues()[slot]->location = stack_.peek();
 }
 
 template <>
@@ -272,11 +273,11 @@ inline void VM::handle(const instruction::Call& call) {
     auto obj = v.as_object();
     if (obj->is<Closure>()) {
       auto closure = obj->as<Closure>();
-      if (argument_count == closure->func()->arity()) {
+      auto arity = closure->get_func()->get_arity();
+      if (argument_count == arity) {
         call_closure(closure, argument_count);
       } else {
-        throw_incorrect_argument_count(closure->func()->arity(),
-                                       argument_count);
+        throw_incorrect_argument_count(arity, argument_count);
       }
     } else if (obj->is<Native_func>()) {
       const auto func = obj->as<Native_func>();
@@ -304,9 +305,10 @@ inline void VM::handle(const instruction::Closure& closure_instr) {
     auto index = upvalues[i * 2 + 1];
     if (is_local) {
       auto value = &stack_[current_frame().start_of_stack + index];
-      closure->upvalues[i] = heap_.make_upvalue(value);
+      closure->get_upvalues()[i] = heap_.make_upvalue(value);
     } else {
-      closure->upvalues[i] = current_frame().closure->upvalues[index];
+      closure->get_upvalues()[i] =
+          current_frame().closure->get_upvalues()[index];
     }
   }
   ip += func->upvalue_count * 2;
@@ -329,7 +331,7 @@ inline void VM::handle(const instruction::Return&) {
   } else {
     stack_.resize(stack_size);
     stack_.push(result);
-    const auto& chunk = current_frame().closure->func()->chunk();
+    const auto& chunk = current_frame().closure->get_func()->get_chunk();
     code = &chunk.code();
     constants = &chunk.constants();
     ip = current_frame().ip;
@@ -348,7 +350,9 @@ template <bool Debug>
 inline void VM::interpret(std::string source) noexcept {
   try {
     lox::scanner scanner{std::move(source)};
-    auto func = lox::compiler{heap_}.compile(scanner.scan());
+    Compiler compiler{heap_};
+    gc.set_compiler(compiler);
+    auto func = compiler.compile(scanner.scan());
     auto closure = heap_.make_object<Closure>(func);
     stack_.push(closure);
     call_closure(closure, 0);
@@ -365,9 +369,10 @@ inline void VM::interpret(std::string source) noexcept {
     *out << e.what() << "\n";
     for (size_t distance = 0; distance < call_frames_.size(); ++distance) {
       auto& frame = call_frames_.peek(distance);
+      auto func = frame.closure->get_func();
       *out << "[line " << std::setfill('0') << std::setw(4)
-           << frame.closure->func()->chunk().lines()[frame.ip] << " in] "
-           << call_frames_.peek(distance).closure->func()->to_string() << "\n";
+           << func->get_chunk().lines()[frame.ip] << " in] "
+           << func->to_string() << "\n";
     }
   }
 }

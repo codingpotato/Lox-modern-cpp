@@ -2,6 +2,7 @@
 #define LOX_OBJECT_H
 
 #include <string>
+#include <vector>
 
 #include "chunk.h"
 #include "contract.h"
@@ -10,44 +11,55 @@
 
 namespace lox {
 
-struct String;
-struct Function;
-struct Native_func;
-struct Closure;
-struct Upvalue;
+class String;
+class Function;
+class Native_func;
+class Upvalue;
+class Closure;
 
-struct Object {
-  using Types = Type_list<String, Function, Native_func, Closure, Upvalue>;
+class Object {
+ public:
+  using Types = Type_list<String, Function, Native_func, Upvalue, Closure>;
   template <typename T>
-  constexpr static size_t id = Index_of<T, Types>::value;
+  constexpr static size_t id_of = Index_of<T, Types>::value;
 
-  explicit Object(size_t id) noexcept : id_{id} {}
-  virtual ~Object() = default;
+  explicit Object(size_t id) noexcept : id{id} {}
+  Object(const Object&) noexcept = delete;
+  Object(Object&&) noexcept = delete;
+  Object& operator=(const Object&) noexcept = delete;
+  Object& operator=(Object&&) noexcept = delete;
+  virtual ~Object() noexcept = default;
 
   template <typename T>
   bool is() const noexcept {
-    return id_ == id<T>;
+    return id == id_of<T>;
+  }
+
+  template <typename T>
+  const T* as() const noexcept {
+    ENSURES(is<T>());
+    return static_cast<const T*>(this);
   }
 
   template <typename T>
   T* as() noexcept {
-    ENSURES(is<T>());
-    return reinterpret_cast<T*>(this);
+    return const_cast<T*>(std::as_const(*this).as<T>());
   }
 
-  virtual std::string to_string(bool = false) noexcept = 0;
+  virtual std::string to_string(bool = false) const noexcept = 0;
 
   Object* next = nullptr;
   bool is_marked = false;
 
  private:
-  size_t id_;
+  size_t id;
 };
 
-struct String : Object {
-  static uint32_t hash(const std::string& str) noexcept {
+class String : public Object {
+ public:
+  static uint32_t hash_from(const std::string& string) noexcept {
     uint32_t hash = 2166136261u;
-    for (const auto ch : str) {
+    for (const auto ch : string) {
       hash ^= ch;
       hash *= 16777619;
     }
@@ -55,90 +67,104 @@ struct String : Object {
   }
 
   String(std::string str) noexcept
-      : Object{id<String>}, str_{std::move(str)}, hash_{hash(str_)} {}
+      : Object{id_of<String>},
+        string{std::move(str)},
+        hash{hash_from(string)} {}
 
-  const std::string& string() const noexcept { return str_; }
-  uint32_t hash() const noexcept { return hash_; }
+  const std::string& get_string() const noexcept { return string; }
+  uint32_t get_hash() const noexcept { return hash; }
 
-  std::string to_string(bool = false) noexcept override { return str_; }
+  std::string to_string(bool = false) const noexcept override { return string; }
 
   friend bool operator==(const String& lhs, const String& rhs) noexcept {
-    return lhs.hash_ == rhs.hash_ && lhs.str_ == rhs.str_;
+    return lhs.hash == rhs.hash && lhs.string == rhs.string;
   }
 
  private:
-  std::string str_;
-  uint32_t hash_;
+  std::string string;
+  uint32_t hash;
 };
 
-struct Function : Object {
-  explicit Function(const String* str) noexcept
-      : Object{id<Function>}, name_{str} {}
+class Function : public Object {
+ public:
+  explicit Function(String* string) noexcept
+      : Object{id_of<Function>}, name{string} {}
 
-  size_t arity() const noexcept { return arity_; }
-  Chunk& chunk() noexcept { return chunk_; }
-  const String* name() const noexcept { return name_; }
+  const Chunk& get_chunk() const noexcept { return chunk; }
+  Chunk& get_chunk() noexcept { return chunk; }
+  size_t get_arity() const noexcept { return arity; }
+  const String* get_name() const noexcept { return name; }
+  String* get_name() noexcept { return name; }
 
-  void inc_arity() noexcept { ++arity_; }
+  void inc_arity() noexcept { ++arity; }
 
-  std::string to_string(bool verbose = false) noexcept override {
+  std::string to_string(bool verbose = false) const noexcept override {
     const std::string message =
-        name_ ? "<function: " + name_->string() + ">" : "<script>";
-    return verbose ? ::lox::to_string(chunk_, message, 1) : message;
+        name ? "<function: " + name->get_string() + ">" : "<script>";
+    return verbose ? ::lox::to_string(chunk, message, 1) : message;
   }
 
   size_t upvalue_count = 0;
 
  private:
-  size_t arity_ = 0;
-  Chunk chunk_;
-  const String* name_;
+  Chunk chunk;
+  size_t arity = 0;
+  String* name;
 };
 
-struct Native_func : Object {
+class Native_func : public Object {
+ public:
   using Func = Value (*)(int arg_count, Value* args) noexcept;
 
-  Native_func(Func func) noexcept : Object{id<Native_func>}, func_{func} {}
+  Native_func(Func func) noexcept : Object{id_of<Native_func>}, func{func} {}
 
   Value operator()(int arg_count, Value* args) const noexcept {
-    return (*func_)(arg_count, args);
+    return (*func)(arg_count, args);
   }
 
-  std::string to_string(bool = false) noexcept override {
+  std::string to_string(bool = false) const noexcept override {
     return "<native func>";
   }
 
  private:
-  Func func_;
+  Func func;
 };
 
-struct Closure : Object {
-  Closure(Function* func) noexcept
-      : Object{id<Closure>},
-        upvalues{func->upvalue_count, nullptr},
-        func_{func} {}
-
-  Function* func() noexcept { return func_; }
-
-  std::string to_string(bool verbose = false) noexcept override {
-    return func_->to_string(verbose);
-  }
-
-  std::vector<Upvalue*> upvalues;
-
- private:
-  Function* func_;
-};
-
-struct Upvalue : Object {
+class Upvalue : public Object {
+ public:
   explicit Upvalue(Value* location) noexcept
-      : Object{id<Upvalue>}, location{location} {}
+      : Object{id_of<Upvalue>}, location{location} {}
 
-  std::string to_string(bool = false) noexcept override { return "upvalue"; }
+  std::string to_string(bool = false) const noexcept override {
+    return "upvalue";
+  }
 
   Value* location;
   Value closed;
   Upvalue* next = nullptr;
+};
+
+class Closure : public Object {
+ public:
+  using Upvalue_vector = std::vector<Upvalue*>;
+
+  Closure(Function* func) noexcept
+      : Object{id_of<Closure>},
+        func{func},
+        upvalues{func->upvalue_count, nullptr} {}
+
+  const Function* get_func() const noexcept { return func; }
+  Function* get_func() noexcept { return func; }
+  const Upvalue_vector& get_upvalues() const noexcept { return upvalues; }
+  Upvalue_vector& get_upvalues() noexcept { return upvalues; }
+
+  std::string to_string(bool verbose = false) const noexcept override {
+    return func->to_string(verbose);
+  }
+
+ private:
+  Function* func;
+  Upvalue_vector upvalues;
 };
 
 }  // namespace lox

@@ -1,6 +1,6 @@
 #include <benchmark/benchmark.h>
 
-#include <unordered_map>
+#include <memory>
 
 #include "hash_table.h"
 #include "object.h"
@@ -8,16 +8,17 @@
 static void hash_table(benchmark::State& state) {
   while (state.KeepRunning()) {
     lox::Hash_table table;
-    std::vector<lox::String> strings;
+    std::vector<std::unique_ptr<lox::String>> strings;
     for (auto i = 0; i < 100; ++i) {
-      strings.emplace_back("test string " + std::to_string(i));
+      strings.emplace_back(
+          std::make_unique<lox::String>("test string " + std::to_string(i)));
     }
     for (std::size_t i = 0; i < strings.size(); ++i) {
-      table.insert(&strings[i], lox::Value{static_cast<double>(i)});
+      table.insert(strings[i].get(), lox::Value{static_cast<double>(i)});
     }
     double result = 0;
     for (std::size_t i = 0; i < strings.size(); ++i) {
-      if (auto value = table.get_if(&strings[i]); value != nullptr) {
+      if (auto value = table.get_if(strings[i].get()); value != nullptr) {
         benchmark::DoNotOptimize(result += value->as_double());
       }
     }

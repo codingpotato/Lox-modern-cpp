@@ -57,6 +57,27 @@ class List {
     }
   }
 
+  template <typename Pred>
+  void erase_if(Pred pred) noexcept {
+    Node* previous = nullptr;
+    Node* node = head;
+    while (node != nullptr) {
+      if (pred(node)) {
+        auto erased = node;
+        node = node->next;
+        if (previous != nullptr) {
+          previous->next = node;
+        } else {
+          head = node;
+        }
+        delete erased;
+      } else {
+        previous = node;
+        node = node->next;
+      }
+    }
+  }
+
  private:
   Node* head = nullptr;
 };

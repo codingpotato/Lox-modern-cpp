@@ -9,7 +9,7 @@
 
 namespace lox {
 
-struct Object;
+class Object;
 
 namespace optimized {
 

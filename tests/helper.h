@@ -15,8 +15,8 @@ inline std::string compile(std::string source,
   lox::scanner scanner{std::move(source)};
   std::ostringstream oss;
   lox::VM vm{oss};
-  auto func = lox::compiler{vm.heap()}.compile(scanner.scan());
-  return lox::to_string(func->chunk(), message);
+  auto func = lox::Compiler{vm.heap()}.compile(scanner.scan());
+  return lox::to_string(func->get_chunk(), message);
 }
 
 template <bool Debug = false>

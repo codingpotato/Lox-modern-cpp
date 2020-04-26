@@ -9,40 +9,40 @@ namespace lox {
 
 struct Hash_table {
  public:
-  Hash_table() noexcept : entries_{nullptr}, capacity_mask_{-1}, count_{0} {}
+  Hash_table() noexcept : entries{nullptr}, capacity_mask{-1}, count{0} {}
 
   ~Hash_table() noexcept {
-    if (entries_) {
-      delete[] entries_;
+    if (entries) {
+      delete[] entries;
     }
   }
 
-  int size() const noexcept { return count_; }
+  int size() const noexcept { return count; }
 
   bool insert(String* key, Value v) noexcept {
     adjust_capacity();
-    auto dest = find_entry(entries_, capacity_mask_, key);
+    auto dest = find_entry(entries, capacity_mask, key);
     if (dest->key == nullptr) {
       dest->key = key;
       dest->value = v;
-      ++count_;
+      ++count;
       return true;
     }
     return false;
   }
 
   bool contains(const String* key) const noexcept {
-    auto dest = find_entry(entries_, capacity_mask_, key);
+    auto dest = find_entry(entries, capacity_mask, key);
     return dest->key != nullptr;
   }
 
   Value* get_if(const String* key) const noexcept {
-    auto dest = find_entry(entries_, capacity_mask_, key);
+    auto dest = find_entry(entries, capacity_mask, key);
     return dest->key ? &dest->value : nullptr;
   }
 
   bool set(const String* key, Value v) const noexcept {
-    auto dest = find_entry(entries_, capacity_mask_, key);
+    auto dest = find_entry(entries, capacity_mask, key);
     if (dest->key) {
       dest->value = v;
       return true;
@@ -51,31 +51,40 @@ struct Hash_table {
   }
 
   bool erase(const String* key) noexcept {
-    if (count_ == 0) {
+    if (count == 0) {
       return false;
     }
-    auto dest = find_entry(entries_, capacity_mask_, key);
+    auto dest = find_entry(entries, capacity_mask, key);
     if (dest->key != nullptr) {
       dest->key = nullptr;
-      --count_;
+      --count;
       return true;
     }
     return false;
   }
 
-  String* find_string(const std::string& str) noexcept {
-    if (count_ == 0) {
+  String* find_string(const std::string& string) noexcept {
+    if (count == 0) {
       return nullptr;
     }
-    int index = String::hash(str) & capacity_mask_;
+    int index = String::hash_from(string) & capacity_mask;
     while (true) {
-      auto& current = entries_[index];
-      if (current.key != nullptr && *current.key == str) {
+      auto& current = entries[index];
+      if (current.key != nullptr && *current.key == string) {
         return current.key;
       } else if (current.value.is_nil()) {
         return nullptr;
       }
-      index = (index + 1) & capacity_mask_;
+      index = (index + 1) & capacity_mask;
+    }
+  }
+
+  template <typename Visitor>
+  void for_each(Visitor&& visitor) const noexcept {
+    for (auto i = 0; i <= capacity_mask; ++i) {
+      if (entries[i].key) {
+        visitor(entries[i].key, entries[i].value);
+      }
     }
   }
 
@@ -94,7 +103,7 @@ struct Hash_table {
 
   Entry* find_entry(Entry* entries, int capacity_mask, const String* key) const
       noexcept {
-    int index = key->hash() & capacity_mask;
+    int index = key->get_hash() & capacity_mask;
     Entry* tobmstone = nullptr;
     while (true) {
       auto current = &entries[index];
@@ -116,31 +125,31 @@ struct Hash_table {
 
   void adjust_capacity() noexcept {
     constexpr auto max_load = 0.75;
-    if (count_ + 1 > capacity_of(capacity_mask_) * max_load) {
+    if (count + 1 > capacity_of(capacity_mask) * max_load) {
       constexpr int initial_capacity = 8;
-      const auto capacity = capacity_of(capacity_mask_);
+      const auto capacity = capacity_of(capacity_mask);
       const auto new_capacity_mask = capacity_mask_of(
           capacity < initial_capacity ? initial_capacity : capacity * 2);
       const auto new_capacity = capacity_of(new_capacity_mask);
       auto new_entries = new Entry[new_capacity];
-      for (int index = 0; index <= capacity_mask_; ++index) {
-        auto current = &entries_[index];
+      for (int index = 0; index <= capacity_mask; ++index) {
+        auto current = &entries[index];
         if (current->key != nullptr) {
           auto dest = find_entry(new_entries, new_capacity_mask, current->key);
           *dest = *current;
         }
       }
-      if (entries_) {
-        delete[] entries_;
+      if (entries) {
+        delete[] entries;
       }
-      entries_ = new_entries;
-      capacity_mask_ = new_capacity_mask;
+      entries = new_entries;
+      capacity_mask = new_capacity_mask;
     }
   }
 
-  Entry* entries_;
-  int capacity_mask_;
-  int count_;
+  Entry* entries;
+  int capacity_mask;
+  int count;
 };
 
 }  // namespace lox

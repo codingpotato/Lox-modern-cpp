@@ -19,7 +19,7 @@ class Heap {
 
   struct Delegate {
     virtual ~Delegate() noexcept = default;
-    virtual void collect_garbage() const noexcept = 0;
+    virtual void collect_garbage() noexcept = 0;
   };
 
   template <typename T, typename... Args>
@@ -34,10 +34,10 @@ class Heap {
     return obj;
   }
 
-  String* make_string(std::string str) noexcept {
+  String* make_string(const std::string& str) noexcept {
     auto string = strings.find_string(str);
     if (!string) {
-      string = make_object<String>(std::move(str));
+      string = make_object<String>(str);
       strings.insert(string, true);
     }
     return string;
@@ -58,17 +58,27 @@ class Heap {
     return upvalue;
   }
 
-  void set_delegate(const Delegate& d) noexcept { delegate = &d; }
+  void set_delegate(Delegate& d) noexcept { delegate = &d; }
 
   const Upvalue_list& get_open_upvalues() const noexcept {
     return open_upvalues;
+  }
+
+  void sweep() noexcept {
+    objects.erase_if([](Object* object) {
+      if (object->is_marked) {
+        object->is_marked = false;
+        return false;
+      }
+      return true;
+    });
   }
 
  private:
   Object_list objects;
   Hash_table strings;
   Upvalue_list open_upvalues;
-  const Delegate* delegate = nullptr;
+  Delegate* delegate = nullptr;
 };
 
 }  // namespace lox
