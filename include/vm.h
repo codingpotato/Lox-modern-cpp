@@ -23,6 +23,7 @@ class VM {
   explicit VM(std::ostream& os) noexcept
       : out{&os}, gc{stack_, heap_, globals_, call_frames_} {
     register_natives(globals_, heap_);
+    heap_.enable_gc();
   }
 
   Heap<>& heap() noexcept { return heap_; }

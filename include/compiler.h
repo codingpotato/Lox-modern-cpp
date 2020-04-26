@@ -126,7 +126,9 @@ class Compiler {
   }
 
   void parse_function() {
+    heap->disable_gc();
     make_func_frame(heap->make_string(previous_->lexeme), 1);
+    heap->enable_gc();
     current_func_frame().begin_scope();
     consume(token::left_paren, "Expect '(' after function name.");
     if (!check(token::right_paren)) {

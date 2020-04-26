@@ -80,10 +80,21 @@ struct Hash_table {
   }
 
   template <typename Visitor>
-  void for_each(Visitor&& visitor) const noexcept {
+  void for_each(Visitor visitor) const noexcept {
     for (auto i = 0; i <= capacity_mask; ++i) {
       if (entries[i].key) {
         visitor(entries[i].key, entries[i].value);
+      }
+    }
+  }
+
+  template <typename Pred>
+  void erase_if(Pred pred) noexcept {
+    for (auto i = 0; i <= capacity_mask; ++i) {
+      auto dest = &entries[i];
+      if (dest->key && pred(dest->key, dest->value)) {
+        dest->key = nullptr;
+        --count;
       }
     }
   }

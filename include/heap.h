@@ -17,15 +17,19 @@ class Heap {
   using Object_list = List<Object>;
   using Upvalue_list = List<Upvalue, false>;
 
-  struct Delegate {
+  class Delegate {
+   public:
     virtual ~Delegate() noexcept = default;
     virtual void collect_garbage() noexcept = 0;
   };
 
+  void enable_gc() noexcept { gc_enabled = true; }
+  void disable_gc() noexcept { gc_enabled = false; }
+
   template <typename T, typename... Args>
   T* make_object(Args&&... args) noexcept {
     if constexpr (Debug_stress_gc) {
-      if (delegate) {
+      if (gc_enabled && delegate) {
         delegate->collect_garbage();
       }
     }
@@ -74,11 +78,16 @@ class Heap {
     });
   }
 
+  void erase_unmarked_strings() noexcept {
+    strings.erase_if([](String* string, Value) { return !string->is_marked; });
+  }
+
  private:
   Object_list objects;
   Hash_table strings;
   Upvalue_list open_upvalues;
   Delegate* delegate = nullptr;
+  bool gc_enabled = false;
 };
 
 }  // namespace lox

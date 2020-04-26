@@ -28,6 +28,8 @@ struct GC : Heap<>::Delegate {
   void collect_garbage() noexcept override {
     mark_roots();
     trace_references();
+    heap->erase_unmarked_strings();
+    heap->sweep();
   }
 
  private:
@@ -91,13 +93,11 @@ struct GC : Heap<>::Delegate {
       }
     } else if (object->is<Upvalue>()) {
       mark_value(object->as<Upvalue>()->closed);
-    } else if (object->is<Native_func>()) {
-    } else if (object->is<String>()) {
     }
   }
 
   const Value_stack* stack;
-  const Heap<>* heap;
+  Heap<>* heap;
   const Hash_table* globals;
   const Call_frame_stack* call_frames;
   const Compiler* compiler = nullptr;
