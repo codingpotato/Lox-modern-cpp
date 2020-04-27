@@ -9,8 +9,10 @@ project(
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 include(submodule)
 
+if(CMAKE_BUILD_TYPE STREQUAL Debug)
   include(CodeCoverage)
   append_coverage_compiler_flags()
+endif(CMAKE_BUILD_TYPE STREQUAL Debug)
 
 enable_testing()
 
@@ -40,13 +42,16 @@ target_link_libraries(lox PUBLIC lox-core)
 include(${DOCTEST_DIR}/scripts/cmake/doctest.cmake)
 doctest_discover_tests(lox)
 
+if(CMAKE_BUILD_TYPE STREQUAL Debug)
   setup_target_for_coverage_lcov(
     NAME
     lox-coverage
     EXECUTABLE
     lox
+    BASE_DIRECTORY
+    "${PROJECT_SOURCE_DIR}"
     EXCLUDE
-    "${PROJECT_SOURCE_DIR}/submodules/*"
-    "${PROJECT_SOURCE_DIR}/benchmark/*"
-    "${PROJECT_SOURCE_DIR}/tests/*"
-    "/usr/include/*")
+    "submodules/*"
+    "benchmark/*"
+    "tests/*")
+endif(CMAKE_BUILD_TYPE STREQUAL Debug)
