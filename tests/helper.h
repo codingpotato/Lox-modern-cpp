@@ -6,6 +6,7 @@
 
 #include "chunk.h"
 #include "compiler.h"
+#include "heap.h"
 #include "object.h"
 #include "scanner.h"
 #include "vm.h"
@@ -13,10 +14,8 @@
 inline std::string compile(std::string source,
                            const std::string& message) noexcept {
   lox::scanner scanner{std::move(source)};
-  std::ostringstream oss;
-  lox::VM vm{oss};
-  vm.heap().disable_gc();
-  lox::Compiler compiler{vm.heap()};
+  lox::Heap<> heap;
+  lox::Compiler compiler{heap};
   auto func = compiler.compile(scanner.scan());
   return lox::to_string(func->get_chunk(), message);
 }

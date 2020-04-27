@@ -20,8 +20,9 @@ inline Value clock(int, Value*) noexcept {
 }
 
 inline void register_natives(Hash_table& globals, Heap<>& heap) noexcept {
-  globals.insert(heap.make_string("clock"),
-                 heap.make_object<Native_func>(clock));
+  auto name = heap.make_string("clock");
+  globals.insert(name, Value{});
+  globals.set(name, heap.make_object<Native_func>(clock));
 }
 
 }  // namespace lox

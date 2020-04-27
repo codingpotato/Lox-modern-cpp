@@ -21,12 +21,11 @@ namespace lox {
 class VM {
  public:
   explicit VM(std::ostream& os) noexcept
-      : out{&os}, gc{stack_, heap_, globals_, call_frames_} {
-    register_natives(globals_, heap_);
-    heap_.enable_gc();
+      : out{&os},
+        compiler{heap},
+        gc{stack_, heap, globals_, call_frames_, compiler} {
+    register_natives(globals_, heap);
   }
-
-  Heap<>& heap() noexcept { return heap_; }
 
   template <bool Debug = false>
   inline void interpret(std::string source) noexcept;
@@ -57,7 +56,7 @@ class VM {
   Call_frame& current_frame() noexcept { return call_frames_.peek(); }
 
   void close_upvalues(const Value* last) noexcept {
-    const auto& open_upvalues = heap_.get_open_upvalues();
+    const auto& open_upvalues = heap.get_open_upvalues();
     for (auto it = open_upvalues.begin(); it != open_upvalues.end(); ++it) {
       if (it->location >= last) {
         it->closed = *it->location;
@@ -91,10 +90,11 @@ class VM {
   constexpr static size_t max_stack_size = max_frame_size * 1024;
 
   std::ostream* out;
+  Heap<> heap;
+  Compiler compiler;
   Stack<Call_frame, max_frame_size> call_frames_;
   Stack<Value, max_stack_size> stack_;
   Hash_table globals_;
-  Heap<> heap_;
   const Bytecode_vector* code = nullptr;
   const Value_vector* constants = nullptr;
   size_t ip = 0;
@@ -157,7 +157,7 @@ inline void VM::handle(const instruction::Define_global& define_global) {
   ENSURES(define_global.operand() < constants->size());
   auto constant = (*constants)[define_global.operand()];
   const auto name = constant.as_object()->as<String>();
-  const auto str = heap_.make_string(name->get_string());
+  const auto str = heap.make_string(name->get_string());
   globals_.insert(str, stack_.pop());
 }
 
@@ -298,7 +298,7 @@ inline void VM::handle(const instruction::Closure& closure_instr) {
   ENSURES(closure_instr.operand() < constants->size());
   auto value = (*constants)[closure_instr.operand()];
   auto func = value.as_object()->as<Function>();
-  auto closure = heap_.make_object<Closure>(func);
+  auto closure = heap.make_object<Closure>(func);
   stack_.push(closure);
   const auto upvalues = closure_instr.upvalues();
   for (size_t i = 0; i < func->upvalue_count; ++i) {
@@ -306,7 +306,7 @@ inline void VM::handle(const instruction::Closure& closure_instr) {
     auto index = upvalues[i * 2 + 1];
     if (is_local) {
       auto value = &stack_[current_frame().start_of_stack + index];
-      closure->get_upvalues()[i] = heap_.make_upvalue(value);
+      closure->get_upvalues()[i] = heap.make_upvalue(value);
     } else {
       closure->get_upvalues()[i] =
           current_frame().closure->get_upvalues()[index];
@@ -351,10 +351,8 @@ template <bool Debug>
 inline void VM::interpret(std::string source) noexcept {
   try {
     lox::scanner scanner{std::move(source)};
-    Compiler compiler{heap_};
-    gc.set_compiler(compiler);
     auto func = compiler.compile(scanner.scan());
-    auto closure = heap_.make_object<Closure>(func);
+    auto closure = heap.make_object<Closure>(func);
     stack_.push(closure);
     call_closure(closure, 0);
     while (ip < code->size()) {

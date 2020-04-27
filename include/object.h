@@ -87,8 +87,7 @@ class String : public Object {
 
 class Function : public Object {
  public:
-  explicit Function(String* string) noexcept
-      : Object{id_of<Function>}, name{string} {}
+  Function() noexcept : Object{id_of<Function>} {}
 
   const Chunk& get_chunk() const noexcept { return chunk; }
   Chunk& get_chunk() noexcept { return chunk; }
@@ -104,12 +103,12 @@ class Function : public Object {
     return verbose ? ::lox::to_string(chunk, message, 1) : message;
   }
 
+  String* name = nullptr;
   size_t upvalue_count = 0;
 
  private:
   Chunk chunk;
   size_t arity = 0;
-  String* name;
 };
 
 class Native_func : public Object {

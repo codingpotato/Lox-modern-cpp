@@ -96,7 +96,7 @@ class Compiler {
   }
 
   Function* compile(token_vector tokens) noexcept {
-    make_func_frame(nullptr, 0);
+    make_func_frame("", 0);
     tokens_ = std::move(tokens);
     current_ = tokens_.cbegin();
     while (!match(token::eof)) {
@@ -126,9 +126,7 @@ class Compiler {
   }
 
   void parse_function() {
-    heap->disable_gc();
-    make_func_frame(heap->make_string(previous_->lexeme), 1);
-    heap->enable_gc();
+    make_func_frame(previous_->lexeme, 1);
     current_func_frame().begin_scope();
     consume(token::left_paren, "Expect '(' after function name.");
     if (!check(token::right_paren)) {
@@ -669,8 +667,12 @@ class Compiler {
   };
   using func_frame_vector = std::vector<func_frame>;
 
-  void make_func_frame(String* name, int depth) noexcept {
-    func_frames.emplace_back(heap->make_object<Function>(name), depth);
+  void make_func_frame(const std::string& name, int depth) noexcept {
+    auto func = heap->make_object<Function>();
+    func_frames.emplace_back(func, depth);
+    if (!name.empty()) {
+      func->name = heap->make_string(name);
+    }
   }
   void pop_func_frame() noexcept { func_frames.pop_back(); }
   func_frame& current_func_frame() noexcept { return func_frames.back(); }

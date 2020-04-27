@@ -14,16 +14,15 @@ namespace lox {
 template <typename Value_stack, typename Call_frame_stack>
 struct GC : Heap<>::Delegate {
   GC(const Value_stack& stack, Heap<>& heap, const Hash_table& globals,
-     const Call_frame_stack& call_frames)
+     const Call_frame_stack& call_frames, const Compiler& compiler)
   noexcept
       : stack{&stack},
         heap{&heap},
         globals{&globals},
-        call_frames{&call_frames} {
+        call_frames{&call_frames},
+        compiler{&compiler} {
     heap.set_delegate(*this);
   }
-
-  void set_compiler(Compiler& c) noexcept { compiler = &c; }
 
   void collect_garbage() noexcept override {
     mark_roots();
@@ -100,7 +99,7 @@ struct GC : Heap<>::Delegate {
   Heap<>* heap;
   const Hash_table* globals;
   const Call_frame_stack* call_frames;
-  const Compiler* compiler = nullptr;
+  const Compiler* compiler;
   std::vector<Object*> gray_objects;
 };
 

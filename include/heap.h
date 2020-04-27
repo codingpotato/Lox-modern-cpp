@@ -23,13 +23,10 @@ class Heap {
     virtual void collect_garbage() noexcept = 0;
   };
 
-  void enable_gc() noexcept { gc_enabled = true; }
-  void disable_gc() noexcept { gc_enabled = false; }
-
   template <typename T, typename... Args>
   T* make_object(Args&&... args) noexcept {
     if constexpr (Debug_stress_gc) {
-      if (gc_enabled && delegate) {
+      if (delegate) {
         delegate->collect_garbage();
       }
     }
@@ -87,7 +84,6 @@ class Heap {
   Hash_table strings;
   Upvalue_list open_upvalues;
   Delegate* delegate = nullptr;
-  bool gc_enabled = false;
 };
 
 }  // namespace lox
