@@ -3,30 +3,32 @@
 #include "list.h"
 #include "object.h"
 
+struct Node {
+  int value = 0;
+  Node* next = nullptr;
+};
+
 TEST_CASE("list") {
-  lox::List<lox::Object> strings;
-  REQUIRE(strings.empty());
+  lox::List<Node> list;
+  REQUIRE(list.empty());
 
   constexpr int count = 10;
   for (auto i = 0; i < count; ++i) {
-    strings.insert(new lox::String{std::to_string(i)});
+    list.insert(new Node{i});
   }
 
   SUBCASE("iterator") {
     auto expected = count - 1;
-    for (auto it = strings.begin(); it != strings.end(); ++it) {
-      REQUIRE_EQ(*it->as<lox::String>(), std::to_string(expected));
+    for (auto it = list.begin(); it != list.end(); ++it) {
+      REQUIRE_EQ(it->value, expected);
       --expected;
     }
   }
   SUBCASE("erase if") {
-    strings.erase_if([](auto object) {
-      return std::stoi(object->template as<lox::String>()->get_string()) % 2 ==
-             0;
-    });
+    list.erase_if([](auto node) { return node->value % 2 == 0; });
     auto expected = count - 1;
-    for (auto it = strings.begin(); it != strings.end(); ++it) {
-      REQUIRE_EQ(*it->as<lox::String>(), std::to_string(expected));
+    for (auto it = list.begin(); it != list.end(); ++it) {
+      REQUIRE_EQ(it->value, expected);
       expected -= 2;
     }
   }

@@ -9,6 +9,9 @@ project(
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 include(submodule)
 
+  include(CodeCoverage)
+  append_coverage_compiler_flags()
+
 enable_testing()
 
 set(CMAKE_CXX_STANDARD 17)
@@ -36,3 +39,14 @@ target_link_libraries(lox PUBLIC lox-core)
 
 include(${DOCTEST_DIR}/scripts/cmake/doctest.cmake)
 doctest_discover_tests(lox)
+
+  setup_target_for_coverage_lcov(
+    NAME
+    lox-coverage
+    EXECUTABLE
+    lox
+    EXCLUDE
+    "${PROJECT_SOURCE_DIR}/submodules/*"
+    "${PROJECT_SOURCE_DIR}/benchmark/*"
+    "${PROJECT_SOURCE_DIR}/tests/*"
+    "/usr/include/*")
