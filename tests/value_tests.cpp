@@ -6,10 +6,7 @@
 #include "performance.h"
 #include "value.h"
 
-TEST_CASE("nil value") {
-  const lox::Value value{};
-  CHECK(value.is_nil());
-}
+TEST_CASE("nil value") { CHECK(lox::Value{}.is_nil()); }
 
 TEST_CASE("bool value") {
   lox::Value value{true};

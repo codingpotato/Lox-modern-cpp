@@ -13,9 +13,8 @@ TEST_CASE("hash table insert") {
   table.insert(&string, lox::Value{1.0});
   CHECK_EQ(table.size(), 1);
   CHECK(table.contains(&string));
-  auto value = table.get_if(&string);
-  CHECK(value != nullptr);
-  CHECK_EQ(value->as_double(), 1);
+  CHECK(table.get_if(&string) != nullptr);
+  CHECK_EQ(table.get_if(&string)->as_double(), 1);
 }
 
 TEST_CASE("hash table insert multiple entries") {
@@ -30,9 +29,8 @@ TEST_CASE("hash table insert multiple entries") {
   }
   CHECK_EQ(table.size(), strings.size());
   for (std::size_t i = 0; i < strings.size(); ++i) {
-    auto value = table.get_if(strings[i].get());
-    CHECK(value != nullptr);
-    CHECK_EQ(value->as_double(), i);
+    CHECK(table.get_if(strings[i].get()) != nullptr);
+    CHECK_EQ(table.get_if(strings[i].get())->as_double(), i);
   }
 }
 
@@ -51,8 +49,7 @@ TEST_CASE("hash table erase") {
   }
   CHECK_EQ(table.size(), strings.size() / 2);
   for (std::size_t i = 1; i < strings.size(); i += 2) {
-    auto value = table.get_if(strings[i].get());
-    CHECK(value != nullptr);
-    CHECK_EQ(value->as_double(), i);
+    CHECK(table.get_if(strings[i].get()) != nullptr);
+    CHECK_EQ(table.get_if(strings[i].get())->as_double(), i);
   }
 }

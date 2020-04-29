@@ -195,7 +195,7 @@ print add(1, 2);
 }
 
 TEST_CASE("function call with incorrect number of argumentws") {
-  std::string source{R"(
+  const std::string source{R"(
 fun a() { b(); }
 fun b() { c(); }
 fun c() {
@@ -203,7 +203,7 @@ fun c() {
 }
 a();
 )"};
-  std::string expected{R"(Expected 0 arguments but got 2.
+  const std::string expected{R"(Expected 0 arguments but got 2.
 [line 0005 in] <function: c>
 [line 0003 in] <function: b>
 [line 0002 in] <function: a>
@@ -213,26 +213,26 @@ a();
 }
 
 TEST_CASE("fib") {
-  std::string source{R"(
+  const std::string source{R"(
 fun fib(n) {
   if (n < 2) return n;
   return fib(n - 2) + fib(n - 1);
 }
 print fib(30);
 )"};
-  std::string expected{R"(832040.000000
+  const std::string expected{R"(832040.000000
 )"};
   CHECK_EQ(run(source), expected);
 }
 
 TEST_CASE("sum function call") {
-  std::string source{R"(
+  const std::string source{R"(
 fun sum(a, b, c) {
   return a + b + c;
 }
 print 4 + sum(5, 6, 7);
 )"};
-  std::string expected{R"(22.000000
+  const std::string expected{R"(22.000000
 )"};
   CHECK_EQ(run(source), expected);
 }
@@ -241,12 +241,13 @@ TEST_CASE("native clock") {
   const std::string source{R"(
 print clock();
 )"};
-  auto time = std::chrono::duration_cast<std::chrono::microseconds>(
-                  std::chrono::steady_clock::now().time_since_epoch())
-                  .count();
-  auto expected = static_cast<double>(time) /
-                  std::chrono::duration_cast<std::chrono::microseconds>(
-                      std::chrono::seconds{1})
-                      .count();
-  CHECK(std::stod(run(source)) == doctest::Approx(expected));
+  REQUIRE_EQ(std::stod(run(source)),
+             doctest::Approx(
+                 static_cast<double>(
+                     std::chrono::duration_cast<std::chrono::microseconds>(
+                         std::chrono::steady_clock::now().time_since_epoch())
+                         .count()) /
+                 std::chrono::duration_cast<std::chrono::microseconds>(
+                     std::chrono::seconds{1})
+                     .count()));
 }
