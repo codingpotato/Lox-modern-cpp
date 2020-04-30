@@ -2,7 +2,6 @@
 #define LOX_SCANNER_H
 
 #include <string>
-#include <string_view>
 #include <vector>
 
 #include "contract.h"
@@ -60,9 +59,9 @@ struct token {
     eof
   };
 
-  explicit token(type_t t, int l) noexcept : type{t}, line{l} {}
-  token(type_t t, std::string lex, int l) noexcept
-      : type{t}, lexeme{std::move(lex)}, line{l} {}
+  token(type_t type, int line) noexcept : type{type}, line{line} {}
+  token(type_t type, std::string lexeme, int line) noexcept
+      : type{type}, lexeme{std::move(lexeme)}, line{line} {}
 
   type_t type;
   std::string lexeme;
@@ -78,11 +77,11 @@ inline bool is_alpha(char ch) noexcept {
 inline bool is_digit(char ch) noexcept { return ch >= '0' && ch <= '9'; }
 
 struct scanner {
-  explicit scanner(std::string source) noexcept : source_{std::move(source)} {}
+  explicit scanner(std::string source) noexcept : source{std::move(source)} {}
 
   token_vector scan() noexcept {
-    current_ = source_.cbegin();
-    line_ = 1;
+    current = source.cbegin();
+    line = 1;
     token_vector tokens;
     while (true) {
       tokens.emplace_back(scan_token());
@@ -96,7 +95,7 @@ struct scanner {
  private:
   token scan_token() {
     skip_white_space();
-    start_ = current_;
+    start = current;
     if (is_at_end()) {
       return make_token(token::eof);
     }
@@ -167,7 +166,7 @@ struct scanner {
   token string() {
     while (!is_at_end() && peek() != '"') {
       if (peek() == '\n') {
-        ++line_;
+        ++line;
       }
       advance();
     }
@@ -180,42 +179,40 @@ struct scanner {
 
   token make_token(token::type_t type) const noexcept {
     if (type == token::string) {
-      // remove ""
-      ENSURES(std::distance(start_, current_) >= 1);
-      return {type,
-              {start_ + 1, start_ + std::distance(start_, current_) - 1},
-              line_};
+      ENSURES(std::distance(start, current) >= 1);
+      return {
+          type, {start + 1, start + std::distance(start, current) - 1}, line};
     }
-    return {type, {start_, current_}, line_};
+    return {type, {start, current}, line};
   }
 
-  bool is_at_end() const noexcept { return current_ == source_.cend(); }
+  bool is_at_end() const noexcept { return current == source.cend(); }
 
   char advance() noexcept {
     ENSURES(!is_at_end());
-    auto ch = *current_;
-    ++current_;
+    auto ch = *current;
+    ++current;
     return ch;
   }
 
   bool match(char expected) noexcept {
-    if (is_at_end() || *current_ != expected) {
+    if (is_at_end() || *current != expected) {
       return false;
     }
-    ++current_;
+    ++current;
     return true;
   }
 
   char peek() const noexcept {
     ENSURES(!is_at_end());
-    return *current_;
+    return *current;
   }
 
   char peek_next() const noexcept {
     if (is_at_end()) {
       return '\0';
     } else {
-      return *(current_ + 1);
+      return *(current + 1);
     }
   }
 
@@ -229,7 +226,7 @@ struct scanner {
           advance();
           break;
         case '\n':
-          ++line_;
+          ++line;
           advance();
           break;
         case '/':
@@ -247,11 +244,11 @@ struct scanner {
     }
   }
 
-  token::type_t check_keyword(int start, const std::string& rest,
+  token::type_t check_keyword(int index, const std::string& rest,
                               token::type_t type) const noexcept {
-    auto first = start_ + start;
-    auto last = start_ + start + rest.size();
-    if (current_ == last &&
+    auto first = start + index;
+    auto last = start + index + rest.size();
+    if (current == last &&
         std::equal(first, last, rest.cbegin(), rest.cend())) {
       return type;
     }
@@ -259,7 +256,7 @@ struct scanner {
   }
 
   token::type_t identifier_type() const noexcept {
-    switch (*start_) {
+    switch (*start) {
       case 'a':
         return check_keyword(1, "nd", token::k_and);
       case 'c':
@@ -267,8 +264,8 @@ struct scanner {
       case 'e':
         return check_keyword(1, "lse", token::k_else);
       case 'f':
-        if (std::distance(start_, source_.cend()) > 1) {
-          switch (*(start_ + 1)) {
+        if (std::distance(start, source.cend()) > 1) {
+          switch (*(start + 1)) {
             case 'a':
               return check_keyword(2, "lse", token::k_false);
             case 'o':
@@ -291,8 +288,8 @@ struct scanner {
       case 's':
         return check_keyword(1, "uper", token::k_super);
       case 't':
-        if (std::distance(start_, source_.cend()) > 1) {
-          switch (*(start_ + 1)) {
+        if (std::distance(start, source.cend()) > 1) {
+          switch (*(start + 1)) {
             case 'h':
               return check_keyword(2, "is", token::k_this);
             case 'r':
@@ -308,10 +305,10 @@ struct scanner {
     return token::identifier;
   }
 
-  std::string source_;
-  std::string::const_iterator start_;
-  std::string::const_iterator current_;
-  int line_;
+  std::string source;
+  std::string::const_iterator start;
+  std::string::const_iterator current;
+  int line;
 };
 
 }  // namespace lox

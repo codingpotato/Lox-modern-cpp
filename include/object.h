@@ -23,7 +23,7 @@ class Object {
   template <typename T>
   constexpr static size_t id_of = Index_of<T, Types>::value;
 
-  explicit Object(size_t id) noexcept : id{id} {}
+  explicit Object(size_t id) noexcept : id{id} { ENSURES(id < Types::size); }
   Object(const Object&) noexcept = delete;
   Object(Object&&) noexcept = delete;
   Object& operator=(const Object&) noexcept = delete;

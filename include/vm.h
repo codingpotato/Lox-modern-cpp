@@ -120,7 +120,7 @@ class VM {
 template <>
 inline void VM::handle(const instruction::Constant& constant) {
   ENSURES(executor.constants != nullptr);
-  ENSURES(executor.constant.operand() < executor.constants->size());
+  ENSURES(constant.operand() < executor.constants->size());
   stack.push((*executor.constants)[constant.operand()]);
 }
 

@@ -14,31 +14,31 @@ class Object;
 namespace optimized {
 
 struct Value {
-  constexpr Value() noexcept : bits_{make_nil()} {}
-  constexpr Value(bool b) noexcept : bits_{make_bool(b)} {}
-  constexpr Value(double d) noexcept : double_{d} {}
-  Value(const Object* obj) noexcept : bits_{make_object(obj)} {}
+  constexpr Value() noexcept : bits{make_nil()} {}
+  constexpr Value(bool b) noexcept : bits{make_bool(b)} {}
+  constexpr Value(double d) noexcept : double_val{d} {}
+  Value(Object* obj) noexcept : bits{make_object(obj)} {}
 
-  constexpr bool is_nil() const noexcept { return bits_ == make_nil(); }
+  constexpr bool is_nil() const noexcept { return bits == make_nil(); }
   constexpr bool is_bool() const noexcept {
-    return (bits_ & (tag_false | qnan)) == (tag_false | qnan);
+    return (bits & (tag_false | qnan)) == (tag_false | qnan);
   }
-  constexpr bool is_double() const noexcept { return (bits_ & qnan) != qnan; }
+  constexpr bool is_double() const noexcept { return (bits & qnan) != qnan; }
   constexpr bool is_object() const noexcept {
-    return (bits_ & (tag_object | qnan)) == (tag_object | qnan);
+    return (bits & (tag_object | qnan)) == (tag_object | qnan);
   }
 
   constexpr bool as_bool() const noexcept {
     ENSURES(is_bool());
-    return (bits_ & (tag_true | qnan)) == (tag_true | qnan);
+    return (bits & (tag_true | qnan)) == (tag_true | qnan);
   }
   constexpr double as_double() const noexcept {
     ENSURES(is_double());
-    return double_;
+    return double_val;
   }
   const Object* as_object() const noexcept {
     ENSURES(is_object());
-    return reinterpret_cast<Object*>(bits_ & ~(tag_object | qnan));
+    return reinterpret_cast<Object*>(bits & ~(tag_object | qnan));
   }
   Object* as_object() noexcept {
     return const_cast<Object*>(std::as_const(*this).as_object());
@@ -62,8 +62,8 @@ struct Value {
   }
 
   union {
-    double double_;
-    storage_t bits_;
+    double double_val;
+    storage_t bits;
   };
 };
 
@@ -72,40 +72,43 @@ struct Value {
 namespace tagged_union {
 
 struct Value {
-  constexpr Value() noexcept : id_{id<Nil>}, object_{nullptr} {}
-  constexpr Value(bool b) noexcept : id_{id<bool>}, bool_{b} {}
-  constexpr Value(double d) noexcept : id_{id<double>}, double_{d} {}
-  constexpr Value(Object* obj) noexcept : id_{id<Object>}, object_{obj} {}
+  constexpr Value() noexcept : id{id_of<Nil>}, object_val{nullptr} {}
+  constexpr Value(bool val) noexcept : id{id_of<bool>}, bool_val{val} {}
+  constexpr Value(double val) noexcept : id{id_of<double>}, double_val{val} {}
+  constexpr Value(Object* obj) noexcept : id{id_of<Object>}, object_val{obj} {}
 
-  constexpr bool is_nil() const noexcept { return id_ == id<Nil>; }
-  constexpr bool is_bool() const noexcept { return id_ == id<bool>; }
-  constexpr bool is_double() const noexcept { return id_ == id<double>; }
-  constexpr bool is_object() const noexcept { return id_ == id<Object>; }
+  constexpr bool is_nil() const noexcept { return id == id_of<Nil>; }
+  constexpr bool is_bool() const noexcept { return id == id_of<bool>; }
+  constexpr bool is_double() const noexcept { return id == id_of<double>; }
+  constexpr bool is_object() const noexcept { return id == id_of<Object>; }
 
   constexpr bool as_bool() const noexcept {
     ENSURES(is_bool());
-    return bool_;
+    return bool_val;
   }
   constexpr double as_double() const noexcept {
     ENSURES(is_double());
-    return double_;
+    return double_val;
+  }
+  const Object* as_object() const noexcept {
+    ENSURES(is_object());
+    return object_val;
   }
   Object* as_object() noexcept {
-    ENSURES(is_object());
-    return object_;
+    return const_cast<Object*>(std::as_const(*this).as_object());
   }
 
  private:
   struct Nil {};
   using Types = Type_list<Nil, bool, double, Object>;
   template <typename T>
-  constexpr static size_t id = Index_of<T, Types>::value;
+  constexpr static size_t id_of = Index_of<T, Types>::value;
 
-  size_t id_;
+  size_t id;
   union {
-    bool bool_;
-    double double_;
-    Object* object_;
+    bool bool_val;
+    double double_val;
+    Object* object_val;
   };
 };
 
