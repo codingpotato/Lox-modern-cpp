@@ -2,8 +2,8 @@
 
 #include "scanner.h"
 
-inline void check_tokens(const lox::token_vector& tokens,
-                         const lox::token_vector& expected) noexcept {
+inline void check_tokens(const lox::Token_vector& tokens,
+                         const lox::Token_vector& expected) noexcept {
   (void)(expected);
   CHECK_EQ(tokens.size(), expected.size());
   for (std::size_t i = 0; i < tokens.size(); ++i) {
@@ -14,24 +14,24 @@ inline void check_tokens(const lox::token_vector& tokens,
 }
 
 TEST_CASE("scan") {
-  lox::scanner scanner{"print 1 + 2;"};
+  lox::Scanner scanner{"print 1 + 2;"};
   auto tokens = scanner.scan();
-  std::vector<lox::token> expected = {
-      {lox::token::k_print, "print", 1}, {lox::token::number, "1", 1},
-      {lox::token::plus, "+", 1},        {lox::token::number, "2", 1},
-      {lox::token::semicolon, ";", 1},   {lox::token::eof, "", 1},
+  std::vector<lox::Token> expected = {
+      {lox::Token::k_print, "print", 1}, {lox::Token::number, "1", 1},
+      {lox::Token::plus, "+", 1},        {lox::Token::number, "2", 1},
+      {lox::Token::semicolon, ";", 1},   {lox::Token::eof, "", 1},
   };
   check_tokens(tokens, expected);
 }
 
 TEST_CASE("scan if statement") {
-  lox::scanner scanner{"if (true) print 1;"};
+  lox::Scanner scanner{"if (true) print 1;"};
   auto tokens = scanner.scan();
-  std::vector<lox::token> expected = {
-      {lox::token::k_if, "if", 1},       {lox::token::left_paren, "(", 1},
-      {lox::token::k_true, "true", 1},   {lox::token::right_paren, ")", 1},
-      {lox::token::k_print, "print", 1}, {lox::token::number, "1", 1},
-      {lox::token::semicolon, ";", 1},   {lox::token::eof, "", 1},
+  std::vector<lox::Token> expected = {
+      {lox::Token::k_if, "if", 1},       {lox::Token::left_paren, "(", 1},
+      {lox::Token::k_true, "true", 1},   {lox::Token::right_paren, ")", 1},
+      {lox::Token::k_print, "print", 1}, {lox::Token::number, "1", 1},
+      {lox::Token::semicolon, ";", 1},   {lox::Token::eof, "", 1},
   };
   check_tokens(tokens, expected);
 }

@@ -361,7 +361,7 @@ inline void VM::handle(const instruction::Return&) {
 template <bool Debug>
 inline void VM::interpret(std::string source) noexcept {
   try {
-    lox::scanner scanner{std::move(source)};
+    lox::Scanner scanner{std::move(source)};
     auto func = compiler.compile(scanner.scan());
     auto closure = heap.make_object<Closure>(func);
     stack.push(closure);

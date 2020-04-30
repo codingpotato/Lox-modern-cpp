@@ -9,8 +9,8 @@
 
 namespace lox {
 
-struct token {
-  enum type_t {
+struct Token {
+  enum Type {
     left_paren,
     right_paren,
     left_brace,
@@ -59,16 +59,16 @@ struct token {
     eof
   };
 
-  token(type_t type, int line) noexcept : type{type}, line{line} {}
-  token(type_t type, std::string lexeme, int line) noexcept
+  Token(Type type, int line) noexcept : type{type}, line{line} {}
+  Token(Type type, std::string lexeme, int line) noexcept
       : type{type}, lexeme{std::move(lexeme)}, line{line} {}
 
-  type_t type;
+  Type type;
   std::string lexeme;
   int line;
 };
 
-using token_vector = std::vector<token>;
+using Token_vector = std::vector<Token>;
 
 inline bool is_alpha(char ch) noexcept {
   return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch == '_';
@@ -76,16 +76,16 @@ inline bool is_alpha(char ch) noexcept {
 
 inline bool is_digit(char ch) noexcept { return ch >= '0' && ch <= '9'; }
 
-struct scanner {
-  explicit scanner(std::string source) noexcept : source{std::move(source)} {}
+struct Scanner {
+  explicit Scanner(std::string source) noexcept : source{std::move(source)} {}
 
-  token_vector scan() noexcept {
+  Token_vector scan() noexcept {
     current = source.cbegin();
     line = 1;
-    token_vector tokens;
+    Token_vector tokens;
     while (true) {
       tokens.emplace_back(scan_token());
-      if (tokens.back().type == token::eof) {
+      if (tokens.back().type == Token::eof) {
         break;
       }
     }
@@ -93,11 +93,11 @@ struct scanner {
   }
 
  private:
-  token scan_token() {
+  Token scan_token() {
     skip_white_space();
     start = current;
     if (is_at_end()) {
-      return make_token(token::eof);
+      return make_token(Token::eof);
     }
     const auto ch = advance();
     if (is_alpha(ch)) {
@@ -108,49 +108,49 @@ struct scanner {
     }
     switch (ch) {
       case '(':
-        return make_token(token::left_paren);
+        return make_token(Token::left_paren);
       case ')':
-        return make_token(token::right_paren);
+        return make_token(Token::right_paren);
       case '{':
-        return make_token(token::left_brace);
+        return make_token(Token::left_brace);
       case '}':
-        return make_token(token::right_brace);
+        return make_token(Token::right_brace);
       case ';':
-        return make_token(token::semicolon);
+        return make_token(Token::semicolon);
       case ',':
-        return make_token(token::comma);
+        return make_token(Token::comma);
       case '.':
-        return make_token(token::dot);
+        return make_token(Token::dot);
       case '-':
-        return make_token(token::minus);
+        return make_token(Token::minus);
       case '+':
-        return make_token(token::plus);
+        return make_token(Token::plus);
       case '/':
-        return make_token(token::slash);
+        return make_token(Token::slash);
       case '*':
-        return make_token(token::star);
+        return make_token(Token::star);
       case '!':
-        return make_token(match('=') ? token::bang_equal : token::bang);
+        return make_token(match('=') ? Token::bang_equal : Token::bang);
       case '=':
-        return make_token(match('=') ? token::equal_equal : token::equal);
+        return make_token(match('=') ? Token::equal_equal : Token::equal);
       case '<':
-        return make_token(match('=') ? token::less_equal : token::less);
+        return make_token(match('=') ? Token::less_equal : Token::less);
       case '>':
-        return make_token(match('=') ? token::greater_equal : token::greater);
+        return make_token(match('=') ? Token::greater_equal : Token::greater);
       case '"':
         return string();
     }
     throw scan_error{"Unexpected character."};
   }
 
-  token identifier() noexcept {
+  Token identifier() noexcept {
     while (!is_at_end() && (is_alpha(peek()) || is_digit(peek()))) {
       advance();
     }
     return make_token(identifier_type());
   }
 
-  token number() noexcept {
+  Token number() noexcept {
     while (!is_at_end() && is_digit(peek())) {
       advance();
     }
@@ -160,10 +160,10 @@ struct scanner {
         advance();
       }
     }
-    return make_token(token::number);
+    return make_token(Token::number);
   }
 
-  token string() {
+  Token string() {
     while (!is_at_end() && peek() != '"') {
       if (peek() == '\n') {
         ++line;
@@ -172,13 +172,13 @@ struct scanner {
     }
     if (!is_at_end()) {
       advance();
-      return make_token(token::string);
+      return make_token(Token::string);
     }
     throw scan_error{"Unterminated string."};
   }
 
-  token make_token(token::type_t type) const noexcept {
-    if (type == token::string) {
+  Token make_token(Token::Type type) const noexcept {
+    if (type == Token::string) {
       ENSURES(std::distance(start, current) >= 1);
       return {
           type, {start + 1, start + std::distance(start, current) - 1}, line};
@@ -244,65 +244,65 @@ struct scanner {
     }
   }
 
-  token::type_t check_keyword(int index, const std::string& rest,
-                              token::type_t type) const noexcept {
+  Token::Type check_keyword(int index, const std::string& rest,
+                            Token::Type type) const noexcept {
     auto first = start + index;
     auto last = start + index + rest.size();
     if (current == last &&
         std::equal(first, last, rest.cbegin(), rest.cend())) {
       return type;
     }
-    return token::identifier;
+    return Token::identifier;
   }
 
-  token::type_t identifier_type() const noexcept {
+  Token::Type identifier_type() const noexcept {
     switch (*start) {
       case 'a':
-        return check_keyword(1, "nd", token::k_and);
+        return check_keyword(1, "nd", Token::k_and);
       case 'c':
-        return check_keyword(1, "lass", token::k_class);
+        return check_keyword(1, "lass", Token::k_class);
       case 'e':
-        return check_keyword(1, "lse", token::k_else);
+        return check_keyword(1, "lse", Token::k_else);
       case 'f':
         if (std::distance(start, source.cend()) > 1) {
           switch (*(start + 1)) {
             case 'a':
-              return check_keyword(2, "lse", token::k_false);
+              return check_keyword(2, "lse", Token::k_false);
             case 'o':
-              return check_keyword(2, "r", token::k_for);
+              return check_keyword(2, "r", Token::k_for);
             case 'u':
-              return check_keyword(2, "n", token::k_func);
+              return check_keyword(2, "n", Token::k_func);
           }
         }
         break;
       case 'i':
-        return check_keyword(1, "f", token::k_if);
+        return check_keyword(1, "f", Token::k_if);
       case 'n':
-        return check_keyword(1, "il", token::k_nil);
+        return check_keyword(1, "il", Token::k_nil);
       case 'o':
-        return check_keyword(1, "r", token::k_or);
+        return check_keyword(1, "r", Token::k_or);
       case 'p':
-        return check_keyword(1, "rint", token::k_print);
+        return check_keyword(1, "rint", Token::k_print);
       case 'r':
-        return check_keyword(1, "eturn", token::k_return);
+        return check_keyword(1, "eturn", Token::k_return);
       case 's':
-        return check_keyword(1, "uper", token::k_super);
+        return check_keyword(1, "uper", Token::k_super);
       case 't':
         if (std::distance(start, source.cend()) > 1) {
           switch (*(start + 1)) {
             case 'h':
-              return check_keyword(2, "is", token::k_this);
+              return check_keyword(2, "is", Token::k_this);
             case 'r':
-              return check_keyword(2, "ue", token::k_true);
+              return check_keyword(2, "ue", Token::k_true);
           }
         }
         break;
       case 'v':
-        return check_keyword(1, "ar", token::k_var);
+        return check_keyword(1, "ar", Token::k_var);
       case 'w':
-        return check_keyword(1, "hile", token::k_while);
+        return check_keyword(1, "hile", Token::k_while);
     }
-    return token::identifier;
+    return Token::identifier;
   }
 
   std::string source;

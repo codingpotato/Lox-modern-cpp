@@ -14,12 +14,12 @@ using Bytecode_vector = std::vector<Bytecode>;
 namespace instruction {
 
 struct Base {
-  Base(const Bytecode* code) noexcept : code_{code} {}
+  Base(const Bytecode* code) noexcept : code{code} {}
 
-  const Bytecode* get_code() const noexcept { return code_; }
+  const Bytecode* get_code() const noexcept { return code; }
 
  protected:
-  const Bytecode* code_;
+  const Bytecode* code;
 };
 
 struct Simple_instruction : Base {
@@ -37,7 +37,7 @@ struct Byte_instruction : Base {
     code.push_back(operand);
     return size - sizeof(Bytecode);
   }
-  size_t operand() const noexcept { return code_[index_operad]; }
+  size_t operand() const noexcept { return code[index_operad]; }
 
   static constexpr size_t size = sizeof(Bytecode) + sizeof(Bytecode);
 };
@@ -66,7 +66,7 @@ struct Jump_instruction : Base {
   }
 
   size_t operand() const noexcept {
-    return (code_[index_operad_high_byte] << 8) | code_[index_operand_low_byte];
+    return (code[index_operad_high_byte] << 8) | code[index_operand_low_byte];
   }
 
   static constexpr size_t size = sizeof(Bytecode) + sizeof(Bytecode) * 2;
@@ -104,9 +104,7 @@ struct Closure_instruction : Constant_instruction {
     return size + upvalues.size() * 2;
   }
 
-  const Bytecode* upvalues() const noexcept {
-    return &code_[index_of_upvalues];
-  }
+  const Bytecode* upvalues() const noexcept { return &code[index_of_upvalues]; }
 };
 
 // clang-format off

@@ -13,7 +13,7 @@
 
 inline std::string compile(std::string source,
                            const std::string& message) noexcept {
-  lox::scanner scanner{std::move(source)};
+  lox::Scanner scanner{std::move(source)};
   lox::Heap<> heap;
   lox::Compiler compiler{heap};
   auto func = compiler.compile(scanner.scan());

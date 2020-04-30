@@ -13,7 +13,7 @@ namespace lox {
 
 namespace precedence {
 
-enum precedence {
+enum Type {
   p_none,
   p_assignment,  // =
   p_or,          // or
@@ -28,51 +28,51 @@ enum precedence {
 };
 
 template <typename Compiler>
-using parse_func = void (Compiler::*)(bool can_assign);
+using Parse_func = void (Compiler::*)(bool can_assign);
 
 template <typename Compiler>
-struct rule {
-  parse_func<Compiler> prefix;
-  parse_func<Compiler> infix;
-  precedence prec;
+struct Rule {
+  Parse_func<Compiler> prefix;
+  Parse_func<Compiler> infix;
+  Type precedence;
 };
 
 template <typename Compiler>
-using rules =
-    std::array<rule<Compiler>, static_cast<std::size_t>(token::eof) + 1>;
+using Rules =
+    std::array<Rule<Compiler>, static_cast<std::size_t>(Token::eof) + 1>;
 
 template <typename Compiler>
 struct rules_generator {
-  static constexpr rules<Compiler> make_rules() noexcept {
+  static constexpr Rules<Compiler> make_rules() noexcept {
     struct element {
-      token::type_t type;
-      rule<Compiler> rule_of_type;
+      Token::Type type;
+      Rule<Compiler> rule_of_type;
     };
     constexpr element elements[] = {
-        {token::left_paren,
+        {Token::left_paren,
          {&Compiler::grouping, &Compiler::parse_call, p_call}},
-        {token::minus, {&Compiler::unary, &Compiler::binary, p_term}},
-        {token::plus, {nullptr, &Compiler::binary, p_term}},
-        {token::slash, {nullptr, &Compiler::binary, p_factor}},
-        {token::star, {nullptr, &Compiler::binary, p_factor}},
-        {token::bang, {&Compiler::unary, nullptr, p_none}},
-        {token::bang_equal, {nullptr, &Compiler::binary, p_equality}},
-        {token::equal, {nullptr, &Compiler::binary, p_comparison}},
-        {token::equal_equal, {nullptr, &Compiler::binary, p_comparison}},
-        {token::greater, {nullptr, &Compiler::binary, p_comparison}},
-        {token::greater_equal, {nullptr, &Compiler::binary, p_comparison}},
-        {token::less, {nullptr, &Compiler::binary, p_comparison}},
-        {token::less_equal, {nullptr, &Compiler::binary, p_comparison}},
-        {token::identifier, {&Compiler::add_variable, nullptr, p_none}},
-        {token::number, {&Compiler::add_number_constant, nullptr, p_none}},
-        {token::string, {&Compiler::add_string_constant, nullptr, p_none}},
-        {token::k_and, {nullptr, &Compiler::parse_and, p_and}},
-        {token::k_or, {nullptr, &Compiler::parse_or, p_or}},
-        {token::k_false, {&Compiler::add_literal, nullptr, p_none}},
-        {token::k_nil, {&Compiler::add_literal, nullptr, p_none}},
-        {token::k_true, {&Compiler::add_literal, nullptr, p_none}},
+        {Token::minus, {&Compiler::unary, &Compiler::binary, p_term}},
+        {Token::plus, {nullptr, &Compiler::binary, p_term}},
+        {Token::slash, {nullptr, &Compiler::binary, p_factor}},
+        {Token::star, {nullptr, &Compiler::binary, p_factor}},
+        {Token::bang, {&Compiler::unary, nullptr, p_none}},
+        {Token::bang_equal, {nullptr, &Compiler::binary, p_equality}},
+        {Token::equal, {nullptr, &Compiler::binary, p_comparison}},
+        {Token::equal_equal, {nullptr, &Compiler::binary, p_comparison}},
+        {Token::greater, {nullptr, &Compiler::binary, p_comparison}},
+        {Token::greater_equal, {nullptr, &Compiler::binary, p_comparison}},
+        {Token::less, {nullptr, &Compiler::binary, p_comparison}},
+        {Token::less_equal, {nullptr, &Compiler::binary, p_comparison}},
+        {Token::identifier, {&Compiler::add_variable, nullptr, p_none}},
+        {Token::number, {&Compiler::add_number_constant, nullptr, p_none}},
+        {Token::string, {&Compiler::add_string_constant, nullptr, p_none}},
+        {Token::k_and, {nullptr, &Compiler::parse_and, p_and}},
+        {Token::k_or, {nullptr, &Compiler::parse_or, p_or}},
+        {Token::k_false, {&Compiler::add_literal, nullptr, p_none}},
+        {Token::k_nil, {&Compiler::add_literal, nullptr, p_none}},
+        {Token::k_true, {&Compiler::add_literal, nullptr, p_none}},
     };
-    rules<Compiler> rules{};
+    Rules<Compiler> rules{};
     for (auto it = std::cbegin(elements); it != std::end(elements); ++it) {
       rules[static_cast<std::size_t>(it->type)] = it->rule_of_type;
     }
@@ -95,23 +95,23 @@ class Compiler {
     }
   }
 
-  Function* compile(token_vector tokens) noexcept {
+  Function* compile(Token_vector ts) noexcept {
     make_func_frame("", 0);
-    tokens_ = std::move(tokens);
-    current_ = tokens_.cbegin();
-    while (!match(token::eof)) {
+    tokens = std::move(ts);
+    current = tokens.cbegin();
+    while (!match(Token::eof)) {
       parse_declaration();
     }
     add_return_instruction();
     EXPECTS(func_frames.size() == 1)
-    return current_func_frame().func;
+    return currentfunc_frame().func;
   }
 
  private:
   void parse_declaration() {
-    if (match(token::k_func)) {
+    if (match(Token::k_func)) {
       parse_func_declaration();
-    } else if (match(token::k_var)) {
+    } else if (match(Token::k_var)) {
       parse_var_declaration();
     } else {
       parse_statement();
@@ -120,34 +120,34 @@ class Compiler {
 
   void parse_func_declaration() {
     const auto name = parse_variable("Expect function name.");
-    current_func_frame().latest_local_initialized();
+    currentfunc_frame().latest_local_initialized();
     parse_function();
-    current_func_frame().define_variable(name, previous_->line);
+    currentfunc_frame().define_variable(name, previous->line);
   }
 
   void parse_function() {
-    make_func_frame(previous_->lexeme, 1);
-    current_func_frame().begin_scope();
-    consume(token::left_paren, "Expect '(' after function name.");
-    if (!check(token::right_paren)) {
+    make_func_frame(previous->lexeme, 1);
+    currentfunc_frame().begin_scope();
+    consume(Token::left_paren, "Expect '(' after function name.");
+    if (!check(Token::right_paren)) {
       do {
         auto parameter = parse_variable("Expect parameter name.");
-        current_func_frame().define_variable(parameter, previous_->line);
-        current_func_frame().func->inc_arity();
-        if (current_func_frame().func->get_arity() > max_function_parameters) {
+        currentfunc_frame().define_variable(parameter, previous->line);
+        currentfunc_frame().func->inc_arity();
+        if (currentfunc_frame().func->get_arity() > max_function_parameters) {
           throw runtime_error{"Cannot have more than " +
                               std::to_string(max_function_parameters) +
                               " parameters."};
         }
-      } while (match(token::comma));
+      } while (match(Token::comma));
     }
-    consume(token::right_paren, "Expect ')' after function name.");
+    consume(Token::right_paren, "Expect ')' after function name.");
 
-    consume(token::left_brace, "Expect '{' after function name.");
+    consume(Token::left_brace, "Expect '{' after function name.");
     parse_block();
     add_return_instruction();
-    auto func = current_func_frame().func;
-    auto upvalues = std::move(current_func_frame().upvalues);
+    auto func = currentfunc_frame().func;
+    auto upvalues = std::move(currentfunc_frame().upvalues);
     pop_func_frame();
     add<instruction::Closure>(add_constant(func), upvalues);
   }
@@ -159,184 +159,184 @@ class Compiler {
 
   void parse_var_declaration() {
     const auto name = parse_variable("Expect variable name.");
-    if (match(token::equal)) {
+    if (match(Token::equal)) {
       parse_expression();
     } else {
       add<instruction::Nil>();
     }
-    consume(token::semicolon, "Expect ';' after variable declaration.");
-    current_func_frame().define_variable(name, previous_->line);
+    consume(Token::semicolon, "Expect ';' after variable declaration.");
+    currentfunc_frame().define_variable(name, previous->line);
   }
 
   size_t parse_variable(const std::string& message) {
-    consume(token::identifier, message);
-    current_func_frame().declare_variable(previous_->lexeme);
-    if (current_func_frame().scope_depth > 0) {
+    consume(Token::identifier, message);
+    currentfunc_frame().declare_variable(previous->lexeme);
+    if (currentfunc_frame().scope_depth > 0) {
       return 0;
     }
-    return add_constant(heap->make_string(previous_->lexeme));
+    return add_constant(heap->make_string(previous->lexeme));
   }
 
   void parse_statement() {
-    if (match(token::k_print)) {
+    if (match(Token::k_print)) {
       parse_print();
-    } else if (match(token::k_for)) {
+    } else if (match(Token::k_for)) {
       parse_for();
-    } else if (match(token::k_if)) {
+    } else if (match(Token::k_if)) {
       parse_if();
-    } else if (match(token::k_return)) {
+    } else if (match(Token::k_return)) {
       parse_return();
-    } else if (match(token::k_while)) {
+    } else if (match(Token::k_while)) {
       parse_while();
-    } else if (match(token::left_brace)) {
-      current_func_frame().begin_scope();
+    } else if (match(Token::left_brace)) {
+      currentfunc_frame().begin_scope();
       parse_block();
-      current_func_frame().end_scope(previous_->line);
+      currentfunc_frame().end_scope(previous->line);
     } else {
       expression_statement();
     }
   }
 
   void parse_for() {
-    current_func_frame().begin_scope();
-    consume(token::left_paren, "Expect '(' after 'for'.");
-    if (match(token::semicolon)) {
-    } else if (match(token::k_var)) {
+    currentfunc_frame().begin_scope();
+    consume(Token::left_paren, "Expect '(' after 'for'.");
+    if (match(Token::semicolon)) {
+    } else if (match(Token::k_var)) {
       parse_var_declaration();
     } else {
       expression_statement();
     }
-    auto loop_start = current_func_frame().current_code_position();
+    auto loop_start = currentfunc_frame().currentcode_position();
     auto exit_jump = -1;
-    if (!match(token::semicolon)) {
+    if (!match(Token::semicolon)) {
       parse_expression();
-      consume(token::semicolon, "Expect ';' after loop condition.");
+      consume(Token::semicolon, "Expect ';' after loop condition.");
       exit_jump = add<instruction::Jump_if_false>(0);
       add<instruction::Pop>();
     }
 
-    if (!match(token::right_paren)) {
+    if (!match(Token::right_paren)) {
       auto body_jump = add<instruction::Jump>(0);
-      auto increament_start = current_func_frame().current_code_position();
+      auto increament_start = currentfunc_frame().currentcode_position();
       parse_expression();
       add<instruction::Pop>();
-      consume(token::right_paren, "Expect ')' after for clauses.");
+      consume(Token::right_paren, "Expect ')' after for clauses.");
       add<instruction::Loop>(
-          current_func_frame().loop_distance_from(loop_start));
+          currentfunc_frame().loop_distance_from(loop_start));
       loop_start = increament_start;
-      current_func_frame().patch_jump(body_jump);
+      currentfunc_frame().patch_jump(body_jump);
     }
 
     parse_statement();
-    add<instruction::Loop>(current_func_frame().loop_distance_from(loop_start));
+    add<instruction::Loop>(currentfunc_frame().loop_distance_from(loop_start));
     if (exit_jump != -1) {
-      current_func_frame().patch_jump(exit_jump);
+      currentfunc_frame().patch_jump(exit_jump);
       add<instruction::Pop>();
     }
-    current_func_frame().end_scope(previous_->line);
+    currentfunc_frame().end_scope(previous->line);
   }
 
   void parse_if() {
-    consume(token::left_paren, "Expect '(' after 'if'.");
+    consume(Token::left_paren, "Expect '(' after 'if'.");
     parse_expression();
-    consume(token::right_paren, "Expect ')' after condition.");
+    consume(Token::right_paren, "Expect ')' after condition.");
 
     const auto then_jump_index = add<instruction::Jump_if_false>(0);
     add<instruction::Pop>();
     parse_statement();
     const auto else_jump_index = add<instruction::Jump>(0);
 
-    current_func_frame().patch_jump(then_jump_index);
+    currentfunc_frame().patch_jump(then_jump_index);
     add<instruction::Pop>();
-    if (match(token::k_else)) {
+    if (match(Token::k_else)) {
       parse_statement();
     }
-    current_func_frame().patch_jump(else_jump_index);
+    currentfunc_frame().patch_jump(else_jump_index);
   }
 
   void parse_return() {
-    if (!current_func_frame().func->get_name()) {
+    if (!currentfunc_frame().func->get_name()) {
       throw compile_error{"Cannot return from top-level code."};
     }
-    if (match(token::semicolon)) {
+    if (match(Token::semicolon)) {
       add_return_instruction();
     } else {
       parse_expression();
-      consume(token::semicolon, "Expect ';' after return value.");
+      consume(Token::semicolon, "Expect ';' after return value.");
       add<instruction::Return>();
     }
   }
 
   void parse_while() {
-    const auto loop_start = current_func_frame().current_code_position();
-    consume(token::left_paren, "Expect '(' after 'while'.");
+    const auto loop_start = currentfunc_frame().currentcode_position();
+    consume(Token::left_paren, "Expect '(' after 'while'.");
     parse_expression();
-    consume(token::right_paren, "Expect ')' after condition.");
+    consume(Token::right_paren, "Expect ')' after condition.");
     const auto exit_jump_index = add<instruction::Jump_if_false>(0);
     add<instruction::Pop>();
     parse_statement();
-    add<instruction::Loop>(current_func_frame().loop_distance_from(loop_start));
-    current_func_frame().patch_jump(exit_jump_index);
+    add<instruction::Loop>(currentfunc_frame().loop_distance_from(loop_start));
+    currentfunc_frame().patch_jump(exit_jump_index);
     add<instruction::Pop>();
   }
 
   void parse_block() {
-    while (!check(token::right_brace) && !check(token::eof)) {
+    while (!check(Token::right_brace) && !check(Token::eof)) {
       parse_declaration();
     }
-    consume(token::right_brace, "Expect '}' after block.");
+    consume(Token::right_brace, "Expect '}' after block.");
   }
 
   void parse_print() {
     parse_expression();
-    consume(token::semicolon, "Expect ';' after value.");
+    consume(Token::semicolon, "Expect ';' after value.");
     add<instruction::Print>();
   }
 
   void expression_statement() {
     parse_expression();
-    consume(token::semicolon, "Expect ';' after value.");
+    consume(Token::semicolon, "Expect ';' after value.");
     add<instruction::Pop>();
   }
 
   void parse_expression() { parse_precedence(precedence::p_assignment); }
 
   void binary(bool) {
-    const auto op_type = previous_->type;
+    const auto op_type = previous->type;
     parse_precedence(
-        static_cast<precedence::precedence>(p_rules_[op_type].prec + 1));
+        static_cast<precedence::Type>(p_rules_[op_type].precedence + 1));
     switch (op_type) {
-      case token::bang_equal:
+      case Token::bang_equal:
         add<instruction::Equal>();
         add<instruction::Not>();
         break;
-      case token::equal_equal:
+      case Token::equal_equal:
         add<instruction::Equal>();
         break;
-      case token::greater:
+      case Token::greater:
         add<instruction::Greater>();
         break;
-      case token::greater_equal:
+      case Token::greater_equal:
         add<instruction::Less>();
         add<instruction::Not>();
         break;
-      case token::less:
+      case Token::less:
         add<instruction::Less>();
         break;
-      case token::less_equal:
+      case Token::less_equal:
         add<instruction::Greater>();
         add<instruction::Not>();
         break;
-      case token::plus:
+      case Token::plus:
         add<instruction::Add>();
         break;
-      case token::minus:
+      case Token::minus:
         add<instruction::Subtract>();
         break;
-      case token::star:
+      case Token::star:
         add<instruction::Multiply>();
         break;
-      case token::slash:
+      case Token::slash:
         add<instruction::Divide>();
         break;
       default:
@@ -348,7 +348,7 @@ class Compiler {
 
   size_t argument_list() {
     size_t count = 0;
-    if (!check(token::right_paren)) {
+    if (!check(Token::right_paren)) {
       do {
         parse_expression();
         if (count == max_function_parameters) {
@@ -357,25 +357,25 @@ class Compiler {
                               " arguments."};
         }
         ++count;
-      } while (match(token::comma));
+      } while (match(Token::comma));
     }
-    consume(token::right_paren, "Expect ')' after arguments.");
+    consume(Token::right_paren, "Expect ')' after arguments.");
     return count;
   }
 
   void grouping(bool) {
     parse_expression();
-    consume(token::right_paren, "Expect ')' after expression.");
+    consume(Token::right_paren, "Expect ')' after expression.");
   }
 
   void unary(bool) {
-    auto op_type = previous_->type;
+    auto op_type = previous->type;
     parse_precedence(precedence::p_unary);
     switch (op_type) {
-      case token::bang:
+      case Token::bang:
         add<instruction::Not>();
         break;
-      case token::minus:
+      case Token::minus:
         add<instruction::Negate>();
         break;
       default:
@@ -385,17 +385,17 @@ class Compiler {
 
   void add_variable(bool can_assign) {
     enum Type { local, upvalue, global } type = local;
-    auto index = current_func_frame().resolve_local(previous_->lexeme);
+    auto index = currentfunc_frame().resolve_local(previous->lexeme);
     if (index == -1) {
-      index = resolve_upvalue(previous_->lexeme, func_frames.size() - 1);
+      index = resolve_upvalue(previous->lexeme, func_frames.size() - 1);
       if (index != -1) {
         type = upvalue;
       } else {
         type = global;
-        index = add_constant(heap->make_string(previous_->lexeme));
+        index = add_constant(heap->make_string(previous->lexeme));
       }
     }
-    if (can_assign && match(token::equal)) {
+    if (can_assign && match(Token::equal)) {
       parse_expression();
       switch (type) {
         case local:
@@ -439,22 +439,22 @@ class Compiler {
   }
 
   void add_number_constant(bool) {
-    add<instruction::Constant>(add_constant(std::stod(previous_->lexeme)));
+    add<instruction::Constant>(add_constant(std::stod(previous->lexeme)));
   }
   void add_string_constant(bool) {
     add<instruction::Constant>(
-        add_constant(heap->make_string(previous_->lexeme)));
+        add_constant(heap->make_string(previous->lexeme)));
   }
 
   void add_literal(bool) {
-    switch (previous_->type) {
-      case token::k_nil:
+    switch (previous->type) {
+      case Token::k_nil:
         add<instruction::Nil>();
         break;
-      case token::k_false:
+      case Token::k_false:
         add<instruction::False>();
         break;
-      case token::k_true:
+      case Token::k_true:
         add<instruction::True>();
         break;
       default:
@@ -466,55 +466,55 @@ class Compiler {
     const auto end_jump_index = add<instruction::Jump_if_false>(0);
     add<instruction::Pop>();
     parse_precedence(precedence::p_and);
-    current_func_frame().patch_jump(end_jump_index);
+    currentfunc_frame().patch_jump(end_jump_index);
   }
 
   void parse_or(bool) {
     const auto else_jump_index = add<instruction::Jump_if_false>(0);
     const auto end_jump_index = add<instruction::Jump>(0);
-    current_func_frame().patch_jump(else_jump_index);
+    currentfunc_frame().patch_jump(else_jump_index);
     add<instruction::Pop>();
     parse_precedence(precedence::p_or);
-    current_func_frame().patch_jump(end_jump_index);
+    currentfunc_frame().patch_jump(end_jump_index);
   }
 
-  void parse_precedence(precedence::precedence prec) {
+  void parse_precedence(precedence::Type precedence) {
     advance();
-    const auto& prefix = p_rules_[previous_->type].prefix;
+    const auto& prefix = p_rules_[previous->type].prefix;
     if (prefix == nullptr) {
       throw compile_error{"Expect expression."};
       return;
     }
-    const auto can_assign = prec <= precedence::p_assignment;
+    const auto can_assign = precedence <= precedence::p_assignment;
     (this->*prefix)(can_assign);
-    while (static_cast<int>(prec) <
-           static_cast<int>(p_rules_[current_->type].prec)) {
+    while (static_cast<int>(precedence) <
+           static_cast<int>(p_rules_[current->type].precedence)) {
       advance();
-      auto infix = p_rules_[previous_->type].infix;
+      auto infix = p_rules_[previous->type].infix;
       (this->*infix)(can_assign);
     }
 
-    if (can_assign && match(token::equal)) {
+    if (can_assign && match(Token::equal)) {
       throw compile_error{"Invalid assignment target."};
     }
   }
 
   void advance() noexcept {
-    previous_ = current_;
-    ++current_;
+    previous = current;
+    ++current;
   }
 
-  void consume(token::type_t type, const std::string& message) {
-    if (current_->type == type) {
+  void consume(Token::Type type, const std::string& message) {
+    if (current->type == type) {
       advance();
     } else {
       throw compile_error{message};
     }
   }
 
-  bool check(token::type_t type) noexcept { return current_->type == type; }
+  bool check(Token::Type type) noexcept { return current->type == type; }
 
-  bool match(token::type_t type) noexcept {
+  bool match(Token::Type type) noexcept {
     if (check(type)) {
       advance();
       return true;
@@ -524,21 +524,21 @@ class Compiler {
 
   template <typename Instruction>
   size_t add() noexcept {
-    return current_func_frame().add<Instruction>(previous_->line);
+    return currentfunc_frame().add<Instruction>(previous->line);
   }
   template <typename Instruction>
   size_t add(size_t operand) noexcept {
-    return current_func_frame().add<Instruction>(operand, previous_->line);
+    return currentfunc_frame().add<Instruction>(operand, previous->line);
   }
   template <typename Instruction>
   size_t add(size_t operand,
              const typename Instruction::Upvalue_vector& upvalues) noexcept {
-    return current_func_frame().add<Instruction>(operand, upvalues,
-                                                 previous_->line);
+    return currentfunc_frame().add<Instruction>(operand, upvalues,
+                                                previous->line);
   }
   template <typename... Args>
   size_t add_constant(Args&&... args) noexcept {
-    return current_func_frame().add_constant(std::forward<Args>(args)...);
+    return currentfunc_frame().add_constant(std::forward<Args>(args)...);
   }
 
   struct local {
@@ -622,13 +622,13 @@ class Compiler {
     void patch_jump(size_t jump) noexcept {
       func->get_chunk().patch_jump(
           jump,
-          current_code_position() - jump - instruction::Jump_instruction::size);
+          currentcode_position() - jump - instruction::Jump_instruction::size);
     }
-    size_t current_code_position() const noexcept {
+    size_t currentcode_position() const noexcept {
       return func->get_chunk().get_code().size();
     }
     size_t loop_distance_from(size_t pos) const noexcept {
-      return current_code_position() + instruction::Loop::size - pos;
+      return currentcode_position() + instruction::Loop::size - pos;
     }
 
     void push_local() noexcept { locals.emplace_back("", 0); }
@@ -675,19 +675,19 @@ class Compiler {
     }
   }
   void pop_func_frame() noexcept { func_frames.pop_back(); }
-  func_frame& current_func_frame() noexcept { return func_frames.back(); }
+  func_frame& currentfunc_frame() noexcept { return func_frames.back(); }
 
   friend precedence::rules_generator<Compiler>;
-  constexpr static precedence::rules<Compiler> p_rules_ =
+  constexpr static precedence::Rules<Compiler> p_rules_ =
       precedence::rules_generator<Compiler>::make_rules();
 
   constexpr static int max_function_parameters = 255;
 
   Heap<>* heap;
   func_frame_vector func_frames;
-  token_vector tokens_;
-  token_vector::const_iterator current_;
-  token_vector::const_iterator previous_;
+  Token_vector tokens;
+  Token_vector::const_iterator current;
+  Token_vector::const_iterator previous;
 };
 
 }  // namespace lox
