@@ -1,25 +1,35 @@
 #include "chunk.h"
 
 #include <string>
+#include <utility>
 
+#include "contract.h"
+#include "instruction.h"
 #include "object.h"
+#include "value.h"
 
 namespace lox {
 
-std::string upvalues_to_string(const Chunk& chunk, size_t& pos,
-                               const instruction::Closure& closure) noexcept {
+std::pair<std::string, size_t> upvalues_to_string(
+    const instruction::Closure& closure,
+    const Value_vector& constants) noexcept {
+  const auto code = closure.get_code();
+  ENSURES(closure.operand() < constants.size());
+  const auto value = constants[closure.operand()];
+  ENSURES(value.is_object() && value.as_object()->is<Function>());
+  const auto func = value.as_object()->template as<Function>();
+
   std::string result;
-  auto start = pos + instruction::Closure::size;
-  auto value = chunk.constants()[closure.operand()];
-  auto func = value.as_object()->template as<Function>();
+  size_t upvalue_pos = closure.size;
   for (size_t i = 0; i < func->upvalue_count; ++i) {
-    auto is_local = chunk.code()[start++];
-    auto index = chunk.code()[start++];
+    ENSURES(index < code.size());
+    const auto is_local = code[upvalue_pos++];
+    ENSURES(index < code.size());
+    const auto index = code[upvalue_pos++];
     result += std::string{" "} + (is_local ? "local" : "upvalue") + " " +
               std::to_string(index) + ",";
   }
-  pos += func->upvalue_count;
-  return result;
+  return {result, upvalue_pos};
 }
 
 }  // namespace lox

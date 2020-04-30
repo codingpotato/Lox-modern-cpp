@@ -87,7 +87,7 @@ struct GC : Heap<>::Delegate {
     } else if (object->is<Function>()) {
       auto func = object->as<Function>();
       mark_object(func->get_name());
-      for (auto value : func->get_chunk().constants()) {
+      for (auto value : func->get_chunk().get_constants()) {
         mark_value(value);
       }
     } else if (object->is<Upvalue>()) {

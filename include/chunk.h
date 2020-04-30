@@ -3,6 +3,7 @@
 
 #include <iomanip>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "instruction.h"
@@ -10,33 +11,32 @@
 
 namespace lox {
 
-using Line_vector = std::vector<size_t>;
-using Value_vector = std::vector<Value>;
-
 struct Chunk {
-  const Bytecode_vector& code() const noexcept { return code_; }
-  const Line_vector& lines() const noexcept { return lines_; }
-  const Value_vector& constants() const noexcept { return constants_; }
+  using Line_vector = std::vector<size_t>;
+
+  const Bytecode_vector& get_code() const noexcept { return code; }
+  const Line_vector& get_lines() const noexcept { return lines; }
+  const Value_vector& get_constants() const noexcept { return constants; }
 
   template <typename Instruction>
   size_t add(size_t line) noexcept {
-    auto pos = code_.size();
-    code_.push_back(Instruction::opcode);
-    lines_.push_back(line);
-    EXPECTS(code_.size() == lines_.size());
+    const auto pos = code.size();
+    code.push_back(Instruction::opcode);
+    lines.push_back(line);
+    EXPECTS(code.size() == lines.size());
     return pos;
   }
 
   template <typename Instruction>
   size_t add(size_t operand, size_t line) noexcept {
-    auto pos = code_.size();
-    code_.push_back(Instruction::opcode);
-    lines_.push_back(line);
-    const auto bytecode_count = Instruction::add_operand(code_, operand);
+    const auto pos = code.size();
+    code.push_back(Instruction::opcode);
+    lines.push_back(line);
+    const auto bytecode_count = Instruction::add_operand(code, operand);
     for (size_t i = 0; i < bytecode_count; ++i) {
-      lines_.push_back(line);
+      lines.push_back(line);
     }
-    EXPECTS(code_.size() == lines_.size());
+    EXPECTS(code.size() == lines.size());
     return pos;
   }
 
@@ -44,45 +44,47 @@ struct Chunk {
   size_t add(size_t operand,
              const typename Instruction::Upvalue_vector& upvalues,
              size_t line) noexcept {
-    auto pos = code_.size();
-    code_.push_back(Instruction::opcode);
-    lines_.push_back(line);
+    const auto pos = code.size();
+    code.push_back(Instruction::opcode);
+    lines.push_back(line);
     const auto bytecode_count =
-        Instruction::add_operand(code_, operand, upvalues);
+        Instruction::add_operand(code, operand, upvalues);
     for (size_t i = 0; i < bytecode_count; ++i) {
-      lines_.push_back(line);
+      lines.push_back(line);
     }
-    EXPECTS(code_.size() == lines_.size());
+    EXPECTS(code.size() == lines.size());
     return pos;
   }
 
   template <typename... Args>
   size_t add_constant(Args&&... args) noexcept {
-    constants_.emplace_back(std::forward<Args>(args)...);
-    return constants_.size() - 1;
+    constants.emplace_back(std::forward<Args>(args)...);
+    return constants.size() - 1;
   }
 
   void patch_jump(size_t pos, size_t operand) noexcept {
-    instruction::Jump_instruction::set_operand(&code_[pos], operand);
+    ENSURES(pos < code.size());
+    instruction::Jump_instruction::set_operand(&code[pos], operand);
   }
 
  private:
-  Bytecode_vector code_;
-  Line_vector lines_;
-  Value_vector constants_;
+  Bytecode_vector code;
+  Line_vector lines;
+  Value_vector constants;
 };
 
-std::string upvalues_to_string(const Chunk& chunk, size_t& pos,
-                               const instruction::Closure& closure) noexcept;
+std::pair<std::string, size_t> upvalues_to_string(
+    const instruction::Closure& closure,
+    const Value_vector& constants) noexcept;
 
 template <typename Instruction>
-inline std::string to_string(const Chunk& chunk, size_t& pos,
-                             const Instruction& instr) noexcept {
+inline std::pair<std::string, size_t> to_string(
+    const Instruction& instr, size_t pos,
+    const Value_vector& constants) noexcept {
   std::ostringstream oss;
   oss << instr.name;
   if constexpr (std::is_base_of_v<instruction::Constant_instruction,
                                   Instruction>) {
-    const auto& constants = chunk.constants();
     ENSURES(instr.operand() < constants.size());
     oss << " " << to_string(constants[instr.operand()], true);
   } else if constexpr (Instruction::size > sizeof(Bytecode)) {
@@ -95,15 +97,17 @@ inline std::string to_string(const Chunk& chunk, size_t& pos,
     }
   }
   if constexpr (std::is_same_v<Instruction, instruction::Closure>) {
-    oss << "        upvalues: " + upvalues_to_string(chunk, pos, instr);
+    auto [string, size] = upvalues_to_string(instr, constants);
+    oss << "        upvalues: " + string;
+    return {oss.str(), size};
   }
-  return oss.str();
+  return {oss.str(), instr.size};
 }
 
 inline std::string to_string(const Chunk& chunk, const std::string& name,
                              int level = 0) noexcept {
-  const auto& code = chunk.code();
-  const auto& lines = chunk.lines();
+  const auto& code = chunk.get_code();
+  const auto& lines = chunk.get_lines();
   std::string result = level == 0 ? "== " + name + " ==\n" : name + "\n";
   size_t pos = 0;
   while (pos < code.size()) {
@@ -117,8 +121,9 @@ inline std::string to_string(const Chunk& chunk, const std::string& name,
     }
     result += oss.str();
     instruction::visit(code, pos, [&](const auto& instr) {
-      result += to_string(chunk, pos, instr);
-      pos += instr.size;
+      auto [string, size] = to_string(instr, pos, chunk.get_constants());
+      result += string;
+      pos += size;
     });
     result += "\n";
   }

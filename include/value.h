@@ -36,9 +36,12 @@ struct Value {
     ENSURES(is_double());
     return double_;
   }
-  Object* as_object() noexcept {
+  const Object* as_object() const noexcept {
     ENSURES(is_object());
     return reinterpret_cast<Object*>(bits_ & ~(tag_object | qnan));
+  }
+  Object* as_object() noexcept {
+    return const_cast<Object*>(std::as_const(*this).as_object());
   }
 
  private:
@@ -109,6 +112,7 @@ struct Value {
 }  // namespace tagged_union
 
 using Value = optimized::Value;
+using Value_vector = std::vector<Value>;
 
 inline constexpr bool operator==(Value lhs, Value rhs) noexcept {
   if (lhs.is_nil() && rhs.is_nil()) {

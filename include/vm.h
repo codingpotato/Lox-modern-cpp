@@ -49,8 +49,8 @@ class VM {
   struct Executor {
     void copy_from(const Closure* closure) noexcept {
       const auto& chunk = closure->get_func()->get_chunk();
-      code = &chunk.code();
-      constants = &chunk.constants();
+      code = &chunk.get_code();
+      constants = &chunk.get_constants();
       ip = 0;
     }
 
@@ -381,7 +381,7 @@ inline void VM::interpret(std::string source) noexcept {
       auto& frame = call_frames.peek(distance);
       auto func = frame.closure->get_func();
       *out << "[line " << std::setfill('0') << std::setw(4)
-           << func->get_chunk().lines()[frame.ip] << " in] "
+           << func->get_chunk().get_lines()[frame.ip] << " in] "
            << func->to_string() << "\n";
     }
   }

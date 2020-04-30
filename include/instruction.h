@@ -16,6 +16,8 @@ namespace instruction {
 struct Base {
   Base(const Bytecode* code) noexcept : code_{code} {}
 
+  const Bytecode* get_code() const noexcept { return code_; }
+
  protected:
   const Bytecode* code_;
 };

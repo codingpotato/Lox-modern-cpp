@@ -625,7 +625,7 @@ class Compiler {
           current_code_position() - jump - instruction::Jump_instruction::size);
     }
     size_t current_code_position() const noexcept {
-      return func->get_chunk().code().size();
+      return func->get_chunk().get_code().size();
     }
     size_t loop_distance_from(size_t pos) const noexcept {
       return current_code_position() + instruction::Loop::size - pos;
