@@ -5,7 +5,7 @@
 #include "chunk.h"
 #include "instruction.h"
 
-TEST_CASE("add instructions") {
+TEST_CASE("chunk: add instructions") {
   lox::Chunk chunk;
   auto constant = chunk.add_constant(1.2);
   chunk.add<lox::instruction::Constant>(constant, 123);
