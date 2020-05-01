@@ -2,6 +2,8 @@
 #define LOX_VALUE_H
 
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "contract.h"
 #include "exception.h"
