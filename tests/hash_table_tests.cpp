@@ -7,11 +7,10 @@
 #include "object.h"
 #include "value.h"
 
-TEST_CASE("hash table insert") {
+TEST_CASE("hash table set") {
   lox::Hash_table table;
   lox::String string{"test string"};
-  table.insert(&string, lox::Value{1.0});
-  CHECK_EQ(table.size(), 1);
+  table.set(&string, lox::Value{1.0});
   CHECK(table.contains(&string));
   CHECK(table.get_if(&string) != nullptr);
   CHECK_EQ(table.get_if(&string)->as_double(), 1);
@@ -25,9 +24,8 @@ TEST_CASE("hash table insert multiple entries") {
         std::make_unique<lox::String>("test string " + std::to_string(i)));
   }
   for (std::size_t i = 0; i < strings.size(); ++i) {
-    table.insert(strings[i].get(), lox::Value{static_cast<double>(i)});
+    table.set(strings[i].get(), lox::Value{static_cast<double>(i)});
   }
-  CHECK_EQ(table.size(), strings.size());
   for (std::size_t i = 0; i < strings.size(); ++i) {
     CHECK(table.get_if(strings[i].get()) != nullptr);
     CHECK_EQ(table.get_if(strings[i].get())->as_double(), i);
@@ -42,12 +40,11 @@ TEST_CASE("hash table erase") {
         std::make_unique<lox::String>("test string " + std::to_string(i)));
   }
   for (std::size_t i = 0; i < strings.size(); ++i) {
-    table.insert(strings[i].get(), lox::Value{static_cast<double>(i)});
+    table.set(strings[i].get(), lox::Value{static_cast<double>(i)});
   }
   for (std::size_t i = 0; i < strings.size(); i += 2) {
     table.erase(strings[i].get());
   }
-  CHECK_EQ(table.size(), strings.size() / 2);
   for (std::size_t i = 1; i < strings.size(); i += 2) {
     CHECK(table.get_if(strings[i].get()) != nullptr);
     CHECK_EQ(table.get_if(strings[i].get())->as_double(), i);

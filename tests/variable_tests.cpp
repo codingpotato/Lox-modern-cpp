@@ -3,45 +3,45 @@
 #include "helper.h"
 
 TEST_CASE("variable: collide with paramter") {
-  std::string source{R"(
+  const std::string source{R"(
 fun foo(a) {
   var a;
 }
 )"};
-  std::string expected{
+  const std::string expected{
       R"([line 3] Error at 'a': Variable with this name already declared in this scope.
 )"};
   CHECK_EQ(run(source), expected);
 }
 
 TEST_CASE("variable: duplicate local") {
-  std::string source{R"(
+  const std::string source{R"(
 {
   var a = "value";
   var a = "other";
 }
 )"};
-  std::string expected{
+  const std::string expected{
       R"([line 4] Error at 'a': Variable with this name already declared in this scope.
 )"};
   CHECK_EQ(run(source), expected);
 }
 
 TEST_CASE("variable: duplicate parameter") {
-  std::string source{R"(
+  const std::string source{R"(
 fun foo(arg,
         arg) {
   "body";
 }
 )"};
-  std::string expected{
+  const std::string expected{
       R"([line 3] Error at 'arg': Variable with this name already declared in this scope.
 )"};
   CHECK_EQ(run(source), expected);
 }
 
 TEST_CASE("variable: early bound") {
-  std::string source{R"(
+  const std::string source{R"(
 var a = "outer";
 {
   fun foo() {
@@ -52,14 +52,14 @@ var a = "outer";
   foo();
 }
 )"};
-  std::string expected{R"(outer
+  const std::string expected{R"(outer
 outer
 )"};
   CHECK_EQ(run(source), expected);
 }
 
 TEST_CASE("variable: in middle of block") {
-  std::string source{R"(
+  const std::string source{R"(
 {
   var a = "a";
   print a;
@@ -71,10 +71,35 @@ TEST_CASE("variable: in middle of block") {
   print d;
 }
 )"};
-  std::string expected{R"(a
+  const std::string expected{R"(a
 a b
 a c
 a b d
+)"};
+  CHECK_EQ(run(source), expected);
+}
+
+TEST_CASE("variable: in nested block") {
+  const std::string source{R"(
+{
+  var a = "outer";
+  {
+    print a;
+  }
+}
+)"};
+  const std::string expected{R"(outer
+)"};
+  CHECK_EQ(run(source), expected);
+}
+
+TEST_CASE("variable: redeclare global") {
+  const std::string source{R"(
+var a = "21";
+var a;
+print a;
+)"};
+  const std::string expected{R"(nil
 )"};
   CHECK_EQ(run(source), expected);
 }

@@ -17,20 +17,6 @@ struct Hash_table {
     }
   }
 
-  int size() const noexcept { return count; }
-
-  bool insert(String* key, Value v) noexcept {
-    adjust_capacity();
-    auto dest = find_entry(entries, capacity_mask, key);
-    if (dest->key == nullptr) {
-      dest->key = key;
-      dest->value = v;
-      ++count;
-      return true;
-    }
-    return false;
-  }
-
   bool contains(const String* key) const noexcept {
     auto dest = find_entry(entries, capacity_mask, key);
     return dest->key != nullptr;
@@ -41,13 +27,16 @@ struct Hash_table {
     return dest->key ? &dest->value : nullptr;
   }
 
-  bool set(const String* key, Value v) const noexcept {
-    auto dest = find_entry(entries, capacity_mask, key);
-    if (dest->key) {
-      dest->value = v;
-      return true;
+  bool set(String* key, Value v) noexcept {
+    adjust_capacity();
+    const auto dest = find_entry(entries, capacity_mask, key);
+    bool is_new_key = dest->key == nullptr;
+    if (is_new_key && dest->value.is_nil()) {
+      ++count;
     }
-    return false;
+    dest->key = key;
+    dest->value = v;
+    return is_new_key;
   }
 
   bool erase(const String* key) noexcept {
@@ -57,7 +46,7 @@ struct Hash_table {
     auto dest = find_entry(entries, capacity_mask, key);
     if (dest->key != nullptr) {
       dest->key = nullptr;
-      --count;
+      dest->value = true;
       return true;
     }
     return false;
@@ -94,7 +83,7 @@ struct Hash_table {
       auto dest = &entries[i];
       if (dest->key && pred(dest->key, dest->value)) {
         dest->key = nullptr;
-        --count;
+        dest->value = true;
       }
     }
   }
@@ -143,11 +132,13 @@ struct Hash_table {
           capacity < initial_capacity ? initial_capacity : capacity * 2);
       const auto new_capacity = capacity_of(new_capacity_mask);
       auto new_entries = new Entry[new_capacity];
+      count = 0;
       for (int index = 0; index <= capacity_mask; ++index) {
         auto current = &entries[index];
         if (current->key != nullptr) {
           auto dest = find_entry(new_entries, new_capacity_mask, current->key);
           *dest = *current;
+          ++count;
         }
       }
       if (entries) {

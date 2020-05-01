@@ -39,7 +39,7 @@ class Heap {
     auto string = strings.find_string(str);
     if (!string) {
       string = make_object<String>(str);
-      strings.insert(string, true);
+      strings.set(string, true);
     }
     return string;
   }

@@ -14,7 +14,7 @@ static void hash_table(benchmark::State& state) {
           std::make_unique<lox::String>("test string " + std::to_string(i)));
     }
     for (std::size_t i = 0; i < strings.size(); ++i) {
-      table.insert(strings[i].get(), lox::Value{static_cast<double>(i)});
+      table.set(strings[i].get(), lox::Value{static_cast<double>(i)});
     }
     double result = 0;
     for (std::size_t i = 0; i < strings.size(); ++i) {
