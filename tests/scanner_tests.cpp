@@ -1,5 +1,6 @@
 #include <doctest/doctest.h>
 
+#include "helper.h"
 #include "scanner.h"
 
 inline void check_tokens(const lox::Token_vector& tokens,
@@ -13,7 +14,7 @@ inline void check_tokens(const lox::Token_vector& tokens,
   }
 }
 
-TEST_CASE("scan") {
+TEST_CASE("scanner: print") {
   lox::Scanner scanner{"print 1 + 2;"};
   auto tokens = scanner.scan();
   std::vector<lox::Token> expected = {
@@ -24,7 +25,7 @@ TEST_CASE("scan") {
   check_tokens(tokens, expected);
 }
 
-TEST_CASE("scan if statement") {
+TEST_CASE("scanner: if") {
   lox::Scanner scanner{"if (true) print 1;"};
   auto tokens = scanner.scan();
   std::vector<lox::Token> expected = {
@@ -34,4 +35,19 @@ TEST_CASE("scan if statement") {
       {lox::Token::semicolon, ";", 1},   {lox::Token::eof, "", 1},
   };
   check_tokens(tokens, expected);
+}
+
+TEST_CASE("scanner: empty") {
+  const std::string source{""};
+  const std::string expected{""};
+  REQUIRE_EQ(run(source), expected);
+}
+
+TEST_CASE("scanner: unexpected character") {
+  const std::string source{R"(
+foo(a | b);
+)"};
+  const std::string expected{R"([line 2] Error at '|': Unexpected character.
+)"};
+  REQUIRE_EQ(run(source), expected);
 }

@@ -43,7 +43,8 @@ TEST_CASE("assignment: grouping") {
 var a = "a";
 (a) = "value";
 )"};
-  const std::string expected{R"([line 3] at '=': Invalid assignment target.
+  const std::string expected{
+      R"([line 3] Error at '=': Invalid assignment target.
 )"};
   CHECK_EQ(run(source), expected);
 }
@@ -54,7 +55,8 @@ var a = "a";
 var b = "b";
 a + b = "value";
 )"};
-  const std::string expected{R"([line 4] at '=': Invalid assignment target.
+  const std::string expected{
+      R"([line 4] Error at '=': Invalid assignment target.
 )"};
   CHECK_EQ(run(source), expected);
 }
@@ -82,7 +84,8 @@ TEST_CASE("assignment: prefix operator") {
 var a = "a";
 !a = "value";
 )"};
-  const std::string expected{R"([line 3] at '=': Invalid assignment target.
+  const std::string expected{
+      R"([line 3] Error at '=': Invalid assignment target.
 )"};
   CHECK_EQ(run(source), expected);
 }
@@ -105,7 +108,7 @@ TEST_CASE("assignment: undefined") {
 unknown = "what";
 )"};
   const std::string expected{R"(Undefined variable: 'unknown'.
-[line 0002 in] <script>
+[line 0002] in <script>
 )"};
   CHECK_EQ(run(source), expected);
 }

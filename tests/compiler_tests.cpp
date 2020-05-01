@@ -77,7 +77,7 @@ fun add(a, b) { return a + b; }
 print add(1, 2);
 )"};
   const std::string expected = R"(== function call ==
-0000    2 OP_Closure <function: add>
+0000    2 OP_Closure <func: add>
     0000    2 OP_Get_local 1
     0002    | OP_Get_local 2
     0004    | OP_Add
@@ -103,10 +103,10 @@ fun fib(n) {
   if (n < 2) return n;
   return fib(n - 2) + fib(n - 1);
 }
-print fib(30);
+print fib(8);
 )"};
   const std::string expected = R"(== fib ==
-0000    5 OP_Closure <function: fib>
+0000    5 OP_Closure <func: fib>
     0000    3 OP_Get_local 1
     0002    | OP_Constant 2.000000
     0004    | OP_Less
@@ -133,7 +133,7 @@ print fib(30);
         upvalues: 
 0002    | OP_Define_global fib
 0004    6 OP_Get_global fib
-0006    | OP_Constant 30.000000
+0006    | OP_Constant 8.000000
 0008    | OP_Call 1
 0010    | OP_Print
 0011    7 OP_Nil

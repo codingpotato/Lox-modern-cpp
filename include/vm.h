@@ -65,10 +65,10 @@ class VM {
   };
 
   template <typename Func>
-  void binary(Func&& func) {
+  void binary(Func func) {
     auto right = stack.pop();
     auto left = stack.pop();
-    stack.push(std::forward<Func>(func)(left, right));
+    stack.push(func(left, right));
   }
 
   Call_frame& top_frame() noexcept {
@@ -204,46 +204,55 @@ inline void VM::handle(const instruction::Set_upvalue& set_upvalue) {
 
 template <>
 inline void VM::handle(const instruction::Equal&) {
-  binary([](const auto& left, const auto& right) { return left == right; });
+  binary([](Value left, Value right) { return left == right; });
 }
 
 template <>
 inline void VM::handle(const instruction::Greater&) {
-  binary([](const auto& left, const auto& right) { return left > right; });
+  binary([](Value left, Value right) { return left > right; });
 }
 
 template <>
 inline void VM::handle(const instruction::Less&) {
-  binary([](const auto& left, const auto& right) { return left < right; });
+  binary([](Value left, Value right) { return left < right; });
 }
 
 template <>
 inline void VM::handle(const instruction::Add&) {
-  binary([](const auto& left, const auto& right) { return left + right; });
+  binary([&](const Value& left, const Value& right) {
+    if (left.is_double() && right.is_double()) {
+      return left + right;
+    } else if (left.is_object() && right.is_object()) {
+      auto obj_left = left.as_object();
+      auto obj_right = right.as_object();
+      if (obj_left->is<String>() && obj_right->is<String>()) {
+        auto result = obj_left->as<String>()->get_string() +
+                      obj_right->as<String>()->get_string();
+        return Value{heap.make_string(result)};
+      }
+    }
+    throw Runtime_error{"Operands must be two numbers or two strings."};
+  });
 }
 
 template <>
 inline void VM::handle(const instruction::Subtract&) {
-  binary([](const auto& left, const auto& right) { return left - right; });
+  binary([](Value left, Value right) { return left - right; });
 }
 
 template <>
 inline void VM::handle(const instruction::Multiply&) {
-  binary([](const auto& left, const auto& right) { return left * right; });
+  binary([](Value left, Value right) { return left * right; });
 }
 
 template <>
 inline void VM::handle(const instruction::Divide&) {
-  binary([](const auto& left, const auto& right) { return left / right; });
+  binary([](Value left, Value right) { return left / right; });
 }
 
 template <>
 inline void VM::handle(const instruction::Not&) {
-  if (stack.peek().is_bool()) {
-    stack.push(!stack.pop().as_bool());
-  } else {
-    throw Runtime_error{"Operand must be a boolean value."};
-  }
+  stack.push(is_falsey(stack.pop()));
 }
 
 template <>
@@ -269,12 +278,8 @@ inline void VM::handle(const instruction::Jump& jump) {
 template <>
 inline void VM::handle(const instruction::Jump_if_false& jump_if_false) {
   ENSURES(!stack.empty());
-  if (const auto value = stack.peek(); value.is_bool()) {
-    if (!value.as_bool()) {
-      executor.ip += jump_if_false.operand();
-    }
-  } else {
-    throw Runtime_error{"Operand must be a boolean value."};
+  if (is_falsey(stack.peek())) {
+    executor.ip += jump_if_false.operand();
   }
 }
 
@@ -383,7 +388,7 @@ inline void VM::interpret(std::string source) noexcept {
       auto& frame = call_frames.peek(distance);
       auto func = frame.closure->get_func();
       *out << "[line " << std::setfill('0') << std::setw(4)
-           << func->get_chunk().get_lines()[frame.ip] << " in] "
+           << func->get_chunk().get_lines()[frame.ip] << "] in "
            << func->to_string() << "\n";
     }
   } catch (Exception& e) {

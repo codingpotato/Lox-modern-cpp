@@ -79,7 +79,7 @@ inline bool is_digit(char ch) noexcept { return ch >= '0' && ch <= '9'; }
 struct Scanner {
   explicit Scanner(std::string source) noexcept : source{std::move(source)} {}
 
-  Token_vector scan() noexcept {
+  Token_vector scan() {
     current = source.cbegin();
     line = 1;
     Token_vector tokens;
@@ -307,9 +307,9 @@ struct Scanner {
 
   Compile_error make_compiler_error(const std::string& message) const {
     std::string string = {start, current};
-    return Compile_error{"[line " + std::to_string(line) + "] " +
-                         (!string.empty() ? "at '" + string + "' " : "") +
-                         message};
+    return Compile_error{
+        "[line " + std::to_string(line) + "] " +
+        (!string.empty() ? "Error at '" + string + "': " : "") + message};
   }
 
   std::string source;

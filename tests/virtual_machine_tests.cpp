@@ -177,7 +177,7 @@ fun areWeHavingItYet() {
 }
 print areWeHavingItYet;
 )"};
-  std::string expected{R"(<function: areWeHavingItYet>
+  std::string expected{R"(<func: areWeHavingItYet>
 )"};
   CHECK_EQ(run(source), expected);
 }
@@ -204,23 +204,10 @@ fun c() {
 a();
 )"};
   const std::string expected{R"(Expected 0 arguments but got 2.
-[line 0005 in] <function: c>
-[line 0003 in] <function: b>
-[line 0002 in] <function: a>
-[line 0007 in] <script>
-)"};
-  CHECK_EQ(run(source), expected);
-}
-
-TEST_CASE("fib") {
-  const std::string source{R"(
-fun fib(n) {
-  if (n < 2) return n;
-  return fib(n - 2) + fib(n - 1);
-}
-print fib(30);
-)"};
-  const std::string expected{R"(832040.000000
+[line 0005] in <func: c>
+[line 0003] in <func: b>
+[line 0002] in <func: a>
+[line 0007] in <script>
 )"};
   CHECK_EQ(run(source), expected);
 }

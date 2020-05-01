@@ -2,7 +2,7 @@
 
 #include "helper.h"
 
-TEST_CASE("assign to closure") {
+TEST_CASE("closure: assign to closure") {
   std::string source{R"(
 var f;
 var g;
@@ -32,7 +32,7 @@ after g
   CHECK_EQ(run(source), expected);
 }
 
-TEST_CASE("assign to shadowed later") {
+TEST_CASE("closure: assign to shadowed later") {
   std::string source{R"(
 var a = "global";
 {
@@ -51,7 +51,7 @@ assigned
   CHECK_EQ(run(source), expected);
 }
 
-TEST_CASE("close over function parameter") {
+TEST_CASE("closure: close over function parameter") {
   std::string source{R"(
 var f;
 fun foo(param) {
@@ -68,7 +68,7 @@ f();
   CHECK_EQ(run(source), expected);
 }
 
-TEST_CASE("close over later variable") {
+TEST_CASE("closure: close over later variable") {
   std::string source{R"(
 fun f() {
   var a = "a";
@@ -87,7 +87,7 @@ a
   CHECK_EQ(run(source), expected);
 }
 
-TEST_CASE("closed closure in function") {
+TEST_CASE("closure: closed closure in function") {
   std::string source{R"(
 var f;
 {
@@ -104,7 +104,7 @@ f();
   CHECK_EQ(run(source), expected);
 }
 
-TEST_CASE("nested closure") {
+TEST_CASE("closure: nested closure") {
   std::string source{R"(
 var f;
 fun f1() {
@@ -134,7 +134,7 @@ c
   CHECK_EQ(run(source), expected);
 }
 
-TEST_CASE("open closure in function") {
+TEST_CASE("closure: open closure in function") {
   std::string source{R"(
 {
   var local = "local";
@@ -149,7 +149,7 @@ TEST_CASE("open closure in function") {
   CHECK_EQ(run(source), expected);
 }
 
-TEST_CASE("reference closure multiple times") {
+TEST_CASE("closure: reference closure multiple times") {
   std::string source{R"(
 var f;
 {
@@ -168,7 +168,7 @@ a
   CHECK_EQ(run(source), expected);
 }
 
-TEST_CASE("reuse closure slot") {
+TEST_CASE("closure: reuse closure slot") {
   std::string source{R"(
 {
   var f;
@@ -188,7 +188,7 @@ TEST_CASE("reuse closure slot") {
   CHECK_EQ(run(source), expected);
 }
 
-TEST_CASE("shadow closure with local") {
+TEST_CASE("closure: shadow closure with local") {
   std::string source{R"(
 {
   var foo = "closure";
@@ -210,7 +210,7 @@ closure
   CHECK_EQ(run(source), expected);
 }
 
-TEST_CASE("unused closure") {
+TEST_CASE("closure: unused closure") {
   std::string source{R"(
 {
   var a = "a";
@@ -225,7 +225,7 @@ print "ok";
   CHECK_EQ(run(source), expected);
 }
 
-TEST_CASE("unused later closure") {
+TEST_CASE("closure: unused later closure") {
   std::string source{R"(
 var closure;
 {

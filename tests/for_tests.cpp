@@ -2,6 +2,76 @@
 
 #include "helper.h"
 
+TEST_CASE("for: closure in body") {
+  std::string source{R"(
+var f1;
+var f2;
+var f3;
+for (var i = 1; i < 4; i = i + 1) {
+  var j = i;
+  fun f() {
+    print i;
+    print j;
+  }
+  if (j == 1) f1 = f;
+  else if (j == 2) f2 = f;
+  else f3 = f;
+}
+f1();
+f2();
+f3();
+)"};
+  std::string expected{R"(4.000000
+1.000000
+4.000000
+2.000000
+4.000000
+3.000000
+)"};
+  CHECK_EQ(run(source), expected);
+}
+
+TEST_CASE("for: function in body") {
+  std::string source{R"(
+for (;;) fun foo() {}
+)"};
+  std::string expected{R"([line 2] Error at 'fun': Expect expression.
+)"};
+  CHECK_EQ(run(source), expected);
+}
+
+TEST_CASE("for: return closure") {
+  std::string source{R"(
+fun f() {
+  for (;;) {
+    var i = "i";
+    fun g() { print i; }
+    return g;
+  }
+}
+var h = f();
+h();
+)"};
+  std::string expected{R"(i
+)"};
+  CHECK_EQ(run(source), expected);
+}
+
+TEST_CASE("for: return inside") {
+  std::string source{R"(
+fun f() {
+  for (;;) {
+    var i = "i";
+    return i;
+  }
+}
+print f();
+)"};
+  std::string expected{R"(i
+)"};
+  CHECK_EQ(run(source), expected);
+}
+
 TEST_CASE("for: scope") {
   std::string source{R"(
 {
@@ -25,6 +95,33 @@ TEST_CASE("for: scope") {
 -1.000000
 after
 0.000000
+)"};
+  CHECK_EQ(run(source), expected);
+}
+
+TEST_CASE("for: statement condition") {
+  std::string source{R"(
+for (var a = 1; {}; a = a + 1) {}
+)"};
+  std::string expected{R"([line 2] Error at '{': Expect expression.
+)"};
+  CHECK_EQ(run(source), expected);
+}
+
+TEST_CASE("for: statement increment") {
+  std::string source{R"(
+for (var a = 1; a < 2; {}) {}
+)"};
+  std::string expected{R"([line 2] Error at '{': Expect expression.
+)"};
+  CHECK_EQ(run(source), expected);
+}
+
+TEST_CASE("for: statement initializer") {
+  std::string source{R"(
+for ({}; a < 2; a = a + 1) {}
+)"};
+  std::string expected{R"([line 2] Error at '{': Expect expression.
 )"};
   CHECK_EQ(run(source), expected);
 }
@@ -79,34 +176,11 @@ done
   CHECK_EQ(run(source), expected);
 }
 
-TEST_CASE("for: return inside") {
+TEST_CASE("for: var in body") {
   std::string source{R"(
-fun f() {
-  for (;;) {
-    var i = "i";
-    return i;
-  }
-}
-print f();
+for (;;) var foo;
 )"};
-  std::string expected{R"(i
-)"};
-  CHECK_EQ(run(source), expected);
-}
-
-TEST_CASE("for: return closure") {
-  std::string source{R"(
-fun f() {
-  for (;;) {
-    var i = "i";
-    fun g() { print i; }
-    return g;
-  }
-}
-var h = f();
-h();
-)"};
-  std::string expected{R"(i
+  std::string expected{R"([line 2] Error at 'var': Expect expression.
 )"};
   CHECK_EQ(run(source), expected);
 }

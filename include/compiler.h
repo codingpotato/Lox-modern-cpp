@@ -140,9 +140,9 @@ class Compiler {
         }
       } while (match(Token::comma));
     }
-    consume(Token::right_paren, "Expect ')' after function name.");
+    consume(Token::right_paren, "Expect ')' after parameters.");
 
-    consume(Token::left_brace, "Expect '{' after function name.");
+    consume(Token::left_brace, "Expect '{' before function body.");
     parse_block();
     add_return_instruction();
     auto func = current_func_frame().func;
@@ -506,7 +506,7 @@ class Compiler {
     if (current->type == type) {
       advance();
     } else {
-      throw make_compile_error(message);
+      throw make_compile_error(message, true);
     }
   }
 
@@ -564,7 +564,7 @@ class Compiler {
           }
           if (it->name == name) {
             throw make_compile_error(
-                "Variable '" + name + "' already declared in this scope.",
+                "Variable with this name already declared in this scope.",
                 token);
           }
         }
@@ -682,14 +682,16 @@ class Compiler {
   static Compile_error make_compile_error(const std::string& message,
                                           const Token& token) noexcept {
     return Compile_error{
-        "[line " + std::to_string(token.line) + "] at " +
+        "[line " + std::to_string(token.line) + "] Error at " +
         (token.type != Token::eof ? "'" + token.lexeme + "': " : "end") +
         message};
   }
 
-  Compile_error make_compile_error(const std::string& message) const noexcept {
-    ENSURES(previous != tokens.cend());
-    return make_compile_error(message, *previous);
+  Compile_error make_compile_error(const std::string& message,
+                                   bool from_current = false) const noexcept {
+    auto it = from_current ? current : previous;
+    ENSURES(it != tokens.cend());
+    return make_compile_error(message, *it);
   }
 
   friend precedence::rules_generator<Compiler>;

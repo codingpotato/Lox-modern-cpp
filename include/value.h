@@ -159,6 +159,10 @@ inline constexpr Value operator<(const Value& lhs, const Value& rhs) noexcept {
   return lhs.as_double() < rhs.as_double();
 }
 
+inline bool is_falsey(Value value) noexcept {
+  return value.is_nil() || (value.is_bool() && !value.as_bool());
+}
+
 std::string to_string(Value v, bool verbose = false) noexcept;
 
 }  // namespace lox

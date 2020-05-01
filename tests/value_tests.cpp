@@ -3,7 +3,6 @@
 #include <iostream>
 #include <vector>
 
-#include "performance.h"
 #include "value.h"
 
 TEST_CASE("nil value") { CHECK(lox::Value{}.is_nil()); }
