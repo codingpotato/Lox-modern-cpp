@@ -21,16 +21,9 @@ class Internal_error : public Exception {
   using Exception::Exception;
 };
 
-class Scan_error : public Exception {
+class Compile_error : public Exception {
  public:
-  Scan_error(std::string message, int line) noexcept
-      : Exception{"[line " + std::to_string(line) + "] " + std::move(message)} {
-  }
-};
-
-class Compile_error : public Scan_error {
- public:
-  using Scan_error::Scan_error;
+  using Exception::Exception;
 };
 
 class Runtime_error : public Exception {

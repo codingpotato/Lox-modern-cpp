@@ -134,10 +134,9 @@ class Compiler {
         current_func_frame().define_variable(parameter, previous->line);
         current_func_frame().func->inc_arity();
         if (current_func_frame().func->get_arity() > max_function_parameters) {
-          throw Compile_error{"Cannot have more than " +
-                                  std::to_string(max_function_parameters) +
-                                  " parameters.",
-                              previous->line};
+          throw make_compile_error("Cannot have more than " +
+                                   std::to_string(max_function_parameters) +
+                                   " parameters.");
         }
       } while (match(Token::comma));
     }
@@ -170,7 +169,7 @@ class Compiler {
 
   size_t parse_variable(const std::string& message) {
     consume(Token::identifier, message);
-    current_func_frame().declare_variable(previous->lexeme, previous->line);
+    current_func_frame().declare_variable(*previous);
     if (current_func_frame().scope_depth > 0) {
       return 0;
     }
@@ -256,7 +255,7 @@ class Compiler {
 
   void parse_return() {
     if (!current_func_frame().func->get_name()) {
-      throw Compile_error{"Cannot return from top-level code.", previous->line};
+      throw make_compile_error("Cannot return from top-level code.");
     }
     if (match(Token::semicolon)) {
       add_return_instruction();
@@ -352,10 +351,9 @@ class Compiler {
       do {
         parse_expression();
         if (count == max_function_parameters) {
-          throw Compile_error{"Cannot have more than " +
-                                  std::to_string(max_function_parameters) +
-                                  " arguments.",
-                              previous->line};
+          throw make_compile_error("Cannot have more than " +
+                                   std::to_string(max_function_parameters) +
+                                   " arguments.");
         }
         ++count;
       } while (match(Token::comma));
@@ -386,8 +384,7 @@ class Compiler {
 
   void add_variable(bool can_assign) {
     enum Type { local, upvalue, global } type = local;
-    auto index =
-        current_func_frame().resolve_local(previous->lexeme, previous->line);
+    auto index = current_func_frame().resolve_local(*previous);
     if (index == -1) {
       index = resolve_upvalue(previous->lexeme, func_frames.size() - 1);
       if (index != -1) {
@@ -427,17 +424,14 @@ class Compiler {
 
   int resolve_upvalue(const std::string& name, size_t frame_index) noexcept {
     if (frame_index > 0) {
-      if (auto local =
-              func_frames[frame_index - 1].resolve_local(name, previous->line);
+      if (auto local = func_frames[frame_index - 1].resolve_local(*previous);
           local != -1) {
         func_frames[frame_index - 1].locals[local].is_captured = true;
-        return func_frames[frame_index].add_upvalue(local, true,
-                                                    previous->line);
+        return func_frames[frame_index].add_upvalue(local, true, *previous);
       }
       if (auto upvalue = resolve_upvalue(name, frame_index - 1);
           upvalue != -1) {
-        return func_frames[frame_index].add_upvalue(upvalue, false,
-                                                    previous->line);
+        return func_frames[frame_index].add_upvalue(upvalue, false, *previous);
       }
     }
     return -1;
@@ -463,7 +457,7 @@ class Compiler {
         add<instruction::True>();
         break;
       default:
-        throw Compile_error{"Unknow literal.", previous->line};
+        throw make_compile_error("Unknow literal.");
     }
   }
 
@@ -487,8 +481,7 @@ class Compiler {
     advance();
     const auto prefix = p_rules_[previous->type].prefix;
     if (prefix == nullptr) {
-      throw Compile_error{"Expect expression.", previous->line};
-      return;
+      throw make_compile_error("Expect expression.");
     }
     const auto can_assign = precedence <= precedence::p_assignment;
     (this->*prefix)(can_assign);
@@ -500,7 +493,7 @@ class Compiler {
     }
 
     if (can_assign && match(Token::equal)) {
-      throw Compile_error{"Invalid assignment target.", previous->line};
+      throw make_compile_error("Invalid assignment target.");
     }
   }
 
@@ -513,7 +506,7 @@ class Compiler {
     if (current->type == type) {
       advance();
     } else {
-      throw Compile_error{message, previous->line};
+      throw make_compile_error(message);
     }
   }
 
@@ -562,16 +555,17 @@ class Compiler {
       locals.emplace_back("function object", depth);
     }
 
-    void declare_variable(const std::string& name, int line) {
+    void declare_variable(const Token& token) {
+      const auto& name = token.lexeme;
       if (scope_depth > 0) {
         for (auto it = locals.crbegin(); it != locals.crend(); ++it) {
           if (it->depth != -1 && it->depth < scope_depth) {
             break;
           }
           if (it->name == name) {
-            throw Compile_error{
+            throw make_compile_error(
                 "Variable '" + name + "' already declared in this scope.",
-                line};
+                token);
           }
         }
         locals.emplace_back(name, -1);
@@ -593,14 +587,15 @@ class Compiler {
       }
     }
 
-    int resolve_local(const std::string& name, int line) const {
+    int resolve_local(const Token& token) const {
+      const auto& name = token.lexeme;
       for (int i = locals.size() - 1; i >= 0; --i) {
         if (locals[i].name == name) {
           if (locals[i].depth != -1) {
             return i;
           }
-          throw Compile_error{
-              "Cannot read local variable in its own initializer.", line};
+          throw make_compile_error(
+              "Cannot read local variable in its own initializer.", token);
         }
       }
       return -1;
@@ -652,14 +647,15 @@ class Compiler {
       }
     }
 
-    size_t add_upvalue(size_t index, bool is_local, int line) {
+    size_t add_upvalue(size_t index, bool is_local, const Token& token) {
       for (size_t i = 0; i < upvalues.size(); ++i) {
         if (upvalues[i].index == index && upvalues[i].is_local == is_local) {
           return i;
         }
       }
       if (upvalues.size() == UINT8_MAX) {
-        throw Compile_error{"Too many closure variables in function.", line};
+        throw make_compile_error("Too many closure variables in function.",
+                                 token);
       }
       upvalues.emplace_back(index, is_local);
       func->upvalue_count = upvalues.size();
@@ -682,6 +678,19 @@ class Compiler {
   }
   void pop_func_frame() noexcept { func_frames.pop_back(); }
   func_frame& current_func_frame() noexcept { return func_frames.back(); }
+
+  static Compile_error make_compile_error(const std::string& message,
+                                          const Token& token) noexcept {
+    return Compile_error{
+        "[line " + std::to_string(token.line) + "] at " +
+        (token.type != Token::eof ? "'" + token.lexeme + "': " : "end") +
+        message};
+  }
+
+  Compile_error make_compile_error(const std::string& message) const noexcept {
+    ENSURES(previous != tokens.cend());
+    return make_compile_error(message, *previous);
+  }
 
   friend precedence::rules_generator<Compiler>;
   constexpr static precedence::Rules<Compiler> p_rules_ =

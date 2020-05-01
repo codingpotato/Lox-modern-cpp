@@ -38,8 +38,8 @@ class VM {
  private:
   struct Call_frame {
     Call_frame() noexcept {}
-    Call_frame(Closure* c, size_t bottom = 0) noexcept
-        : closure{c}, bottom_of_stack{bottom} {}
+    Call_frame(Closure* closure, size_t bottom = 0) noexcept
+        : closure{closure}, bottom_of_stack{bottom} {}
 
     Closure* closure = nullptr;
     size_t ip = 0;
@@ -94,11 +94,11 @@ class VM {
     executor.copy_from(closure);
   }
 
-  void throw_undefined_variable(const String* name) const {
+  static void throw_undefined_variable(const String* name) {
     throw Runtime_error{"Undefined variable: '" + name->get_string() + "'."};
   }
 
-  void throw_incorrect_argument_count(int arity, int argument_count) const {
+  static void throw_incorrect_argument_count(int arity, int argument_count) {
     throw Runtime_error{"Expected " + std::to_string(arity) +
                         " arguments but got " + std::to_string(argument_count) +
                         "."};
@@ -269,7 +269,7 @@ inline void VM::handle(const instruction::Jump& jump) {
 template <>
 inline void VM::handle(const instruction::Jump_if_false& jump_if_false) {
   ENSURES(!stack.empty());
-  if (auto value = stack.peek(); value.is_bool()) {
+  if (const auto value = stack.peek(); value.is_bool()) {
     if (!value.as_bool()) {
       executor.ip += jump_if_false.operand();
     }
@@ -286,25 +286,27 @@ inline void VM::handle(const instruction::Loop& loop) {
 template <>
 inline void VM::handle(const instruction::Call& call) {
   const auto argument_count = call.operand();
-  if (auto v = stack.peek(argument_count); v.is_object()) {
-    auto obj = v.as_object();
-    if (obj->is<Closure>()) {
-      auto closure = obj->as<Closure>();
-      auto arity = closure->get_func()->get_arity();
+  if (auto value = stack.peek(argument_count); value.is_object()) {
+    auto object = value.as_object();
+    if (object->is<Closure>()) {
+      auto closure = object->as<Closure>();
+      const auto arity = closure->get_func()->get_arity();
       if (argument_count == arity) {
         call_closure(closure, argument_count);
-      } else {
-        throw_incorrect_argument_count(arity, argument_count);
+        return;
       }
-    } else if (obj->is<Native_func>()) {
-      const auto func = obj->as<Native_func>();
+      throw_incorrect_argument_count(arity, argument_count);
+    } else if (object->is<Native_func>()) {
+      const auto func = object->as<Native_func>();
       const auto result = (*func)(
           argument_count,
           argument_count > 0 ? &stack[stack.size() - argument_count] : nullptr);
       stack.resize(stack.size() - argument_count - 1);
       stack.push(result);
+      return;
     }
   }
+  throw Runtime_error{"Can only call functions and classes."};
 }
 
 template <>

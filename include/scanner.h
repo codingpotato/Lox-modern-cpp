@@ -140,7 +140,7 @@ struct Scanner {
       case '"':
         return string();
     }
-    throw Scan_error{"Unexpected character.", line};
+    throw make_compiler_error("Unexpected character.");
   }
 
   Token identifier() noexcept {
@@ -174,7 +174,7 @@ struct Scanner {
       advance();
       return make_token(Token::string);
     }
-    throw Scan_error{"Unterminated string.", line};
+    throw make_compiler_error("Unterminated string.");
   }
 
   Token make_token(Token::Type type) const noexcept {
@@ -303,6 +303,13 @@ struct Scanner {
         return check_keyword(1, "hile", Token::k_while);
     }
     return Token::identifier;
+  }
+
+  Compile_error make_compiler_error(const std::string& message) const {
+    std::string string = {start, current};
+    return Compile_error{"[line " + std::to_string(line) + "] " +
+                         (!string.empty() ? "at '" + string + "' " : "") +
+                         message};
   }
 
   std::string source;
