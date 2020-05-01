@@ -94,6 +94,18 @@ class VM {
     executor.copy_from(closure);
   }
 
+  Value concatenate(Value left, Value right) noexcept {
+    if (left.is_object() && right.is_object()) {
+      auto obj_left = left.as_object();
+      auto obj_right = right.as_object();
+      if (obj_left->is<String>() && obj_right->is<String>()) {
+        return Value{heap.make_string(obj_left->as<String>()->get_string() +
+                                      obj_right->as<String>()->get_string())};
+      }
+    }
+    return {};
+  }
+
   static void throw_undefined_variable(const String* name) {
     throw Runtime_error{"Undefined variable: '" + name->get_string() + "'."};
   }
@@ -220,20 +232,19 @@ inline void VM::handle(const instruction::Less&) {
 
 template <>
 inline void VM::handle(const instruction::Add&) {
-  binary([&](const Value& left, const Value& right) {
-    if (left.is_double() && right.is_double()) {
-      return left + right;
-    } else if (left.is_object() && right.is_object()) {
-      auto obj_left = left.as_object();
-      auto obj_right = right.as_object();
-      if (obj_left->is<String>() && obj_right->is<String>()) {
-        auto result = obj_left->as<String>()->get_string() +
-                      obj_right->as<String>()->get_string();
-        return Value{heap.make_string(result)};
-      }
+  auto right = stack.pop();
+  auto left = stack.pop();
+  if (left.is_double() && right.is_double()) {
+    stack.push(left + right);
+    return;
+  } else {
+    auto result = concatenate(left, right);
+    if (!result.is_nil()) {
+      stack.push(result);
+      return;
     }
-    throw Runtime_error{"Operands must be two numbers or two strings."};
-  });
+  }
+  throw Runtime_error{"Operands must be two numbers or two strings."};
 }
 
 template <>

@@ -35,10 +35,10 @@ class Heap {
     return obj;
   }
 
-  String* make_string(const std::string& str) noexcept {
+  String* make_string(std::string str) noexcept {
     auto string = strings.find_string(str);
     if (!string) {
-      string = make_object<String>(str);
+      string = make_object<String>(std::move(str));
       strings.set(string, true);
     }
     return string;

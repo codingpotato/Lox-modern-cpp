@@ -28,7 +28,10 @@ struct Hash_table {
   }
 
   bool set(String* key, Value v) noexcept {
-    adjust_capacity();
+    constexpr auto max_load = 0.75;
+    if (count + 1 > capacity_of(capacity_mask) * max_load) {
+      adjust_capacity();
+    }
     const auto dest = find_entry(entries, capacity_mask, key);
     bool is_new_key = dest->key == nullptr;
     if (is_new_key && dest->value.is_nil()) {
@@ -124,29 +127,26 @@ struct Hash_table {
   }
 
   void adjust_capacity() noexcept {
-    constexpr auto max_load = 0.75;
-    if (count + 1 > capacity_of(capacity_mask) * max_load) {
-      constexpr int initial_capacity = 8;
-      const auto capacity = capacity_of(capacity_mask);
-      const auto new_capacity_mask = capacity_mask_of(
-          capacity < initial_capacity ? initial_capacity : capacity * 2);
-      const auto new_capacity = capacity_of(new_capacity_mask);
-      auto new_entries = new Entry[new_capacity];
-      count = 0;
-      for (int index = 0; index <= capacity_mask; ++index) {
-        auto current = &entries[index];
-        if (current->key != nullptr) {
-          auto dest = find_entry(new_entries, new_capacity_mask, current->key);
-          *dest = *current;
-          ++count;
-        }
+    constexpr int initial_capacity = 8;
+    const auto capacity = capacity_of(capacity_mask);
+    const auto new_capacity_mask = capacity_mask_of(
+        capacity < initial_capacity ? initial_capacity : capacity * 2);
+    const auto new_capacity = capacity_of(new_capacity_mask);
+    auto new_entries = new Entry[new_capacity];
+    count = 0;
+    for (int index = 0; index <= capacity_mask; ++index) {
+      auto current = &entries[index];
+      if (current->key != nullptr) {
+        auto dest = find_entry(new_entries, new_capacity_mask, current->key);
+        *dest = *current;
+        ++count;
       }
-      if (entries) {
-        delete[] entries;
-      }
-      entries = new_entries;
-      capacity_mask = new_capacity_mask;
     }
+    if (entries) {
+      delete[] entries;
+    }
+    entries = new_entries;
+    capacity_mask = new_capacity_mask;
   }
 
   Entry* entries;
