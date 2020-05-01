@@ -48,6 +48,17 @@ var a = "a";
   CHECK_EQ(run(source), expected);
 }
 
+TEST_CASE("assignment: infix operator") {
+  const std::string source{R"(
+var a = "a";
+var b = "b";
+a + b = "value";
+)"};
+  const std::string expected{R"([line 4] Invalid assignment target.
+)"};
+  CHECK_EQ(run(source), expected);
+}
+
 TEST_CASE("assignment: local") {
   const std::string source{R"({
     var a = "before";
@@ -66,6 +77,16 @@ arg
   CHECK_EQ(run(source), expected);
 }
 
+TEST_CASE("assignment: prefix operator") {
+  const std::string source{R"(
+var a = "a";
+!a = "value";
+)"};
+  const std::string expected{R"([line 3] Invalid assignment target.
+)"};
+  CHECK_EQ(run(source), expected);
+}
+
 TEST_CASE("assignment: syntax") {
   const std::string source{R"(
 var a = "before";
@@ -75,6 +96,16 @@ print c;
 )"};
   const std::string expected{R"(var
 var
+)"};
+  CHECK_EQ(run(source), expected);
+}
+
+TEST_CASE("assignment: undefined") {
+  const std::string source{R"(
+unknown = "what";
+)"};
+  const std::string expected{R"(Undefined variable: 'unknown'.
+[line 0002 in] <script>
 )"};
   CHECK_EQ(run(source), expected);
 }

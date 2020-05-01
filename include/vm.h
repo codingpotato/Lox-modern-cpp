@@ -95,7 +95,7 @@ class VM {
   }
 
   void throw_undefined_variable(const String* name) const {
-    throw Runtime_error{"Undefined variable: " + name->get_string()};
+    throw Runtime_error{"Undefined variable: '" + name->get_string() + "'."};
   }
 
   void throw_incorrect_argument_count(int arity, int argument_count) const {
