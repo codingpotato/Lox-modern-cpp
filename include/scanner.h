@@ -140,7 +140,7 @@ struct Scanner {
       case '"':
         return string();
     }
-    throw scan_error{"Unexpected character."};
+    throw Scan_error{"Unexpected character.", line};
   }
 
   Token identifier() noexcept {
@@ -174,7 +174,7 @@ struct Scanner {
       advance();
       return make_token(Token::string);
     }
-    throw scan_error{"Unterminated string."};
+    throw Scan_error{"Unterminated string.", line};
   }
 
   Token make_token(Token::Type type) const noexcept {

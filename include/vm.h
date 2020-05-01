@@ -95,11 +95,11 @@ class VM {
   }
 
   void throw_undefined_variable(const String* name) const {
-    throw runtime_error{"Undefined variable: " + name->get_string()};
+    throw Runtime_error{"Undefined variable: " + name->get_string()};
   }
 
   void throw_incorrect_argument_count(int arity, int argument_count) const {
-    throw runtime_error{"Expected " + std::to_string(arity) +
+    throw Runtime_error{"Expected " + std::to_string(arity) +
                         " arguments but got " + std::to_string(argument_count) +
                         "."};
   }
@@ -242,7 +242,7 @@ inline void VM::handle(const instruction::Not&) {
   if (stack.peek().is_bool()) {
     stack.push(!stack.pop().as_bool());
   } else {
-    throw runtime_error{"Operand must be a boolean value."};
+    throw Runtime_error{"Operand must be a boolean value."};
   }
 }
 
@@ -251,7 +251,7 @@ inline void VM::handle(const instruction::Negate&) {
   if (stack.peek().is_double()) {
     stack.push(-stack.pop().as_double());
   } else {
-    throw runtime_error{"Operand must be a number value."};
+    throw Runtime_error{"Operand must be a number value."};
   }
 }
 
@@ -274,7 +274,7 @@ inline void VM::handle(const instruction::Jump_if_false& jump_if_false) {
       executor.ip += jump_if_false.operand();
     }
   } else {
-    throw runtime_error{"Operand must be a boolean value."};
+    throw Runtime_error{"Operand must be a boolean value."};
   }
 }
 
@@ -375,8 +375,8 @@ inline void VM::interpret(std::string source) noexcept {
         *out << "\n";
       }
     }
-  } catch (exception& e) {
-    *out << e.what() << "\n";
+  } catch (Runtime_error& runtime_error) {
+    *out << runtime_error.what() << "\n";
     for (size_t distance = 0; distance < call_frames.size(); ++distance) {
       auto& frame = call_frames.peek(distance);
       auto func = frame.closure->get_func();
@@ -384,6 +384,8 @@ inline void VM::interpret(std::string source) noexcept {
            << func->get_chunk().get_lines()[frame.ip] << " in] "
            << func->to_string() << "\n";
     }
+  } catch (Exception& e) {
+    *out << e.what() << "\n";
   }
 }
 

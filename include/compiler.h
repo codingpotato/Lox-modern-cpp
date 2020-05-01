@@ -50,15 +50,14 @@ struct rules_generator {
     };
     constexpr element elements[] = {
         {Token::left_paren,
-         {&Compiler::grouping, &Compiler::parse_call, p_call}},
+         {&Compiler::parse_grouping, &Compiler::parse_call, p_call}},
         {Token::minus, {&Compiler::unary, &Compiler::binary, p_term}},
         {Token::plus, {nullptr, &Compiler::binary, p_term}},
         {Token::slash, {nullptr, &Compiler::binary, p_factor}},
         {Token::star, {nullptr, &Compiler::binary, p_factor}},
         {Token::bang, {&Compiler::unary, nullptr, p_none}},
         {Token::bang_equal, {nullptr, &Compiler::binary, p_equality}},
-        {Token::equal, {nullptr, &Compiler::binary, p_comparison}},
-        {Token::equal_equal, {nullptr, &Compiler::binary, p_comparison}},
+        {Token::equal_equal, {nullptr, &Compiler::binary, p_equality}},
         {Token::greater, {nullptr, &Compiler::binary, p_comparison}},
         {Token::greater_equal, {nullptr, &Compiler::binary, p_comparison}},
         {Token::less, {nullptr, &Compiler::binary, p_comparison}},
@@ -95,7 +94,7 @@ class Compiler {
     }
   }
 
-  Function* compile(Token_vector ts) noexcept {
+  Function* compile(Token_vector ts) {
     make_func_frame("", 0);
     tokens = std::move(ts);
     current = tokens.cbegin();
@@ -104,7 +103,7 @@ class Compiler {
     }
     add_return_instruction();
     EXPECTS(func_frames.size() == 1)
-    return currentfunc_frame().func;
+    return current_func_frame().func;
   }
 
  private:
@@ -120,24 +119,25 @@ class Compiler {
 
   void parse_func_declaration() {
     const auto name = parse_variable("Expect function name.");
-    currentfunc_frame().latest_local_initialized();
+    current_func_frame().latest_local_initialized();
     parse_function();
-    currentfunc_frame().define_variable(name, previous->line);
+    current_func_frame().define_variable(name, previous->line);
   }
 
   void parse_function() {
     make_func_frame(previous->lexeme, 1);
-    currentfunc_frame().begin_scope();
+    current_func_frame().begin_scope();
     consume(Token::left_paren, "Expect '(' after function name.");
     if (!check(Token::right_paren)) {
       do {
         auto parameter = parse_variable("Expect parameter name.");
-        currentfunc_frame().define_variable(parameter, previous->line);
-        currentfunc_frame().func->inc_arity();
-        if (currentfunc_frame().func->get_arity() > max_function_parameters) {
-          throw runtime_error{"Cannot have more than " +
-                              std::to_string(max_function_parameters) +
-                              " parameters."};
+        current_func_frame().define_variable(parameter, previous->line);
+        current_func_frame().func->inc_arity();
+        if (current_func_frame().func->get_arity() > max_function_parameters) {
+          throw Compile_error{"Cannot have more than " +
+                                  std::to_string(max_function_parameters) +
+                                  " parameters.",
+                              previous->line};
         }
       } while (match(Token::comma));
     }
@@ -146,8 +146,8 @@ class Compiler {
     consume(Token::left_brace, "Expect '{' after function name.");
     parse_block();
     add_return_instruction();
-    auto func = currentfunc_frame().func;
-    auto upvalues = std::move(currentfunc_frame().upvalues);
+    auto func = current_func_frame().func;
+    auto upvalues = std::move(current_func_frame().upvalues);
     pop_func_frame();
     add<instruction::Closure>(add_constant(func), upvalues);
   }
@@ -165,13 +165,13 @@ class Compiler {
       add<instruction::Nil>();
     }
     consume(Token::semicolon, "Expect ';' after variable declaration.");
-    currentfunc_frame().define_variable(name, previous->line);
+    current_func_frame().define_variable(name, previous->line);
   }
 
   size_t parse_variable(const std::string& message) {
     consume(Token::identifier, message);
-    currentfunc_frame().declare_variable(previous->lexeme);
-    if (currentfunc_frame().scope_depth > 0) {
+    current_func_frame().declare_variable(previous->lexeme, previous->line);
+    if (current_func_frame().scope_depth > 0) {
       return 0;
     }
     return add_constant(heap->make_string(previous->lexeme));
@@ -189,16 +189,16 @@ class Compiler {
     } else if (match(Token::k_while)) {
       parse_while();
     } else if (match(Token::left_brace)) {
-      currentfunc_frame().begin_scope();
+      current_func_frame().begin_scope();
       parse_block();
-      currentfunc_frame().end_scope(previous->line);
+      current_func_frame().end_scope(previous->line);
     } else {
       expression_statement();
     }
   }
 
   void parse_for() {
-    currentfunc_frame().begin_scope();
+    current_func_frame().begin_scope();
     consume(Token::left_paren, "Expect '(' after 'for'.");
     if (match(Token::semicolon)) {
     } else if (match(Token::k_var)) {
@@ -206,7 +206,7 @@ class Compiler {
     } else {
       expression_statement();
     }
-    auto loop_start = currentfunc_frame().currentcode_position();
+    auto loop_start = current_func_frame().currentcode_position();
     auto exit_jump = -1;
     if (!match(Token::semicolon)) {
       parse_expression();
@@ -217,23 +217,23 @@ class Compiler {
 
     if (!match(Token::right_paren)) {
       auto body_jump = add<instruction::Jump>(0);
-      auto increament_start = currentfunc_frame().currentcode_position();
+      auto increament_start = current_func_frame().currentcode_position();
       parse_expression();
       add<instruction::Pop>();
       consume(Token::right_paren, "Expect ')' after for clauses.");
       add<instruction::Loop>(
-          currentfunc_frame().loop_distance_from(loop_start));
+          current_func_frame().loop_distance_from(loop_start));
       loop_start = increament_start;
-      currentfunc_frame().patch_jump(body_jump);
+      current_func_frame().patch_jump(body_jump);
     }
 
     parse_statement();
-    add<instruction::Loop>(currentfunc_frame().loop_distance_from(loop_start));
+    add<instruction::Loop>(current_func_frame().loop_distance_from(loop_start));
     if (exit_jump != -1) {
-      currentfunc_frame().patch_jump(exit_jump);
+      current_func_frame().patch_jump(exit_jump);
       add<instruction::Pop>();
     }
-    currentfunc_frame().end_scope(previous->line);
+    current_func_frame().end_scope(previous->line);
   }
 
   void parse_if() {
@@ -246,17 +246,17 @@ class Compiler {
     parse_statement();
     const auto else_jump_index = add<instruction::Jump>(0);
 
-    currentfunc_frame().patch_jump(then_jump_index);
+    current_func_frame().patch_jump(then_jump_index);
     add<instruction::Pop>();
     if (match(Token::k_else)) {
       parse_statement();
     }
-    currentfunc_frame().patch_jump(else_jump_index);
+    current_func_frame().patch_jump(else_jump_index);
   }
 
   void parse_return() {
-    if (!currentfunc_frame().func->get_name()) {
-      throw compile_error{"Cannot return from top-level code."};
+    if (!current_func_frame().func->get_name()) {
+      throw Compile_error{"Cannot return from top-level code.", previous->line};
     }
     if (match(Token::semicolon)) {
       add_return_instruction();
@@ -268,15 +268,15 @@ class Compiler {
   }
 
   void parse_while() {
-    const auto loop_start = currentfunc_frame().currentcode_position();
+    const auto loop_start = current_func_frame().currentcode_position();
     consume(Token::left_paren, "Expect '(' after 'while'.");
     parse_expression();
     consume(Token::right_paren, "Expect ')' after condition.");
     const auto exit_jump_index = add<instruction::Jump_if_false>(0);
     add<instruction::Pop>();
     parse_statement();
-    add<instruction::Loop>(currentfunc_frame().loop_distance_from(loop_start));
-    currentfunc_frame().patch_jump(exit_jump_index);
+    add<instruction::Loop>(current_func_frame().loop_distance_from(loop_start));
+    current_func_frame().patch_jump(exit_jump_index);
     add<instruction::Pop>();
   }
 
@@ -352,9 +352,10 @@ class Compiler {
       do {
         parse_expression();
         if (count == max_function_parameters) {
-          throw runtime_error{"Cannot have more than " +
-                              std::to_string(max_function_parameters) +
-                              " arguments."};
+          throw Compile_error{"Cannot have more than " +
+                                  std::to_string(max_function_parameters) +
+                                  " arguments.",
+                              previous->line};
         }
         ++count;
       } while (match(Token::comma));
@@ -363,7 +364,7 @@ class Compiler {
     return count;
   }
 
-  void grouping(bool) {
+  void parse_grouping(bool) {
     parse_expression();
     consume(Token::right_paren, "Expect ')' after expression.");
   }
@@ -385,7 +386,8 @@ class Compiler {
 
   void add_variable(bool can_assign) {
     enum Type { local, upvalue, global } type = local;
-    auto index = currentfunc_frame().resolve_local(previous->lexeme);
+    auto index =
+        current_func_frame().resolve_local(previous->lexeme, previous->line);
     if (index == -1) {
       index = resolve_upvalue(previous->lexeme, func_frames.size() - 1);
       if (index != -1) {
@@ -425,14 +427,17 @@ class Compiler {
 
   int resolve_upvalue(const std::string& name, size_t frame_index) noexcept {
     if (frame_index > 0) {
-      if (auto local = func_frames[frame_index - 1].resolve_local(name);
+      if (auto local =
+              func_frames[frame_index - 1].resolve_local(name, previous->line);
           local != -1) {
         func_frames[frame_index - 1].locals[local].is_captured = true;
-        return func_frames[frame_index].add_upvalue(local, true);
+        return func_frames[frame_index].add_upvalue(local, true,
+                                                    previous->line);
       }
       if (auto upvalue = resolve_upvalue(name, frame_index - 1);
           upvalue != -1) {
-        return func_frames[frame_index].add_upvalue(upvalue, false);
+        return func_frames[frame_index].add_upvalue(upvalue, false,
+                                                    previous->line);
       }
     }
     return -1;
@@ -458,7 +463,7 @@ class Compiler {
         add<instruction::True>();
         break;
       default:
-        throw internal_error{"Unknow literal."};
+        throw Compile_error{"Unknow literal.", previous->line};
     }
   }
 
@@ -466,36 +471,36 @@ class Compiler {
     const auto end_jump_index = add<instruction::Jump_if_false>(0);
     add<instruction::Pop>();
     parse_precedence(precedence::p_and);
-    currentfunc_frame().patch_jump(end_jump_index);
+    current_func_frame().patch_jump(end_jump_index);
   }
 
   void parse_or(bool) {
     const auto else_jump_index = add<instruction::Jump_if_false>(0);
     const auto end_jump_index = add<instruction::Jump>(0);
-    currentfunc_frame().patch_jump(else_jump_index);
+    current_func_frame().patch_jump(else_jump_index);
     add<instruction::Pop>();
     parse_precedence(precedence::p_or);
-    currentfunc_frame().patch_jump(end_jump_index);
+    current_func_frame().patch_jump(end_jump_index);
   }
 
   void parse_precedence(precedence::Type precedence) {
     advance();
-    const auto& prefix = p_rules_[previous->type].prefix;
+    const auto prefix = p_rules_[previous->type].prefix;
     if (prefix == nullptr) {
-      throw compile_error{"Expect expression."};
+      throw Compile_error{"Expect expression.", previous->line};
       return;
     }
     const auto can_assign = precedence <= precedence::p_assignment;
     (this->*prefix)(can_assign);
-    while (static_cast<int>(precedence) <
+    while (static_cast<int>(precedence) <=
            static_cast<int>(p_rules_[current->type].precedence)) {
       advance();
-      auto infix = p_rules_[previous->type].infix;
+      const auto infix = p_rules_[previous->type].infix;
       (this->*infix)(can_assign);
     }
 
     if (can_assign && match(Token::equal)) {
-      throw compile_error{"Invalid assignment target."};
+      throw Compile_error{"Invalid assignment target.", previous->line};
     }
   }
 
@@ -508,7 +513,7 @@ class Compiler {
     if (current->type == type) {
       advance();
     } else {
-      throw compile_error{message};
+      throw Compile_error{message, previous->line};
     }
   }
 
@@ -524,21 +529,21 @@ class Compiler {
 
   template <typename Instruction>
   size_t add() noexcept {
-    return currentfunc_frame().add<Instruction>(previous->line);
+    return current_func_frame().add<Instruction>(previous->line);
   }
   template <typename Instruction>
   size_t add(size_t operand) noexcept {
-    return currentfunc_frame().add<Instruction>(operand, previous->line);
+    return current_func_frame().add<Instruction>(operand, previous->line);
   }
   template <typename Instruction>
   size_t add(size_t operand,
              const typename Instruction::Upvalue_vector& upvalues) noexcept {
-    return currentfunc_frame().add<Instruction>(operand, upvalues,
-                                                previous->line);
+    return current_func_frame().add<Instruction>(operand, upvalues,
+                                                 previous->line);
   }
   template <typename... Args>
   size_t add_constant(Args&&... args) noexcept {
-    return currentfunc_frame().add_constant(std::forward<Args>(args)...);
+    return current_func_frame().add_constant(std::forward<Args>(args)...);
   }
 
   struct local {
@@ -557,15 +562,16 @@ class Compiler {
       locals.emplace_back("function object", depth);
     }
 
-    void declare_variable(const std::string& name) {
+    void declare_variable(const std::string& name, int line) {
       if (scope_depth > 0) {
         for (auto it = locals.crbegin(); it != locals.crend(); ++it) {
           if (it->depth != -1 && it->depth < scope_depth) {
             break;
           }
           if (it->name == name) {
-            throw compile_error{"Variable '" + name +
-                                "' already declared in this scope."};
+            throw Compile_error{
+                "Variable '" + name + "' already declared in this scope.",
+                line};
           }
         }
         locals.emplace_back(name, -1);
@@ -587,14 +593,14 @@ class Compiler {
       }
     }
 
-    int resolve_local(const std::string& name) const {
+    int resolve_local(const std::string& name, int line) const {
       for (int i = locals.size() - 1; i >= 0; --i) {
         if (locals[i].name == name) {
           if (locals[i].depth != -1) {
             return i;
           }
-          throw compile_error{
-              "Cannot read local variable in its own initializer."};
+          throw Compile_error{
+              "Cannot read local variable in its own initializer.", line};
         }
       }
       return -1;
@@ -646,14 +652,14 @@ class Compiler {
       }
     }
 
-    size_t add_upvalue(size_t index, bool is_local) {
+    size_t add_upvalue(size_t index, bool is_local, int line) {
       for (size_t i = 0; i < upvalues.size(); ++i) {
         if (upvalues[i].index == index && upvalues[i].is_local == is_local) {
           return i;
         }
       }
       if (upvalues.size() == UINT8_MAX) {
-        throw compile_error{"Too many closure variables in function."};
+        throw Compile_error{"Too many closure variables in function.", line};
       }
       upvalues.emplace_back(index, is_local);
       func->upvalue_count = upvalues.size();
@@ -675,7 +681,7 @@ class Compiler {
     }
   }
   void pop_func_frame() noexcept { func_frames.pop_back(); }
-  func_frame& currentfunc_frame() noexcept { return func_frames.back(); }
+  func_frame& current_func_frame() noexcept { return func_frames.back(); }
 
   friend precedence::rules_generator<Compiler>;
   constexpr static precedence::Rules<Compiler> p_rules_ =

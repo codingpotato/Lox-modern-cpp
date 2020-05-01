@@ -2,27 +2,40 @@
 #define LOX_EXCEPTION_H
 
 #include <stdexcept>
+#include <string>
 
 namespace lox {
 
-struct exception : std::runtime_error {
-  using runtime_error::runtime_error;
+class Exception : public std::exception {
+ public:
+  Exception(std::string message) noexcept : message{message} {}
+
+  const char* what() const noexcept override { return message.c_str(); }
+
+ private:
+  std::string message;
 };
 
-struct internal_error : exception {
-  using exception::exception;
+class Internal_error : public Exception {
+ public:
+  using Exception::Exception;
 };
 
-struct scan_error : exception {
-  using exception::exception;
+class Scan_error : public Exception {
+ public:
+  Scan_error(std::string message, int line) noexcept
+      : Exception{"[line " + std::to_string(line) + "] " + std::move(message)} {
+  }
 };
 
-struct compile_error : exception {
-  using exception::exception;
+class Compile_error : public Scan_error {
+ public:
+  using Scan_error::Scan_error;
 };
 
-struct runtime_error : exception {
-  using exception::exception;
+class Runtime_error : public Exception {
+ public:
+  using Exception::Exception;
 };
 
 }  // namespace lox

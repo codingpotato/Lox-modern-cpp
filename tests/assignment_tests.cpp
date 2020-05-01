@@ -38,13 +38,13 @@ arg
   CHECK_EQ(run(source), expected);
 }
 
-// todo: shall throw
 TEST_CASE("assignment: grouping") {
   const std::string source{R"(
 var a = "a";
-(a) = "value"; // Error at '=': Invalid assignment target.
+(a) = "value";
 )"};
-  const std::string expected{R"()"};
+  const std::string expected{R"([line 3] Invalid assignment target.
+)"};
   CHECK_EQ(run(source), expected);
 }
 
