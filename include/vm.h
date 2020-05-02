@@ -94,27 +94,11 @@ class VM {
     executor.copy_from(closure);
   }
 
-  Value concatenate(Value left, Value right) noexcept {
-    if (left.is_object() && right.is_object()) {
-      auto obj_left = left.as_object();
-      auto obj_right = right.as_object();
-      if (obj_left->is<String>() && obj_right->is<String>()) {
-        return Value{heap.make_string(obj_left->as<String>()->get_string() +
-                                      obj_right->as<String>()->get_string())};
-      }
-    }
-    return {};
-  }
+  bool concatenate(const Value& left, const Value& right) noexcept;
 
-  static void throw_undefined_variable(const String* name) {
-    throw Runtime_error{"Undefined variable: '" + name->get_string() + "'."};
-  }
-
-  static void throw_incorrect_argument_count(int arity, int argument_count) {
-    throw Runtime_error{"Expected " + std::to_string(arity) +
-                        " arguments but got " + std::to_string(argument_count) +
-                        "."};
-  }
+  static void throw_runtime_error(const std::string& message);
+  static void throw_undefined_variable(const String* name);
+  static void throw_incorrect_argument_count(int arity, int argument_count);
 
   constexpr static size_t max_frame_size = 64;
   constexpr static size_t max_stacksize = max_frame_size * 1024;
@@ -174,9 +158,9 @@ inline void VM::handle(const instruction::Get_global& get_global) {
   auto name = constant.as_object()->as<String>();
   if (auto value = globals.get_if(name); value != nullptr) {
     stack.push(*value);
-  } else {
-    throw_undefined_variable(name);
+    return;
   }
+  throw_undefined_variable(name);
 }
 
 template <>
@@ -216,49 +200,45 @@ inline void VM::handle(const instruction::Set_upvalue& set_upvalue) {
 
 template <>
 inline void VM::handle(const instruction::Equal&) {
-  binary([](Value left, Value right) { return left == right; });
+  binary([](const Value& left, const Value& right) { return left == right; });
 }
 
 template <>
 inline void VM::handle(const instruction::Greater&) {
-  binary([](Value left, Value right) { return left > right; });
+  binary([](const Value& left, const Value& right) { return left > right; });
 }
 
 template <>
 inline void VM::handle(const instruction::Less&) {
-  binary([](Value left, Value right) { return left < right; });
+  binary([](const Value& left, const Value& right) { return left < right; });
 }
 
 template <>
 inline void VM::handle(const instruction::Add&) {
-  auto right = stack.pop();
-  auto left = stack.pop();
+  auto& right = stack.pop();
+  auto& left = stack.pop();
   if (left.is_double() && right.is_double()) {
     stack.push(left + right);
     return;
-  } else {
-    auto result = concatenate(left, right);
-    if (!result.is_nil()) {
-      stack.push(result);
-      return;
-    }
+  } else if (concatenate(left, right)) {
+    return;
   }
-  throw Runtime_error{"Operands must be two numbers or two strings."};
+  throw_runtime_error("Operands must be two numbers or two strings.");
 }
 
 template <>
 inline void VM::handle(const instruction::Subtract&) {
-  binary([](Value left, Value right) { return left - right; });
+  binary([](const Value& left, const Value& right) { return left - right; });
 }
 
 template <>
 inline void VM::handle(const instruction::Multiply&) {
-  binary([](Value left, Value right) { return left * right; });
+  binary([](const Value& left, const Value& right) { return left * right; });
 }
 
 template <>
 inline void VM::handle(const instruction::Divide&) {
-  binary([](Value left, Value right) { return left / right; });
+  binary([](const Value& left, const Value& right) { return left / right; });
 }
 
 template <>
@@ -270,9 +250,9 @@ template <>
 inline void VM::handle(const instruction::Negate&) {
   if (stack.peek().is_double()) {
     stack.push(-stack.pop().as_double());
-  } else {
-    throw Runtime_error{"Operand must be a number value."};
+    return;
   }
+  throw_runtime_error("Operand must be a number value.");
 }
 
 template <>
@@ -322,7 +302,7 @@ inline void VM::handle(const instruction::Call& call) {
       return;
     }
   }
-  throw Runtime_error{"Can only call functions and classes."};
+  throw_runtime_error("Can only call functions and classes.");
 }
 
 template <>
