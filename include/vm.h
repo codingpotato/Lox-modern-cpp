@@ -68,7 +68,11 @@ class VM {
   void binary(Func func) {
     auto right = stack.pop();
     auto left = stack.pop();
-    stack.push(func(left, right));
+    if (left.is_double() && right.is_double()) {
+      stack.push(func(left.as_double(), right.as_double()));
+    } else {
+      throw_runtime_error("Operands must be numbers.");
+    }
   }
 
   Call_frame& top_frame() noexcept {
@@ -158,9 +162,9 @@ inline void VM::handle(const instruction::Get_global& get_global) {
   auto name = constant.as_object()->as<String>();
   if (auto value = globals.get_if(name); value != nullptr) {
     stack.push(*value);
-    return;
+  } else {
+    throw_undefined_variable(name);
   }
-  throw_undefined_variable(name);
 }
 
 template <>
@@ -200,17 +204,19 @@ inline void VM::handle(const instruction::Set_upvalue& set_upvalue) {
 
 template <>
 inline void VM::handle(const instruction::Equal&) {
-  binary([](const Value& left, const Value& right) { return left == right; });
+  auto right = stack.pop();
+  auto left = stack.pop();
+  stack.push(left == right);
 }
 
 template <>
 inline void VM::handle(const instruction::Greater&) {
-  binary([](const Value& left, const Value& right) { return left > right; });
+  binary([](double left, double right) { return left > right; });
 }
 
 template <>
 inline void VM::handle(const instruction::Less&) {
-  binary([](const Value& left, const Value& right) { return left < right; });
+  binary([](double left, double right) { return left < right; });
 }
 
 template <>
@@ -219,26 +225,24 @@ inline void VM::handle(const instruction::Add&) {
   auto& left = stack.pop();
   if (left.is_double() && right.is_double()) {
     stack.push(left + right);
-    return;
-  } else if (concatenate(left, right)) {
-    return;
+  } else if (!concatenate(left, right)) {
+    throw_runtime_error("Operands must be two numbers or two strings.");
   }
-  throw_runtime_error("Operands must be two numbers or two strings.");
 }
 
 template <>
 inline void VM::handle(const instruction::Subtract&) {
-  binary([](const Value& left, const Value& right) { return left - right; });
+  binary([](double left, double right) { return left - right; });
 }
 
 template <>
 inline void VM::handle(const instruction::Multiply&) {
-  binary([](const Value& left, const Value& right) { return left * right; });
+  binary([](double left, double right) { return left * right; });
 }
 
 template <>
 inline void VM::handle(const instruction::Divide&) {
-  binary([](const Value& left, const Value& right) { return left / right; });
+  binary([](double left, double right) { return left / right; });
 }
 
 template <>
@@ -250,9 +254,9 @@ template <>
 inline void VM::handle(const instruction::Negate&) {
   if (stack.peek().is_double()) {
     stack.push(-stack.pop().as_double());
-    return;
+  } else {
+    throw_runtime_error("Operand must be a number value.");
   }
-  throw_runtime_error("Operand must be a number value.");
 }
 
 template <>
