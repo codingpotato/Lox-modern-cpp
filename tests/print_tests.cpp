@@ -10,3 +10,12 @@ print;
 )"};
   CHECK_EQ(run(source), expected);
 }
+
+TEST_CASE("print: nil") {
+  std::string source{R"(
+print nil;
+)"};
+  std::string expected{R"(nil
+)"};
+  CHECK_EQ(run(source), expected);
+}

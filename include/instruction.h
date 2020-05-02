@@ -30,14 +30,15 @@ struct Simple_instruction : Base {
 struct Byte_instruction : Base {
   using Base::Base;
 
-  static constexpr size_t index_operad = 1;
+  static constexpr size_t max_operand = UINT8_MAX;
+  static constexpr size_t index_operand = 1;
 
   static size_t add_operand(Bytecode_vector& code, size_t operand) noexcept {
-    ENSURES(operand <= UINT8_MAX);
+    ENSURES(operand <= max_operand);
     code.push_back(operand);
     return size - sizeof(Bytecode);
   }
-  size_t operand() const noexcept { return code[index_operad]; }
+  size_t operand() const noexcept { return code[index_operand]; }
 
   static constexpr size_t size = sizeof(Bytecode) + sizeof(Bytecode);
 };
@@ -49,11 +50,12 @@ struct Constant_instruction : Byte_instruction {
 struct Jump_instruction : Base {
   using Base::Base;
 
-  static constexpr size_t index_operad_high_byte = 1;
+  static constexpr size_t max_operand = UINT16_MAX;
+  static constexpr size_t index_operand_high_byte = 1;
   static constexpr size_t index_operand_low_byte = 2;
 
   static size_t add_operand(Bytecode_vector& code, size_t operand) noexcept {
-    ENSURES(operand <= UINT16_MAX);
+    ENSURES(operand <= max_operand);
     code.push_back(high_byte_of(operand));
     code.push_back(low_byte_of(operand));
     return size - sizeof(Bytecode);
@@ -61,12 +63,12 @@ struct Jump_instruction : Base {
 
   static void set_operand(Bytecode* code, size_t operand) noexcept {
     ENSURES(operand < UINT16_MAX);
-    code[index_operad_high_byte] = high_byte_of(operand);
+    code[index_operand_high_byte] = high_byte_of(operand);
     code[index_operand_low_byte] = low_byte_of(operand);
   }
 
   size_t operand() const noexcept {
-    return (code[index_operad_high_byte] << 8) | code[index_operand_low_byte];
+    return (code[index_operand_high_byte] << 8) | code[index_operand_low_byte];
   }
 
   static constexpr size_t size = sizeof(Bytecode) + sizeof(Bytecode) * 2;

@@ -14,13 +14,13 @@ struct Stack {
   bool empty() const noexcept { return count == 0; }
   size_t size() const noexcept { return count; }
   void resize(size_t size) noexcept {
-    ENSURES(size < Max_size);
+    ENSURES(size <= Max_size);
     count = size;
   }
 
   template <typename... Args>
   void push(Args&&... args) noexcept {
-    ENSURES(count < Max_size);
+    ENSURES(count <= Max_size);
     storage[count++] = T{std::forward<Args>(args)...};
   }
 

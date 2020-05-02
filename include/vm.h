@@ -90,12 +90,16 @@ class VM {
     }
   }
 
-  void call_closure(Closure* closure, size_t argument_count) noexcept {
+  void call_closure(Closure* closure, size_t argument_count) {
     if (!call_frames.empty()) {
       top_frame().ip = executor.ip;
     }
-    call_frames.push(closure, stack.size() - argument_count - 1);
-    executor.copy_from(closure);
+    if (call_frames.size() < max_frame_size) {
+      call_frames.push(closure, stack.size() - argument_count - 1);
+      executor.copy_from(closure);
+    } else {
+      throw_runtime_error("Stack overflow.");
+    }
   }
 
   bool concatenate(const Value& left, const Value& right) noexcept;
@@ -105,7 +109,7 @@ class VM {
   static void throw_incorrect_argument_count(int arity, int argument_count);
 
   constexpr static size_t max_frame_size = 64;
-  constexpr static size_t max_stacksize = max_frame_size * 1024;
+  constexpr static size_t max_stacksize = max_frame_size * 256;
 
   std::ostream* out;
   Heap<> heap;

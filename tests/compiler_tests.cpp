@@ -5,9 +5,9 @@
 
 #include "helper.h"
 
-TEST_CASE("compile primary") {
+TEST_CASE("compile: primary") {
   const std::string source{R"(1; 2; nil;
-  true; false; "str";
+true; false; "str";
 )"};
   const std::string expected = R"(== primary ==
 0000    1 OP_Constant 1.000000
@@ -28,7 +28,7 @@ TEST_CASE("compile primary") {
   CHECK_EQ(compile(source, "primary"), expected);
 }
 
-TEST_CASE("compile if statement") {
+TEST_CASE("compile: if") {
   const std::string source{R"(
 if (1 > 0) print 1;
 else print 0;
@@ -51,7 +51,7 @@ else print 0;
   CHECK_EQ(compile(source, "if"), expected);
 }
 
-TEST_CASE("compile while statement") {
+TEST_CASE("compile: while") {
   const std::string source{R"(
 while (1 > 0) print 1;
 )"};
@@ -71,7 +71,7 @@ while (1 > 0) print 1;
   CHECK_EQ(compile(source, "while"), expected);
 }
 
-TEST_CASE("compile function call") {
+TEST_CASE("compile: function call") {
   const std::string source{R"(
 fun add(a, b) { return a + b; }
 print add(1, 2);
@@ -97,7 +97,7 @@ print add(1, 2);
   CHECK_EQ(compile(source, "function call"), expected);
 }
 
-TEST_CASE("compile fib") {
+TEST_CASE("compile: fib") {
   const std::string source{R"(
 fun fib(n) {
   if (n < 2) return n;
@@ -140,4 +140,38 @@ print fib(8);
 0012    | OP_Return
 )";
   CHECK_EQ(compile(source, "fib"), expected);
+}
+
+TEST_CASE("compile: and truth") {
+  const std::string source{R"(
+print false and "bad";
+print nil and "bad";
+print true and "ok";
+print 0 and "ok";
+)"};
+  const std::string expected = R"(== and truth ==
+0000    2 OP_False
+0001    | OP_Jump_if_false 3 -> 7
+0004    | OP_Pop
+0005    | OP_Constant bad
+0007    | OP_Print
+0008    3 OP_Nil
+0009    | OP_Jump_if_false 3 -> 15
+0012    | OP_Pop
+0013    | OP_Constant bad
+0015    | OP_Print
+0016    4 OP_True
+0017    | OP_Jump_if_false 3 -> 23
+0020    | OP_Pop
+0021    | OP_Constant ok
+0023    | OP_Print
+0024    5 OP_Constant 0.000000
+0026    | OP_Jump_if_false 3 -> 32
+0029    | OP_Pop
+0030    | OP_Constant ok
+0032    | OP_Print
+0033    6 OP_Nil
+0034    | OP_Return
+)";
+  CHECK_EQ(compile(source, "and truth"), expected);
 }

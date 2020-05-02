@@ -130,14 +130,15 @@ class Compiler {
     consume(Token::left_paren, "Expect '(' after function name.");
     if (!check(Token::right_paren)) {
       do {
-        auto parameter = parse_variable("Expect parameter name.");
-        current_func_frame().define_variable(parameter, previous->line);
         current_func_frame().func->inc_arity();
         if (current_func_frame().func->get_arity() > max_function_parameters) {
           throw make_compile_error("Cannot have more than " +
-                                   std::to_string(max_function_parameters) +
-                                   " parameters.");
+                                       std::to_string(max_function_parameters) +
+                                       " parameters.",
+                                   *current);
         }
+        auto parameter = parse_variable("Expect parameter name.");
+        current_func_frame().define_variable(parameter, previous->line);
       } while (match(Token::comma));
     }
     consume(Token::right_paren, "Expect ')' after parameters.");
@@ -205,7 +206,7 @@ class Compiler {
     } else {
       expression_statement();
     }
-    auto loop_start = current_func_frame().currentcode_position();
+    auto loop_start = current_func_frame().current_code_position();
     auto exit_jump = -1;
     if (!match(Token::semicolon)) {
       parse_expression();
@@ -216,18 +217,17 @@ class Compiler {
 
     if (!match(Token::right_paren)) {
       auto body_jump = add<instruction::Jump>(0);
-      auto increament_start = current_func_frame().currentcode_position();
+      auto increament_start = current_func_frame().current_code_position();
       parse_expression();
       add<instruction::Pop>();
       consume(Token::right_paren, "Expect ')' after for clauses.");
-      add<instruction::Loop>(
-          current_func_frame().loop_distance_from(loop_start));
+      emit_loop_from(loop_start);
       loop_start = increament_start;
       current_func_frame().patch_jump(body_jump);
     }
 
     parse_statement();
-    add<instruction::Loop>(current_func_frame().loop_distance_from(loop_start));
+    emit_loop_from(loop_start);
     if (exit_jump != -1) {
       current_func_frame().patch_jump(exit_jump);
       add<instruction::Pop>();
@@ -267,14 +267,14 @@ class Compiler {
   }
 
   void parse_while() {
-    const auto loop_start = current_func_frame().currentcode_position();
+    const auto loop_start = current_func_frame().current_code_position();
     consume(Token::left_paren, "Expect '(' after 'while'.");
     parse_expression();
     consume(Token::right_paren, "Expect ')' after condition.");
     const auto exit_jump_index = add<instruction::Jump_if_false>(0);
     add<instruction::Pop>();
     parse_statement();
-    add<instruction::Loop>(current_func_frame().loop_distance_from(loop_start));
+    emit_loop_from(loop_start);
     current_func_frame().patch_jump(exit_jump_index);
     add<instruction::Pop>();
   }
@@ -422,7 +422,7 @@ class Compiler {
     }
   }
 
-  int resolve_upvalue(const std::string& name, size_t frame_index) noexcept {
+  int resolve_upvalue(const std::string& name, size_t frame_index) {
     if (frame_index > 0) {
       if (auto local = func_frames[frame_index - 1].resolve_local(*previous);
           local != -1) {
@@ -435,6 +435,15 @@ class Compiler {
       }
     }
     return -1;
+  }
+
+  void emit_loop_from(size_t pos) {
+    const auto distance = current_func_frame().loop_distance_from(pos);
+    if (distance <= UINT16_MAX) {
+      add<instruction::Loop>(distance);
+    } else {
+      throw make_compile_error("Loop body too large.", *previous);
+    }
   }
 
   void add_number_constant(bool) {
@@ -535,8 +544,13 @@ class Compiler {
                                                  previous->line);
   }
   template <typename... Args>
-  size_t add_constant(Args&&... args) noexcept {
-    return current_func_frame().add_constant(std::forward<Args>(args)...);
+  size_t add_constant(Args&&... args) {
+    const auto index =
+        current_func_frame().add_constant(std::forward<Args>(args)...);
+    if (index <= instruction::Constant_instruction::max_operand) {
+      return index;
+    }
+    throw make_compile_error("Too many constants in one chunk.", *previous);
   }
 
   struct local {
@@ -568,7 +582,7 @@ class Compiler {
                 token);
           }
         }
-        locals.emplace_back(name, -1);
+        add_local(std::move(name), token);
       }
     }
 
@@ -616,23 +630,30 @@ class Compiler {
       return func->get_chunk().add<Instruction>(operand, upvalues, line);
     }
     template <typename... Args>
-    size_t add_constant(Args&&... args) noexcept {
+    size_t add_constant(Args&&... args) {
       return func->get_chunk().add_constant(std::forward<Args>(args)...);
     }
 
     void patch_jump(size_t jump) noexcept {
       func->get_chunk().patch_jump(
           jump,
-          currentcode_position() - jump - instruction::Jump_instruction::size);
+          current_code_position() - jump - instruction::Jump_instruction::size);
     }
-    size_t currentcode_position() const noexcept {
+    size_t current_code_position() const noexcept {
       return func->get_chunk().get_code().size();
     }
     size_t loop_distance_from(size_t pos) const noexcept {
-      return currentcode_position() + instruction::Loop::size - pos;
+      return current_code_position() + instruction::Loop::size - pos;
     }
 
-    void push_local() noexcept { locals.emplace_back("", 0); }
+    void add_local(std::string name, const Token& token) {
+      if (locals.size() <= UINT8_MAX) {
+        locals.emplace_back(std::move(name), -1);
+      } else {
+        throw make_compile_error("Too many local variables in function.",
+                                 token);
+      }
+    }
 
     void begin_scope() noexcept { ++scope_depth; }
     void end_scope(int line) noexcept {
@@ -653,13 +674,13 @@ class Compiler {
           return i;
         }
       }
-      if (upvalues.size() == UINT8_MAX) {
-        throw make_compile_error("Too many closure variables in function.",
-                                 token);
+      if (upvalues.size() <= UINT8_MAX) {
+        upvalues.emplace_back(index, is_local);
+        func->upvalue_count = upvalues.size();
+        return func->upvalue_count - 1;
       }
-      upvalues.emplace_back(index, is_local);
-      func->upvalue_count = upvalues.size();
-      return func->upvalue_count - 1;
+      throw make_compile_error("Too many closure variables in function.",
+                               token);
     }
 
     Function* func = nullptr;

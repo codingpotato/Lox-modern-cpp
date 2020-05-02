@@ -407,3 +407,91 @@ print 1.2 - 1.2;
     CHECK_EQ(run(source), expected);
   }
 }
+
+TEST_CASE("operator: logical") {
+  SUBCASE("and truth") {
+    const std::string source{R"(
+print false and "bad";
+print nil and "bad";
+print true and "ok";
+print 0 and "ok";
+print "" and "ok";
+)"};
+    const std::string expected{R"(false
+nil
+ok
+ok
+ok
+)"};
+    CHECK_EQ(run(source), expected);
+  }
+
+  SUBCASE("and") {
+    const std::string source{R"(
+print false and 1;
+print true and 1;
+print 1 and 2 and false;
+print 1 and true;
+print 1 and 2 and 3;
+var a = "before";
+var b = "before";
+(a = true) and
+    (b = false) and
+    (a = "bad");
+print a;
+print b;
+)"};
+    const std::string expected{R"(false
+1.000000
+false
+true
+3.000000
+true
+false
+)"};
+    CHECK_EQ(run(source), expected);
+  }
+
+  SUBCASE("or truth") {
+    const std::string source{R"(
+print false or "ok";
+print nil or "ok";
+print true or "ok";
+print 0 or "ok";
+print "s" or "ok";
+)"};
+    const std::string expected{R"(ok
+ok
+true
+0.000000
+s
+)"};
+    CHECK_EQ(run(source), expected);
+  }
+
+  SUBCASE("or") {
+    const std::string source{R"(
+print 1 or true;
+print false or 1;
+print false or false or true;
+print false or false;
+print false or false or false;
+var a = "before";
+var b = "before";
+(a = false) or
+    (b = true) or
+    (a = "bad");
+print a;
+print b;
+)"};
+    const std::string expected{R"(1.000000
+1.000000
+true
+false
+false
+false
+true
+)"};
+    CHECK_EQ(run(source), expected);
+  }
+}
