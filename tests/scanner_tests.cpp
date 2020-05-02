@@ -70,6 +70,69 @@ TEST_CASE("scanner: numbers") {
   check_tokens(tokens, expected);
 }
 
+TEST_CASE("scanner: punctuators") {
+  lox::Scanner scanner{R"(
+(){};,+-*!===<=>=!=<>/.
+)"};
+  auto tokens = scanner.scan();
+  std::vector<lox::Token> expected = {
+      {lox::Token::left_paren, "(", 2},
+      {lox::Token::right_paren, ")", 2},
+      {lox::Token::left_brace, "{", 2},
+      {lox::Token::right_brace, "}", 2},
+      {lox::Token::semicolon, ";", 2},
+      {lox::Token::comma, ",", 2},
+      {lox::Token::plus, "+", 2},
+      {lox::Token::minus, "-", 2},
+      {lox::Token::star, "*", 2},
+      {lox::Token::bang_equal, "!=", 2},
+      {lox::Token::equal_equal, "==", 2},
+      {lox::Token::less_equal, "<=", 2},
+      {lox::Token::greater_equal, ">=", 2},
+      {lox::Token::bang_equal, "!=", 2},
+      {lox::Token::less, "<", 2},
+      {lox::Token::greater, ">", 2},
+      {lox::Token::slash, "/", 2},
+      {lox::Token::dot, ".", 2},
+      {lox::Token::eof, "", 3},
+  };
+  check_tokens(tokens, expected);
+}
+
+TEST_CASE("scanner: strings") {
+  lox::Scanner scanner{R"(
+""
+"string"
+)"};
+  auto tokens = scanner.scan();
+  std::vector<lox::Token> expected = {
+      {lox::Token::string, "", 2},
+      {lox::Token::string, "string", 3},
+      {lox::Token::eof, "", 4},
+  };
+  check_tokens(tokens, expected);
+}
+
+TEST_CASE("scanner: whitespace") {
+  lox::Scanner scanner{R"(
+space    tabs				newlines
+
+
+
+
+end
+)"};
+  auto tokens = scanner.scan();
+  std::vector<lox::Token> expected = {
+      {lox::Token::identifier, "space", 2},
+      {lox::Token::identifier, "tabs", 2},
+      {lox::Token::identifier, "newlines", 2},
+      {lox::Token::identifier, "end", 7},
+      {lox::Token::eof, "", 8},
+  };
+  check_tokens(tokens, expected);
+}
+
 TEST_CASE("scanner: empty") {
   const std::string source{""};
   const std::string expected{""};
