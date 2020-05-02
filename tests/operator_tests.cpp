@@ -133,63 +133,276 @@ TEST_CASE("operator: divide") {
     CHECK_EQ(run(source), expected);
   }
 
-  SUBCASE("add bool number") {
+  SUBCASE("divide number non-number") {
     const std::string source{R"(
-true + 123;
+1 / "1";
 )"};
-    const std::string expected{R"(Operands must be two numbers or two strings.
+    const std::string expected{R"(Operands must be numbers.
 [line 0002] in <script>
 )"};
     CHECK_EQ(run(source), expected);
   }
 
-  SUBCASE("add bool string") {
+  SUBCASE("divide") {
     const std::string source{R"(
-true + "s";
+print 8 / 2;
+print 12.34 / 12.34;
 )"};
-    const std::string expected{R"(Operands must be two numbers or two strings.
+    const std::string expected{R"(4.000000
+1.000000
+)"};
+    CHECK_EQ(run(source), expected);
+  }
+}
+
+TEST_CASE("operator: equals") {
+  const std::string source{R"(
+print nil == nil;
+print true == true;
+print true == false;
+print 1 == 1;
+print 1 == 2;
+print "str" == "str";
+print "str" == "ing";
+print nil == false;
+print false == 0;
+print 0 == "0";
+)"};
+  const std::string expected{R"(true
+true
+false
+true
+false
+true
+false
+false
+false
+false
+)"};
+  CHECK_EQ(run(source), expected);
+}
+
+TEST_CASE("operator: greater") {
+  SUBCASE("greater non-number numebr") {
+    const std::string source{R"(
+"1" > 1;
+)"};
+    const std::string expected{R"(Operands must be numbers.
 [line 0002] in <script>
 )"};
     CHECK_EQ(run(source), expected);
   }
 
-  SUBCASE("add nil nil") {
+  SUBCASE("greater number non-number") {
     const std::string source{R"(
-nil + nil;
+1 > "1";
 )"};
-    const std::string expected{R"(Operands must be two numbers or two strings.
+    const std::string expected{R"(Operands must be numbers.
 [line 0002] in <script>
 )"};
     CHECK_EQ(run(source), expected);
   }
 
-  SUBCASE("add number nil") {
+  SUBCASE("greater or equal non-number numebr") {
     const std::string source{R"(
-1 + nil;
+"1" >= 1;
 )"};
-    const std::string expected{R"(Operands must be two numbers or two strings.
+    const std::string expected{R"(Operands must be numbers.
 [line 0002] in <script>
 )"};
     CHECK_EQ(run(source), expected);
   }
 
-  SUBCASE("add string nil") {
+  SUBCASE("greater or equal number non-number") {
     const std::string source{R"(
-"s" + nil;
+1 >= "1";
 )"};
-    const std::string expected{R"(Operands must be two numbers or two strings.
+    const std::string expected{R"(Operands must be numbers.
+[line 0002] in <script>
+)"};
+    CHECK_EQ(run(source), expected);
+  }
+}
+
+TEST_CASE("operator: less") {
+  SUBCASE("less non-number numebr") {
+    const std::string source{R"(
+"1" < 1;
+)"};
+    const std::string expected{R"(Operands must be numbers.
 [line 0002] in <script>
 )"};
     CHECK_EQ(run(source), expected);
   }
 
-  SUBCASE("add") {
+  SUBCASE("less number non-number") {
     const std::string source{R"(
-print 123 + 456;
-print "str" + "ing";
+1 < "1";
 )"};
-    const std::string expected{R"(579.000000
-string
+    const std::string expected{R"(Operands must be numbers.
+[line 0002] in <script>
+)"};
+    CHECK_EQ(run(source), expected);
+  }
+
+  SUBCASE("less or equal non-number numebr") {
+    const std::string source{R"(
+"1" <= 1;
+)"};
+    const std::string expected{R"(Operands must be numbers.
+[line 0002] in <script>
+)"};
+    CHECK_EQ(run(source), expected);
+  }
+
+  SUBCASE("less or equal number non-number") {
+    const std::string source{R"(
+1 <= "1";
+)"};
+    const std::string expected{R"(Operands must be numbers.
+[line 0002] in <script>
+)"};
+    CHECK_EQ(run(source), expected);
+  }
+}
+
+TEST_CASE("operator: multiply") {
+  SUBCASE("multiply non-number numebr") {
+    const std::string source{R"(
+"1" * 1;
+)"};
+    const std::string expected{R"(Operands must be numbers.
+[line 0002] in <script>
+)"};
+    CHECK_EQ(run(source), expected);
+  }
+
+  SUBCASE("multiply number non-number") {
+    const std::string source{R"(
+1 * "1";
+)"};
+    const std::string expected{R"(Operands must be numbers.
+[line 0002] in <script>
+)"};
+    CHECK_EQ(run(source), expected);
+  }
+
+  SUBCASE("multiply") {
+    const std::string source{R"(
+print 5 * 3;
+print 12.34 * 0.3;
+)"};
+    const std::string expected{R"(15.000000
+3.702000
+)"};
+    CHECK_EQ(run(source), expected);
+  }
+}
+
+TEST_CASE("operator: negate") {
+  SUBCASE("negate non-number") {
+    const std::string source{R"(
+-"s";
+)"};
+    const std::string expected{R"(Operand must be a number.
+[line 0002] in <script>
+)"};
+    CHECK_EQ(run(source), expected);
+  }
+
+  SUBCASE("negate") {
+    const std::string source{R"(
+print -(3); // expect: -3
+print --(3); // expect: 3
+print ---(3); // expect: -3
+)"};
+    const std::string expected{R"(-3.000000
+3.000000
+-3.000000
+)"};
+    CHECK_EQ(run(source), expected);
+  }
+}
+
+TEST_CASE("operator: not equals") {
+  const std::string source{R"(
+print nil != nil;
+print true != true;
+print true != false;
+print 1 != 1;
+print 1 != 2;
+print "str" != "str";
+print "str" != "ing";
+print nil != false;
+print false != 0;
+print 0 != "0";
+)"};
+  const std::string expected{R"(false
+false
+true
+false
+true
+false
+true
+true
+true
+true
+)"};
+  CHECK_EQ(run(source), expected);
+}
+
+TEST_CASE("operator: not") {
+  const std::string source{R"(
+print !true;
+print !false;
+print !!true;
+print !123;
+print !0;
+print !nil;
+print !"";
+fun foo() {}
+print !foo;
+)"};
+  const std::string expected{R"(false
+true
+true
+false
+false
+true
+false
+false
+)"};
+  CHECK_EQ(run(source), expected);
+}
+
+TEST_CASE("operator: subtract") {
+  SUBCASE("subtract non-number numebr") {
+    const std::string source{R"(
+"1" - 1;
+)"};
+    const std::string expected{R"(Operands must be numbers.
+[line 0002] in <script>
+)"};
+    CHECK_EQ(run(source), expected);
+  }
+
+  SUBCASE("subtract number non-number") {
+    const std::string source{R"(
+1 - "1";
+)"};
+    const std::string expected{R"(Operands must be numbers.
+[line 0002] in <script>
+)"};
+    CHECK_EQ(run(source), expected);
+  }
+
+  SUBCASE("subtract") {
+    const std::string source{R"(
+print 4 - 3;
+print 1.2 - 1.2;
+)"};
+    const std::string expected{R"(1.000000
+0.000000
 )"};
     CHECK_EQ(run(source), expected);
   }

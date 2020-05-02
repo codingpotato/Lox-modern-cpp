@@ -255,7 +255,7 @@ inline void VM::handle(const instruction::Negate&) {
   if (stack.peek().is_double()) {
     stack.push(-stack.pop().as_double());
   } else {
-    throw_runtime_error("Operand must be a number value.");
+    throw_runtime_error("Operand must be a number.");
   }
 }
 
