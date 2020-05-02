@@ -39,7 +39,7 @@ class Heap {
     auto string = strings.find_string(str);
     if (!string) {
       string = make_object<String>(std::move(str));
-      strings.set(string, true);
+      strings.insert(string, true);
     }
     return string;
   }

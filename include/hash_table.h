@@ -18,38 +18,41 @@ struct Hash_table {
   }
 
   bool contains(const String* key) const noexcept {
-    auto dest = find_entry(entries, capacity_mask, key);
-    return dest->key != nullptr;
+    const auto& dest = find_entry(entries, capacity_mask, key);
+    return dest.key != nullptr;
+  }
+
+  void insert(String* key, Value value) noexcept {
+    adjust_capacity();
+    auto& dest = find_entry(entries, capacity_mask, key);
+    if (dest.key == nullptr && dest.value.is_nil()) {
+      ++count;
+    }
+    dest.key = key;
+    dest.value = value;
+  }
+
+  bool set(String* key, Value value) noexcept {
+    auto& dest = find_entry(entries, capacity_mask, key);
+    if (dest.key) {
+      dest.value = value;
+      return true;
+    }
+    return false;
   }
 
   Value* get_if(const String* key) const noexcept {
-    auto dest = find_entry(entries, capacity_mask, key);
-    return dest->key ? &dest->value : nullptr;
-  }
-
-  bool set(String* key, Value v) noexcept {
-    constexpr auto max_load = 0.75;
-    if (count + 1 > capacity_of(capacity_mask) * max_load) {
-      adjust_capacity();
-    }
-    const auto dest = find_entry(entries, capacity_mask, key);
-    bool is_new_key = dest->key == nullptr;
-    if (is_new_key && dest->value.is_nil()) {
-      ++count;
-    }
-    dest->key = key;
-    dest->value = v;
-    return is_new_key;
+    auto& dest = find_entry(entries, capacity_mask, key);
+    return dest.key ? &dest.value : nullptr;
   }
 
   bool erase(const String* key) noexcept {
     if (count == 0) {
       return false;
     }
-    auto dest = find_entry(entries, capacity_mask, key);
-    if (dest->key != nullptr) {
-      dest->key = nullptr;
-      dest->value = true;
+    auto& dest = find_entry(entries, capacity_mask, key);
+    if (dest.key != nullptr) {
+      dest.key = nullptr;
       return true;
     }
     return false;
@@ -104,7 +107,7 @@ struct Hash_table {
     return capacity - 1;
   }
 
-  Entry* find_entry(Entry* entries, int capacity_mask, const String* key) const
+  Entry& find_entry(Entry* entries, int capacity_mask, const String* key) const
       noexcept {
     int index = key->get_hash() & capacity_mask;
     Entry* tobmstone = nullptr;
@@ -112,14 +115,14 @@ struct Hash_table {
       auto current = &entries[index];
       if (current->key == nullptr) {
         if (current->value.is_nil()) {
-          return tobmstone != nullptr ? tobmstone : current;
+          return tobmstone != nullptr ? *tobmstone : *current;
         } else {
           if (tobmstone == nullptr) {
             tobmstone = current;
           }
         }
       } else if (current->key == key) {
-        return current;
+        return *current;
       }
 
       index = (index + 1) & capacity_mask;
@@ -127,26 +130,29 @@ struct Hash_table {
   }
 
   void adjust_capacity() noexcept {
-    constexpr int initial_capacity = 8;
-    const auto capacity = capacity_of(capacity_mask);
-    const auto new_capacity_mask = capacity_mask_of(
-        capacity < initial_capacity ? initial_capacity : capacity * 2);
-    const auto new_capacity = capacity_of(new_capacity_mask);
-    auto new_entries = new Entry[new_capacity];
-    count = 0;
-    for (int index = 0; index <= capacity_mask; ++index) {
-      auto current = &entries[index];
-      if (current->key != nullptr) {
-        auto dest = find_entry(new_entries, new_capacity_mask, current->key);
-        *dest = *current;
-        ++count;
+    constexpr auto max_load = 0.75;
+    if (count + 1 > capacity_of(capacity_mask) * max_load) {
+      constexpr int initial_capacity = 8;
+      const auto capacity = capacity_of(capacity_mask);
+      const auto new_capacity_mask = capacity_mask_of(
+          capacity < initial_capacity ? initial_capacity : capacity * 2);
+      const auto new_capacity = capacity_of(new_capacity_mask);
+      auto new_entries = new Entry[new_capacity];
+      count = 0;
+      for (int index = 0; index <= capacity_mask; ++index) {
+        auto current = &entries[index];
+        if (current->key != nullptr) {
+          auto& dest = find_entry(new_entries, new_capacity_mask, current->key);
+          dest = *current;
+          ++count;
+        }
       }
+      if (entries) {
+        delete[] entries;
+      }
+      entries = new_entries;
+      capacity_mask = new_capacity_mask;
     }
-    if (entries) {
-      delete[] entries;
-    }
-    entries = new_entries;
-    capacity_mask = new_capacity_mask;
   }
 
   Entry* entries;

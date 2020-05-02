@@ -186,7 +186,7 @@ inline void VM::handle(const instruction::Define_global& define_global) {
   auto constant = (*executor.constants)[define_global.operand()];
   const auto name = constant.as_object()->as<String>();
   const auto str = heap.make_string(name->get_string());
-  globals.set(str, stack.pop());
+  globals.insert(str, stack.pop());
 }
 
 template <>
@@ -195,8 +195,7 @@ inline void VM::handle(const instruction::Set_global& set_global) {
   ENSURES(set_global.operand() < executor.constants->size());
   auto constant = (*executor.constants)[set_global.operand()];
   const auto name = constant.as_object()->as<String>();
-  if (globals.set(name, stack.peek())) {
-    globals.erase(name);
+  if (!globals.set(name, stack.peek())) {
     throw_undefined_variable(name);
   }
 }
