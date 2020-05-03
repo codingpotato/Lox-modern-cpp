@@ -25,24 +25,28 @@ jobs:
 
       - name: Unit test
         run: |
-          mkdir -p build && cd build && cmake -DCODE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug ..
-          cmake --build build -- -j2
-          cd build && ctest -j8
-          cd build && lcov --directory . --capture -o coverage.info
-          cd build && lcov --remove coverage.info -o coverage.info    \
-              '*/tools/*'                                             \
-              '*/tests/*'                                             \
-              '*/usr/include/*'
-          cd build && genhtml -o coverage coverage.info
+          mkdir -p build && cd build
+          cmake -DCODE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug ..
+          cmake --build . -- -j2
+          ctest -j8
+          if [ "${{ matrix.compiler }}" = "gcc" ]; then
+            lcov --directory . --capture -o coverage.info
+            lcov --remove coverage.info -o coverage.info    \
+                '*/tools/*'                                 \
+                '*/tests/*'                                 \
+                '*/usr/include/*'
+            genhtml -o coverage coverage.info
+          fi
 
-      - name: Upload coverage to Codecov  
+      - name: Upload coverage to Codecov
+        if: ${{ matrix.compiler }} == "gcc"
         uses: codecov/codecov-action@v1
         with:
           file: ./build/coverage.info
 
       - name: Benchmark
         run: |
-          mkdir -p build_benchmark && cd build_benchmark && cmake -DCMAKE_BUILD_TYPE=Release ..
-          cmake --build build -- -j2
-          ./build/benchmark/lox_benchmark
-
+          mkdir -p build_benchmark && cd build_benchmark
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          cmake --build . -- -j2
+          ./benchmark/lox_benchmark
