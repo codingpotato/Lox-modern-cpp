@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@master
 
-      - name: install
+      - name: Install
         run: |
           if [ "${{ matrix.compiler }}" = "gcc" ]; then
             echo "::set-env name=CC::gcc"
@@ -22,14 +22,11 @@ jobs:
             echo "::set-env name=CXX::clang++"
           fi
 
-      - name: configure
-        run: mkdir build && cd build && cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ..
+      - name: Unit test
+        run: ./unit_test.sh
 
-      - name: build
-        run: cmake --build build -j 2
+      - name: Benchmark
+        run: ./benchmark.sh
 
-      - name: test
-        run: cd build && ctest
-
-      - name: benchmark
-        run: ./build/benchmark/lox-benchmark
+      - name: Upload coverage to Codecov  
+        uses: codecov/codecov-action@v1
