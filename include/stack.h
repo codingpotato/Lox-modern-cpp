@@ -1,6 +1,7 @@
 #ifndef LOX_STACK_H
 #define LOX_STACK_H
 
+#include <utility>
 #include <vector>
 
 #include "contract.h"
@@ -8,11 +9,13 @@
 namespace lox {
 
 template <typename T, size_t Max_size>
-struct Stack {
+class Stack {
+ public:
   Stack() noexcept : storage(Max_size) {}
 
   bool empty() const noexcept { return count == 0; }
   size_t size() const noexcept { return count; }
+
   void resize(size_t size) noexcept {
     ENSURES(size <= Max_size);
     count = size;
@@ -24,29 +27,27 @@ struct Stack {
     storage[count++] = T{std::forward<Args>(args)...};
   }
 
-  T& operator[](size_t pos) noexcept {
-    ENSURES(pos < count);
-    return storage[pos];
-  }
-
   const T& operator[](size_t pos) const noexcept {
     ENSURES(pos < count);
     return storage[pos];
   }
 
-  const T& pop() noexcept {
+  T& operator[](size_t pos) noexcept {
+    return const_cast<T&>(std::as_const(*this)[pos]);
+  }
+
+  T pop() noexcept {
     ENSURES(count > 0);
     return storage[--count];
   }
 
-  T& peek(size_t distance = 0) noexcept {
+  const T& peek(size_t distance = 0) const noexcept {
     ENSURES(distance < count);
     return storage[count - distance - 1];
   }
 
-  const T& back() const noexcept {
-    ENSURES(count > 0);
-    return storage[count - 1];
+  T& peek(size_t distance = 0) noexcept {
+    return const_cast<T&>(std::as_const(*this).peek(distance));
   }
 
  private:

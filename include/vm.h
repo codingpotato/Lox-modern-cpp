@@ -66,9 +66,9 @@ class VM {
 
   template <typename Func>
   void binary(Func func) {
-    auto right = stack.pop();
-    auto left = stack.pop();
-    if (left.is_double() && right.is_double()) {
+    if (stack.peek().is_double() && stack.peek(1).is_double()) {
+      const auto right = stack.pop();
+      const auto left = stack.pop();
       stack.push(func(left.as_double(), right.as_double()));
     } else {
       throw_runtime_error("Operands must be numbers.");
@@ -102,7 +102,7 @@ class VM {
     }
   }
 
-  bool concatenate(const Value& left, const Value& right) noexcept;
+  bool concat_string(Value left, Value right) noexcept;
 
   static void throw_runtime_error(const std::string& message);
   static void throw_undefined_variable(const String* name);
@@ -208,8 +208,8 @@ inline void VM::handle(const instruction::Set_upvalue& set_upvalue) {
 
 template <>
 inline void VM::handle(const instruction::Equal&) {
-  auto right = stack.pop();
-  auto left = stack.pop();
+  const auto right = stack.pop();
+  const auto left = stack.pop();
   stack.push(left == right);
 }
 
@@ -225,11 +225,11 @@ inline void VM::handle(const instruction::Less&) {
 
 template <>
 inline void VM::handle(const instruction::Add&) {
-  auto& right = stack.pop();
-  auto& left = stack.pop();
+  const auto right = stack.pop();
+  const auto left = stack.pop();
   if (left.is_double() && right.is_double()) {
     stack.push(left + right);
-  } else if (!concatenate(left, right)) {
+  } else if (!concat_string(left, right)) {
     throw_runtime_error("Operands must be two numbers or two strings.");
   }
 }
@@ -337,7 +337,7 @@ inline void VM::handle(const instruction::Closure& closure_instr) {
 
 template <>
 inline void VM::handle(const instruction::Close_upvalue&) {
-  close_upvalues(&stack.back());
+  close_upvalues(&stack.peek());
   stack.pop();
 }
 

@@ -35,7 +35,6 @@ jobs:
                 '*/tools/*'                                 \
                 '*/tests/*'                                 \
                 '*/usr/include/*'
-            genhtml -o coverage coverage.info
             bash <(curl -s https://codecov.io/bash)
           fi
 

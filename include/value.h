@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "contract.h"
-#include "exception.h"
 #include "type_list.h"
 
 namespace lox {
@@ -15,13 +14,14 @@ class Object;
 
 namespace optimized {
 
-struct Value {
-  constexpr Value() noexcept : bits{make_nil()} {}
-  constexpr Value(bool b) noexcept : bits{make_bool(b)} {}
+class Value {
+ public:
+  constexpr Value() noexcept : bits{from_nil()} {}
+  constexpr Value(bool b) noexcept : bits{from_bool(b)} {}
   constexpr Value(double d) noexcept : double_val{d} {}
-  Value(Object* obj) noexcept : bits{make_object(obj)} {}
+  Value(Object* obj) noexcept : bits{from_object(obj)} {}
 
-  constexpr bool is_nil() const noexcept { return bits == make_nil(); }
+  constexpr bool is_nil() const noexcept { return bits == from_nil(); }
   constexpr bool is_bool() const noexcept {
     return (bits & (tag_false | qnan)) == (tag_false | qnan);
   }
@@ -55,11 +55,11 @@ struct Value {
   constexpr static storage_t tag_true = 3;
   constexpr static storage_t tag_object = 0x8000000000000000;
 
-  constexpr static storage_t make_nil() noexcept { return tag_nil | qnan; }
-  constexpr static storage_t make_bool(bool b) noexcept {
+  constexpr static storage_t from_nil() noexcept { return tag_nil | qnan; }
+  constexpr static storage_t from_bool(bool b) noexcept {
     return (b ? tag_true : tag_false) | qnan;
   }
-  static storage_t make_object(const Object* obj) noexcept {
+  static storage_t from_object(const Object* obj) noexcept {
     return tag_object | qnan | reinterpret_cast<storage_t>(obj);
   }
 
@@ -73,10 +73,11 @@ struct Value {
 
 namespace tagged_union {
 
-struct Value {
+class Value {
+ public:
   constexpr Value() noexcept : id{id_of<Nil>}, object_val{nullptr} {}
-  constexpr Value(bool val) noexcept : id{id_of<bool>}, bool_val{val} {}
-  constexpr Value(double val) noexcept : id{id_of<double>}, double_val{val} {}
+  constexpr Value(bool b) noexcept : id{id_of<bool>}, bool_val{b} {}
+  constexpr Value(double d) noexcept : id{id_of<double>}, double_val{d} {}
   constexpr Value(Object* obj) noexcept : id{id_of<Object>}, object_val{obj} {}
 
   constexpr bool is_nil() const noexcept { return id == id_of<Nil>; }
@@ -135,27 +136,27 @@ inline constexpr bool operator==(Value lhs, Value rhs) noexcept {
   return false;
 }
 
-inline constexpr Value operator+(const Value& lhs, const Value& rhs) noexcept {
+inline constexpr Value operator+(Value lhs, Value rhs) noexcept {
   return lhs.as_double() + rhs.as_double();
 }
 
-inline constexpr Value operator-(const Value& lhs, const Value& rhs) noexcept {
+inline constexpr Value operator-(Value lhs, Value rhs) noexcept {
   return lhs.as_double() - rhs.as_double();
 }
 
-inline constexpr Value operator*(const Value& lhs, const Value& rhs) noexcept {
+inline constexpr Value operator*(Value lhs, Value rhs) noexcept {
   return lhs.as_double() * rhs.as_double();
 }
 
-inline constexpr Value operator/(const Value& lhs, const Value& rhs) noexcept {
+inline constexpr Value operator/(Value lhs, Value rhs) noexcept {
   return lhs.as_double() / rhs.as_double();
 }
 
-inline constexpr Value operator>(const Value& lhs, const Value& rhs) noexcept {
+inline constexpr Value operator>(Value lhs, Value rhs) noexcept {
   return lhs.as_double() > rhs.as_double();
 }
 
-inline constexpr Value operator<(const Value& lhs, const Value& rhs) noexcept {
+inline constexpr Value operator<(Value lhs, Value rhs) noexcept {
   return lhs.as_double() < rhs.as_double();
 }
 

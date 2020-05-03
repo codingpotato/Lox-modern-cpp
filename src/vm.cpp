@@ -2,7 +2,7 @@
 
 namespace lox {
 
-bool VM::concatenate(const Value& left, const Value& right) noexcept {
+bool VM::concat_string(Value left, Value right) noexcept {
   if (left.is_object() && right.is_object()) {
     auto obj_left = left.as_object();
     auto obj_right = right.as_object();
