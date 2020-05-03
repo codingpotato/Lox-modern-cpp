@@ -14,7 +14,6 @@ jobs:
 
       - name: Install
         run: |
-          sudo apt-get install lcov
           if [ "${{ matrix.compiler }}" = "gcc" ]; then
             echo "::set-env name=CC::gcc"
             echo "::set-env name=CXX::g++"
@@ -22,12 +21,28 @@ jobs:
             echo "::set-env name=CC::clang"
             echo "::set-env name=CXX::clang++"
           fi
+          sudo apt-get install lcov
 
       - name: Unit test
-        run: ./unit_test.sh
-
-      - name: Benchmark
-        run: ./benchmark.sh
+        run: |
+          mkdir -p build && cd build && cmake -DCODE_COVERAGE=ON -DCMAKE_BUILD_TYPE=Debug ..
+          cmake --build build -- -j2
+          cd build && ctest -j8
+          cd build && lcov --directory . --capture -o coverage.info
+          cd build && lcov --remove coverage.info -o coverage.info    \
+              '*/tools/*'                                             \
+              '*/tests/*'                                             \
+              '*/usr/include/*'
+          cd build && genhtml -o coverage coverage.info
 
       - name: Upload coverage to Codecov  
         uses: codecov/codecov-action@v1
+        with:
+          file: ./build/coverage.info
+
+      - name: Benchmark
+        run: |
+          mkdir -p build_benchmark && cd build_benchmark && cmake -DCMAKE_BUILD_TYPE=Release ..
+          cmake --build build -- -j2
+          ./build/benchmark/lox_benchmark
+
