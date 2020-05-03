@@ -14,6 +14,7 @@ jobs:
 
       - name: Install
         run: |
+          sudo apt-get install lcov
           if [ "${{ matrix.compiler }}" = "gcc" ]; then
             echo "::set-env name=CC::gcc"
             echo "::set-env name=CXX::g++"
