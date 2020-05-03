@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.13)
 
 project(
   Lox-modern-cpp
@@ -7,12 +7,7 @@ project(
   LANGUAGES CXX)
 
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
-include(submodule)
-
-if(CMAKE_BUILD_TYPE STREQUAL Debug)
-  include(CodeCoverage)
-  append_coverage_compiler_flags()
-endif(CMAKE_BUILD_TYPE STREQUAL Debug)
+include(UpdateSubmodules)
 
 enable_testing()
 
@@ -27,9 +22,16 @@ set(BENCHMARK_ENABLE_TESTING
     OFF
     CACHE BOOL "Suppressing benchmark's tests" FORCE)
 
-set(BENCHMARK_DIR ${PROJECT_SOURCE_DIR}/submodules/benchmark)
-set(DOCTEST_DIR ${PROJECT_SOURCE_DIR}/submodules/doctest)
-add_subdirectory(submodules)
+set(BENCHMARK_DIR ${PROJECT_SOURCE_DIR}/tools/benchmark)
+set(DOCTEST_DIR ${PROJECT_SOURCE_DIR}/tools/doctest)
+add_subdirectory(tools)
+
+add_library(coverage_config INTERFACE)
+option(CODE_COVERAGE "Enable coverage reporting" OFF)
+if(CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+  target_compile_options(coverage_config INTERFACE -O0 -g --coverage)
+  target_link_options(coverage_config INTERFACE --coverage)
+endif(CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 
 add_subdirectory(benchmark)
 add_subdirectory(src)
@@ -37,21 +39,7 @@ add_subdirectory(tests)
 
 add_executable(lox main.cpp ${TESTS_SOURCES})
 add_dependencies(lox doctest)
-target_link_libraries(lox PUBLIC lox-core)
+target_link_libraries(lox PUBLIC lox_core)
 
 include(${DOCTEST_DIR}/scripts/cmake/doctest.cmake)
 doctest_discover_tests(lox)
-
-if(CMAKE_BUILD_TYPE STREQUAL Debug)
-  setup_target_for_coverage_lcov(
-    NAME
-    lox-coverage
-    EXECUTABLE
-    lox
-    BASE_DIRECTORY
-    "${PROJECT_SOURCE_DIR}"
-    EXCLUDE
-    "submodules/*"
-    "benchmark/*"
-    "tests/*")
-endif(CMAKE_BUILD_TYPE STREQUAL Debug)
