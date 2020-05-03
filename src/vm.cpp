@@ -15,7 +15,7 @@ bool VM::concat_string(Value left, Value right) noexcept {
   return false;
 }
 
-void VM::throw_runtime_error(const std::string& message) {
+void VM::throw_runtime_error(const char* message) {
   throw Runtime_error{message};
 }
 
@@ -27,6 +27,16 @@ void VM::throw_incorrect_argument_count(int arity, int argument_count) {
   throw Runtime_error{"Expected " + std::to_string(arity) +
                       " arguments but got " + std::to_string(argument_count) +
                       "."};
+}
+
+void VM::backtrace() const noexcept {
+  for (size_t distance = 0; distance < call_frames.size(); ++distance) {
+    auto& frame = call_frames.peek(distance);
+    auto func = frame.closure->get_func();
+    *out << "[line " << std::setfill('0') << std::setw(4)
+         << func->get_chunk().get_lines()[frame.ip] << "] in "
+         << func->to_string() << "\n";
+  }
 }
 
 }  // namespace lox

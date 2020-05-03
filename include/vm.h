@@ -66,10 +66,10 @@ class VM {
 
   template <typename Func>
   void binary(Func func) {
-    if (stack.peek().is_double() && stack.peek(1).is_double()) {
-      const auto right = stack.pop();
-      const auto left = stack.pop();
-      stack.push(func(left.as_double(), right.as_double()));
+    const auto right = stack.pop();
+    const auto left = stack.pop();
+    if (left.is_double() && right.is_double()) {
+      stack.push(func(left, right));
     } else {
       throw_runtime_error("Operands must be numbers.");
     }
@@ -104,9 +104,11 @@ class VM {
 
   bool concat_string(Value left, Value right) noexcept;
 
-  static void throw_runtime_error(const std::string& message);
-  static void throw_undefined_variable(const String* name);
-  static void throw_incorrect_argument_count(int arity, int argument_count);
+  void throw_runtime_error(const char* message);
+  void throw_undefined_variable(const String* name);
+  void throw_incorrect_argument_count(int arity, int argument_count);
+
+  void backtrace() const noexcept;
 
   constexpr static size_t max_frame_size = 64;
   constexpr static size_t max_stacksize = max_frame_size * 256;
@@ -215,12 +217,12 @@ inline void VM::handle(const instruction::Equal&) {
 
 template <>
 inline void VM::handle(const instruction::Greater&) {
-  binary([](double left, double right) { return left > right; });
+  binary([](Value left, Value right) { return left > right; });
 }
 
 template <>
 inline void VM::handle(const instruction::Less&) {
-  binary([](double left, double right) { return left < right; });
+  binary([](Value left, Value right) { return left < right; });
 }
 
 template <>
@@ -236,17 +238,17 @@ inline void VM::handle(const instruction::Add&) {
 
 template <>
 inline void VM::handle(const instruction::Subtract&) {
-  binary([](double left, double right) { return left - right; });
+  binary([](Value left, Value right) { return left - right; });
 }
 
 template <>
 inline void VM::handle(const instruction::Multiply&) {
-  binary([](double left, double right) { return left * right; });
+  binary([](Value left, Value right) { return left * right; });
 }
 
 template <>
 inline void VM::handle(const instruction::Divide&) {
-  binary([](double left, double right) { return left / right; });
+  binary([](Value left, Value right) { return left / right; });
 }
 
 template <>
@@ -381,15 +383,9 @@ inline void VM::interpret(std::string source) noexcept {
         *out << "\n";
       }
     }
-  } catch (Runtime_error& runtime_error) {
-    *out << runtime_error.what() << "\n";
-    for (size_t distance = 0; distance < call_frames.size(); ++distance) {
-      auto& frame = call_frames.peek(distance);
-      auto func = frame.closure->get_func();
-      *out << "[line " << std::setfill('0') << std::setw(4)
-           << func->get_chunk().get_lines()[frame.ip] << "] in "
-           << func->to_string() << "\n";
-    }
+  } catch (Runtime_error& error) {
+    *out << error.what() << "\n";
+    backtrace();
   } catch (Exception& e) {
     *out << e.what() << "\n";
   }

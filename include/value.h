@@ -137,26 +137,32 @@ inline constexpr bool operator==(Value lhs, Value rhs) noexcept {
 }
 
 inline constexpr Value operator+(Value lhs, Value rhs) noexcept {
+  ENSURES(lhs.is_double() && rhs.is_double());
   return lhs.as_double() + rhs.as_double();
 }
 
 inline constexpr Value operator-(Value lhs, Value rhs) noexcept {
+  ENSURES(lhs.is_double() && rhs.is_double());
   return lhs.as_double() - rhs.as_double();
 }
 
 inline constexpr Value operator*(Value lhs, Value rhs) noexcept {
+  ENSURES(lhs.is_double() && rhs.is_double());
   return lhs.as_double() * rhs.as_double();
 }
 
 inline constexpr Value operator/(Value lhs, Value rhs) noexcept {
+  ENSURES(lhs.is_double() && rhs.is_double());
   return lhs.as_double() / rhs.as_double();
 }
 
 inline constexpr Value operator>(Value lhs, Value rhs) noexcept {
+  ENSURES(lhs.is_double() && rhs.is_double());
   return lhs.as_double() > rhs.as_double();
 }
 
 inline constexpr Value operator<(Value lhs, Value rhs) noexcept {
+  ENSURES(lhs.is_double() && rhs.is_double());
   return lhs.as_double() < rhs.as_double();
 }
 
