@@ -36,13 +36,8 @@ jobs:
                 '*/tests/*'                                 \
                 '*/usr/include/*'
             genhtml -o coverage coverage.info
+            bash <(curl -s https://codecov.io/bash)
           fi
-
-      - name: Upload coverage to Codecov
-        if: ${{ matrix.compiler }} == "gcc"
-        uses: codecov/codecov-action@v1
-        with:
-          file: ./build/coverage.info
 
       - name: Benchmark
         run: |
