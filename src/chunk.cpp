@@ -11,13 +11,13 @@ namespace lox {
 static std::pair<std::string, size_t> upvalues_to_string(
     const instruction::Closure& closure,
     const Value_vector& constants) noexcept {
-  const auto code = closure.get_code();
   ENSURES(closure.operand() < constants.size());
   const auto value = constants[closure.operand()];
   ENSURES(value.is_object() && value.as_object()->is<Function>());
-  const auto func = value.as_object()->template as<Function>();
+  const auto* func = value.as_object()->template as<Function>();
 
   std::string result;
+  const auto* code = closure.get_code();
   size_t upvalue_pos = closure.size;
   for (size_t i = 0; i < func->upvalue_count; ++i) {
     const auto is_local = code[upvalue_pos++];
@@ -28,25 +28,55 @@ static std::pair<std::string, size_t> upvalues_to_string(
   return {result, upvalue_pos};
 }
 
+static std::string operand_to_string(const instruction::Simple_instr&, size_t,
+                                     const Value_vector&) noexcept {
+  return "";
+}
+
+static std::string operand_to_string(const instruction::Byte_instr& instr,
+                                     size_t, const Value_vector&) noexcept {
+  std::ostringstream oss;
+  oss << " " << static_cast<int>(instr.operand());
+  return oss.str();
+}
+
+static std::string operand_to_string(const instruction::Constant_instr& instr,
+                                     size_t,
+                                     const Value_vector& constants) noexcept {
+  ENSURES(instr.operand() < constants.size());
+  return " " + to_string(constants[instr.operand()], true);
+}
+
+static std::string operand_to_string(const instruction::Jump& instr, size_t pos,
+                                     const Value_vector&) noexcept {
+  std::ostringstream oss;
+  oss << " " << instr.operand() << " -> "
+      << pos + instruction::Jump::size + instr.operand();
+  return oss.str();
+}
+
+static std::string operand_to_string(const instruction::Jump_if_false& instr,
+                                     size_t pos, const Value_vector&) noexcept {
+  std::ostringstream oss;
+  oss << " " << instr.operand() << " -> "
+      << pos + instruction::Jump_if_false::size + instr.operand();
+  return oss.str();
+}
+
+static std::string operand_to_string(const instruction::Loop& instr, size_t pos,
+                                     const Value_vector&) noexcept {
+  std::ostringstream oss;
+  oss << " " << instr.operand() << " -> "
+      << pos + instruction::Loop::size - instr.operand();
+  return oss.str();
+}
+
 template <typename Instruction>
 static std::pair<std::string, size_t> to_string(
     const Instruction& instr, size_t pos,
     const Value_vector& constants) noexcept {
   std::ostringstream oss;
-  oss << instr.name;
-  if constexpr (std::is_base_of_v<instruction::Constant_instruction,
-                                  Instruction>) {
-    ENSURES(instr.operand() < constants.size());
-    oss << " " << to_string(constants[instr.operand()], true);
-  } else if constexpr (Instruction::size > sizeof(Bytecode)) {
-    oss << " " << instr.operand();
-    if constexpr (std::is_same_v<Instruction, instruction::Jump> ||
-                  std::is_same_v<Instruction, instruction::Jump_if_false>) {
-      oss << " -> " << pos + instruction::Jump::size + instr.operand();
-    } else if constexpr (std::is_same_v<Instruction, instruction::Loop>) {
-      oss << " -> " << pos + instruction::Loop::size - instr.operand();
-    }
-  }
+  oss << instr.name << operand_to_string(instr, pos, constants);
   if constexpr (std::is_same_v<Instruction, instruction::Closure>) {
     auto [string, size] = upvalues_to_string(instr, constants);
     oss << "        upvalues: " + string;

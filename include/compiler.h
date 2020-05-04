@@ -547,7 +547,7 @@ class Compiler {
   size_t add_constant(Args&&... args) {
     const auto index =
         current_func_frame().add_constant(std::forward<Args>(args)...);
-    if (index <= instruction::Constant_instruction::max_operand) {
+    if (index <= instruction::Constant_instr::operand_max) {
       return index;
     }
     throw make_compile_error("Too many constants in one chunk.", *previous);
@@ -636,8 +636,7 @@ class Compiler {
 
     void patch_jump(size_t jump) noexcept {
       func->get_chunk().patch_jump(
-          jump,
-          current_code_position() - jump - instruction::Jump_instruction::size);
+          jump, current_code_position() - jump - instruction::Jump_instr::size);
     }
     size_t current_code_position() const noexcept {
       return func->get_chunk().get_code().size();

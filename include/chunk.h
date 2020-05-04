@@ -1,6 +1,7 @@
 #ifndef LOX_CHUNK_H
 #define LOX_CHUNK_H
 
+#include <type_traits>
 #include <vector>
 
 #include "contract.h"
@@ -26,12 +27,12 @@ struct Chunk {
   }
 
   template <typename Instruction>
-  size_t add(size_t operand, size_t line) noexcept {
-    const auto pos = code.size();
-    code.push_back(Instruction::opcode);
-    lines.push_back(line);
-    const auto bytecode_count = Instruction::add_operand(code, operand);
-    for (size_t i = 0; i < bytecode_count; ++i) {
+  size_t add(typename Instruction::Operand_t operand, size_t line) noexcept {
+    static_assert(Instruction::size > instruction::Simple_instr::size);
+
+    const auto pos = add<Instruction>(line);
+    const auto count = Instruction::add_operand(code, operand);
+    for (size_t i = 0; i < count; ++i) {
       lines.push_back(line);
     }
     EXPECTS(code.size() == lines.size());
@@ -42,12 +43,11 @@ struct Chunk {
   size_t add(size_t operand,
              const typename Instruction::Upvalue_vector& upvalues,
              size_t line) noexcept {
-    const auto pos = code.size();
-    code.push_back(Instruction::opcode);
-    lines.push_back(line);
-    const auto bytecode_count =
-        Instruction::add_operand(code, operand, upvalues);
-    for (size_t i = 0; i < bytecode_count; ++i) {
+    static_assert(std::is_base_of_v<instruction::Closure_instr, Instruction>);
+
+    const auto pos = add<Instruction>(operand, line);
+    const auto count = Instruction::add_upvalues(code, upvalues);
+    for (size_t i = 0; i < count; ++i) {
       lines.push_back(line);
     }
     EXPECTS(code.size() == lines.size());
@@ -60,9 +60,9 @@ struct Chunk {
     return constants.size() - 1;
   }
 
-  void patch_jump(size_t pos, size_t operand) noexcept {
+  void patch_jump(size_t pos, instruction::Jump::Operand_t operand) noexcept {
     ENSURES(pos < code.size());
-    instruction::Jump_instruction::set_operand(&code[pos], operand);
+    instruction::Jump_instr::set_operand(&code[pos], operand);
   }
 
  private:

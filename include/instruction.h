@@ -22,56 +22,60 @@ struct Base {
   const Bytecode* code;
 };
 
-struct Simple_instruction : Base {
-  using Base::Base;
+struct Simple_instr : Base {
   static constexpr size_t size = sizeof(Bytecode);
+
+  using Base::Base;
 };
 
-struct Byte_instruction : Base {
-  using Base::Base;
+struct Byte_instr : Base {
+  using Operand_t = uint8_t;
 
-  static constexpr size_t max_operand = UINT8_MAX;
-  static constexpr size_t index_operand = 1;
+  static constexpr size_t size = sizeof(Bytecode) + sizeof(Operand_t);
+  static constexpr Operand_t operand_max = UINT8_MAX;
+  static constexpr size_t operand_index = 1;
 
-  static size_t add_operand(Bytecode_vector& code, size_t operand) noexcept {
-    ENSURES(operand <= max_operand);
+  static size_t add_operand(Bytecode_vector& code, Operand_t operand) noexcept {
+    ENSURES(operand <= operand_max);
     code.push_back(operand);
-    return size - sizeof(Bytecode);
+    return sizeof(Operand_t);
   }
-  size_t operand() const noexcept { return code[index_operand]; }
 
-  static constexpr size_t size = sizeof(Bytecode) + sizeof(Bytecode);
-};
-
-struct Constant_instruction : Byte_instruction {
-  using Byte_instruction::Byte_instruction;
-};
-
-struct Jump_instruction : Base {
   using Base::Base;
 
-  static constexpr size_t max_operand = UINT16_MAX;
-  static constexpr size_t index_operand_high_byte = 1;
-  static constexpr size_t index_operand_low_byte = 2;
+  Operand_t operand() const noexcept { return code[operand_index]; }
+};
 
-  static size_t add_operand(Bytecode_vector& code, size_t operand) noexcept {
-    ENSURES(operand <= max_operand);
+struct Constant_instr : Byte_instr {
+  using Byte_instr::Byte_instr;
+};
+
+struct Jump_instr : Base {
+  using Operand_t = uint16_t;
+
+  static constexpr size_t size = sizeof(Bytecode) + sizeof(Operand_t);
+  static constexpr Operand_t operand_max = UINT16_MAX;
+  static constexpr size_t operand_index_high = 1;
+  static constexpr size_t operand_index_low = 2;
+
+  static size_t add_operand(Bytecode_vector& code, Operand_t operand) noexcept {
+    ENSURES(operand <= operand_max);
     code.push_back(high_byte_of(operand));
     code.push_back(low_byte_of(operand));
-    return size - sizeof(Bytecode);
+    return sizeof(Operand_t);
   }
 
-  static void set_operand(Bytecode* code, size_t operand) noexcept {
+  static void set_operand(Bytecode* code, Operand_t operand) noexcept {
     ENSURES(operand < UINT16_MAX);
-    code[index_operand_high_byte] = high_byte_of(operand);
-    code[index_operand_low_byte] = low_byte_of(operand);
+    code[operand_index_high] = high_byte_of(operand);
+    code[operand_index_low] = low_byte_of(operand);
   }
 
-  size_t operand() const noexcept {
-    return (code[index_operand_high_byte] << 8) | code[index_operand_low_byte];
-  }
+  using Base::Base;
 
-  static constexpr size_t size = sizeof(Bytecode) + sizeof(Bytecode) * 2;
+  Operand_t operand() const noexcept {
+    return (code[operand_index_high] << 8) | code[operand_index_low];
+  }
 
  private:
   static Bytecode high_byte_of(size_t operand) noexcept { return operand >> 8; }
@@ -80,66 +84,65 @@ struct Jump_instruction : Base {
   }
 };
 
-struct Closure_instruction : Constant_instruction {
+struct Closure_instr : Constant_instr {
   struct Upvalue {
     Upvalue(size_t index, bool is_local) noexcept
         : index{static_cast<Bytecode>(index)},
           is_local{static_cast<Bytecode>(is_local ? 1 : 0)} {
-      ENSURES(index < UINT8_MAX);
+      ENSURES(index <= UINT8_MAX);
     }
     Bytecode index;
     Bytecode is_local;
   };
   using Upvalue_vector = std::vector<Upvalue>;
 
-  using Constant_instruction::Constant_instruction;
+  using Constant_instr::Constant_instr;
 
   static constexpr size_t index_of_upvalues = 2;
 
-  static size_t add_operand(Bytecode_vector& code, size_t operand,
-                            const Upvalue_vector& upvalues) noexcept {
-    const auto size = Constant_instruction::add_operand(code, operand);
+  static size_t add_upvalues(Bytecode_vector& code,
+                             const Upvalue_vector& upvalues) noexcept {
     for (const auto& upvalue : upvalues) {
       code.push_back(upvalue.is_local);
       code.push_back(upvalue.index);
     }
-    return size + upvalues.size() * 2;
+    return upvalues.size() * 2;
   }
 
   const Bytecode* upvalues() const noexcept { return &code[index_of_upvalues]; }
 };
 
 // clang-format off
-#define INSTRUCTIONS(generator)                     \
-  generator(Constant, Constant_instruction)         \
-  generator(Nil, Simple_instruction)                \
-  generator(True, Simple_instruction)               \
-  generator(False, Simple_instruction)              \
-  generator(Pop, Simple_instruction)                \
-  generator(Get_local, Byte_instruction)            \
-  generator(Set_local, Byte_instruction)            \
-  generator(Get_global, Constant_instruction)       \
-  generator(Define_global, Constant_instruction)    \
-  generator(Set_global, Constant_instruction)       \
-  generator(Get_upvalue, Byte_instruction)          \
-  generator(Set_upvalue, Byte_instruction)          \
-  generator(Equal, Simple_instruction)              \
-  generator(Greater, Simple_instruction)            \
-  generator(Less, Simple_instruction)               \
-  generator(Add, Simple_instruction)                \
-  generator(Subtract, Simple_instruction)           \
-  generator(Multiply, Simple_instruction)           \
-  generator(Divide, Simple_instruction)             \
-  generator(Not, Simple_instruction)                \
-  generator(Negate, Simple_instruction)             \
-  generator(Print, Simple_instruction)              \
-  generator(Jump, Jump_instruction)                 \
-  generator(Jump_if_false, Jump_instruction)        \
-  generator(Loop, Jump_instruction)                 \
-  generator(Call, Byte_instruction)                 \
-  generator(Closure, Closure_instruction)           \
-  generator(Close_upvalue, Simple_instruction)      \
-  generator(Return, Simple_instruction)
+#define INSTRUCTIONS(generator)               \
+  generator(Constant, Constant_instr)         \
+  generator(Nil, Simple_instr)                \
+  generator(True, Simple_instr)               \
+  generator(False, Simple_instr)              \
+  generator(Pop, Simple_instr)                \
+  generator(Get_local, Byte_instr)            \
+  generator(Set_local, Byte_instr)            \
+  generator(Get_global, Constant_instr)       \
+  generator(Define_global, Constant_instr)    \
+  generator(Set_global, Constant_instr)       \
+  generator(Get_upvalue, Byte_instr)          \
+  generator(Set_upvalue, Byte_instr)          \
+  generator(Equal, Simple_instr)              \
+  generator(Greater, Simple_instr)            \
+  generator(Less, Simple_instr)               \
+  generator(Add, Simple_instr)                \
+  generator(Subtract, Simple_instr)           \
+  generator(Multiply, Simple_instr)           \
+  generator(Divide, Simple_instr)             \
+  generator(Not, Simple_instr)                \
+  generator(Negate, Simple_instr)             \
+  generator(Print, Simple_instr)              \
+  generator(Jump, Jump_instr)                 \
+  generator(Jump_if_false, Jump_instr)        \
+  generator(Loop, Jump_instr)                 \
+  generator(Call, Byte_instr)                 \
+  generator(Closure, Closure_instr)           \
+  generator(Close_upvalue, Simple_instr)      \
+  generator(Return, Simple_instr)
 // clang-format on
 
 #define FORWARD_DECLARATION(instr, base) struct instr;
@@ -151,21 +154,21 @@ INSTRUCTIONS(FORWARD_DECLARATION)
 using Types = Type_list<INSTRUCTIONS(TYPE_LIST_ARGUMENT) void>;
 static_assert(Types::size < UINT8_MAX);
 
-#define STRUCT(instr, base)                                         \
-  struct instr : base {                                             \
-    instr(const Bytecode* code) noexcept : base{code} {             \
-      ENSURES(*code == instr::opcode);                              \
-    }                                                               \
-                                                                    \
-    static constexpr size_t opcode = Index_of<instr, Types>::value; \
-    static constexpr const char* name = "OP_" #instr;               \
+#define STRUCT(instr, base)                                           \
+  struct instr : base {                                               \
+    instr(const Bytecode* code) noexcept : base{code} {               \
+      ENSURES(*code == instr::opcode);                                \
+    }                                                                 \
+                                                                      \
+    static constexpr Bytecode opcode = Index_of<instr, Types>::value; \
+    static constexpr const char* name = "OP_" #instr;                 \
   };
 
 INSTRUCTIONS(STRUCT)
 
 #define VISIT_CASE(instr, base) \
   case instr::opcode:           \
-    return std::forward<Visitor>(visitor)(instr{&code[pos]});
+    return visitor(instr{&code[pos]});
 
 template <typename Visitor>
 void visit(const Bytecode_vector& code, size_t pos, Visitor&& visitor) {
