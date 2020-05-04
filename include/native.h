@@ -7,16 +7,17 @@
 #include "heap.h"
 #include "value.h"
 
+using std::chrono_literals::operator""s;
+
 namespace lox {
 
 inline Value clock(int, Value*) noexcept {
-  auto time = std::chrono::duration_cast<std::chrono::microseconds>(
-                  std::chrono::steady_clock::now().time_since_epoch())
-                  .count();
-  return static_cast<double>(time) /
-         std::chrono::duration_cast<std::chrono::microseconds>(
-             std::chrono::seconds{1})
-             .count();
+  constexpr auto one_second =
+      std::chrono::duration_cast<std::chrono::microseconds>(1s).count();
+  const auto time = std::chrono::duration_cast<std::chrono::microseconds>(
+                        std::chrono::steady_clock::now().time_since_epoch())
+                        .count();
+  return static_cast<double>(time) / one_second;
 }
 
 inline void register_natives(Hash_table& globals, Heap<>& heap) noexcept {

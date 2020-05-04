@@ -34,9 +34,9 @@ class List {
   ~List() noexcept {
     if constexpr (Owened) {
       while (head) {
-        const auto current = head;
-        head = head->next;
-        delete current;
+        auto next = head->next;
+        delete head;
+        head = next;
       }
     }
   }

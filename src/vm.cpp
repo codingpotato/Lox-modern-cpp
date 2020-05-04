@@ -1,5 +1,7 @@
 #include "vm.h"
 
+#include <iomanip>
+
 namespace lox {
 
 bool VM::concat_string(Value left, Value right) noexcept {
