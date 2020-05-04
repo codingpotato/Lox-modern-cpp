@@ -36,7 +36,6 @@ struct Byte_instr : Base {
   static constexpr size_t operand_index = 1;
 
   static size_t add_operand(Bytecode_vector& code, Operand_t operand) noexcept {
-    ENSURES(operand <= operand_max);
     code.push_back(operand);
     return sizeof(Operand_t);
   }
@@ -59,14 +58,12 @@ struct Jump_instr : Base {
   static constexpr size_t operand_index_low = 2;
 
   static size_t add_operand(Bytecode_vector& code, Operand_t operand) noexcept {
-    ENSURES(operand <= operand_max);
     code.push_back(high_byte_of(operand));
     code.push_back(low_byte_of(operand));
     return sizeof(Operand_t);
   }
 
   static void set_operand(Bytecode* code, Operand_t operand) noexcept {
-    ENSURES(operand < UINT16_MAX);
     code[operand_index_high] = high_byte_of(operand);
     code[operand_index_low] = low_byte_of(operand);
   }
