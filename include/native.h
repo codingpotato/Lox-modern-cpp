@@ -20,7 +20,7 @@ inline Value clock(int, Value*) noexcept {
   return static_cast<double>(time) / one_second;
 }
 
-inline void register_natives(Hash_table& globals, Heap<>& heap) noexcept {
+inline void register_natives(Hash_table& globals, Heap& heap) noexcept {
   const auto name = heap.make_string("clock");
   globals.insert(name, Value{});
   globals.set(name, heap.make_object<Native_func>(clock));

@@ -23,7 +23,7 @@ class VM {
   explicit VM(std::ostream& os) noexcept
       : out{&os},
         compiler{heap},
-        gc{stack, heap, globals, call_frames, compiler} {
+        gc{heap, globals, stack, call_frames, compiler} {
     register_natives(globals, heap);
   }
 
@@ -113,13 +113,16 @@ class VM {
   constexpr static size_t max_frame_size = 64;
   constexpr static size_t max_stacksize = max_frame_size * 256;
 
+  using Value_stack = Stack<Value, max_stacksize>;
+  using Call_frame_stack = Stack<Call_frame, max_frame_size>;
+
   std::ostream* out;
-  Heap<> heap;
-  Compiler compiler;
-  Stack<Call_frame, max_frame_size> call_frames;
-  Stack<Value, max_stacksize> stack;
+  Heap heap;
   Hash_table globals;
-  GC<Stack<Value, max_stacksize>, Stack<Call_frame, max_frame_size>> gc;
+  Value_stack stack;
+  Call_frame_stack call_frames;
+  Compiler compiler;
+  GC<Heap, Hash_table, Value_stack, Call_frame_stack, Compiler> gc;
   Executor executor;
 };
 

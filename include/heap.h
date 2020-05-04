@@ -11,7 +11,6 @@
 
 namespace lox {
 
-template <bool Debug_stress_gc = true>
 class Heap {
  public:
   using Object_list = List<Object>;
@@ -25,11 +24,6 @@ class Heap {
 
   template <typename T, typename... Args>
   T* make_object(Args&&... args) noexcept {
-    if constexpr (Debug_stress_gc) {
-      if (delegate) {
-        delegate->collect_garbage();
-      }
-    }
     const auto obj = new T{std::forward<Args>(args)...};
     objects.insert(obj);
     return obj;

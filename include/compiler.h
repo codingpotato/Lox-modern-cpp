@@ -83,16 +83,7 @@ struct rules_generator {
 
 class Compiler {
  public:
-  explicit Compiler(Heap<>& heap) noexcept : heap{&heap} {}
-
-  template <typename Visitor>
-  void for_each_func(Visitor&& visitor) const noexcept {
-    for (const auto& func_frame : func_frames) {
-      if (func_frame.func) {
-        visitor(func_frame.func);
-      }
-    }
-  }
+  explicit Compiler(Heap& heap) noexcept : heap{&heap} {}
 
   Function* compile(Token_vector ts) {
     make_func_frame("", 0);
@@ -104,6 +95,15 @@ class Compiler {
     add_return_instruction();
     EXPECTS(func_frames.size() == 1)
     return current_func_frame().func;
+  }
+
+  template <typename Visitor>
+  void for_each_func(Visitor&& visitor) const noexcept {
+    for (const auto& func_frame : func_frames) {
+      if (func_frame.func) {
+        visitor(func_frame.func);
+      }
+    }
   }
 
  private:
@@ -720,7 +720,7 @@ class Compiler {
 
   constexpr static int max_function_parameters = 255;
 
-  Heap<>* heap;
+  Heap* heap;
   func_frame_vector func_frames;
   Token_vector tokens;
   Token_vector::const_iterator current;

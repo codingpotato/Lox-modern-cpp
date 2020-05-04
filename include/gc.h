@@ -3,22 +3,21 @@
 
 #include <vector>
 
-#include "compiler.h"
-#include "hash_table.h"
-#include "heap.h"
-#include "stack.h"
+#include "object.h"
 #include "value.h"
 
 namespace lox {
 
-template <typename Value_stack, typename Call_frame_stack>
-struct GC : Heap<>::Delegate {
-  GC(const Value_stack& stack, Heap<>& heap, const Hash_table& globals,
+template <typename Heap, typename Hash_table, typename Value_stack,
+          typename Call_frame_stack, typename Compiler>
+class GC : Heap::Delegate {
+ public:
+  GC(Heap& heap, const Hash_table& globals, const Value_stack& stack,
      const Call_frame_stack& call_frames, const Compiler& compiler)
   noexcept
-      : stack{&stack},
-        heap{&heap},
+      : heap{&heap},
         globals{&globals},
+        stack{&stack},
         call_frames{&call_frames},
         compiler{&compiler} {
     heap.set_delegate(*this);
@@ -95,9 +94,9 @@ struct GC : Heap<>::Delegate {
     }
   }
 
-  const Value_stack* stack;
-  Heap<>* heap;
+  Heap* heap;
   const Hash_table* globals;
+  const Value_stack* stack;
   const Call_frame_stack* call_frames;
   const Compiler* compiler;
   std::vector<Object*> gray_objects;
