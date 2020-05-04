@@ -7,13 +7,13 @@
 #include "heap.h"
 #include "value.h"
 
-using std::chrono_literals::operator""s;
-
 namespace lox {
 
 inline Value clock(int, Value*) noexcept {
   constexpr auto one_second =
-      std::chrono::duration_cast<std::chrono::microseconds>(1s).count();
+      std::chrono::duration_cast<std::chrono::microseconds>(
+          std::chrono::seconds{1})
+          .count();
   const auto time = std::chrono::duration_cast<std::chrono::microseconds>(
                         std::chrono::steady_clock::now().time_since_epoch())
                         .count();

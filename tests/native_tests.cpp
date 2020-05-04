@@ -3,15 +3,15 @@
 #include <thread>
 
 #include "helper.h"
-#include "native.h"
 
 TEST_CASE("native") {
-  REQUIRE(
-      std::stod(run("print clock();")) ==
-      doctest::Approx(
-          static_cast<double>(
+  REQUIRE(std::stod(run("print clock();")) ==
+          doctest::Approx(
+              static_cast<double>(
+                  std::chrono::duration_cast<std::chrono::microseconds>(
+                      std::chrono::steady_clock::now().time_since_epoch())
+                      .count()) /
               std::chrono::duration_cast<std::chrono::microseconds>(
-                  std::chrono::steady_clock::now().time_since_epoch())
-                  .count()) /
-          std::chrono::duration_cast<std::chrono::microseconds>(1s).count()));
+                  std::chrono::seconds{1})
+                  .count()));
 }
