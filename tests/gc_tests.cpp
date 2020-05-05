@@ -12,7 +12,7 @@
 constexpr size_t max_size = 10;
 
 struct Heap_mockup {
-  using Upvalue_list = lox::List<lox::Upvalue>;
+  using Upvalue_list = lox::List<lox::Upvalue, false>;
 
   struct Delegate {
     virtual ~Delegate() noexcept = default;
@@ -24,8 +24,6 @@ struct Heap_mockup {
   void set_delegate(Delegate&) const noexcept {}
 
   void sweep() noexcept {}
-
-  void erase_unmarked_strings() noexcept {}
 
   Upvalue_list upvalues;
 };
@@ -39,7 +37,13 @@ using Value_stack = lox::Stack<lox::Value, max_size>;
 
 struct Compiler {
   template <typename Visitor>
-  void for_each_func(Visitor&&) const noexcept {}
+  void for_each_func(Visitor&& visitor) const noexcept {
+    for (auto func : functions) {
+      visitor(func);
+    }
+  }
+
+  std::vector<lox::Function*> functions;
 };
 
 TEST_CASE("gc") {
@@ -56,6 +60,41 @@ TEST_CASE("gc") {
   lox::String value{"value"};
   globals.insert(&key, &value);
 
+  lox::Function func;
+  lox::String func_name{"func"};
+  func.name = &func_name;
+  func.upvalue_count = 1;
+
+  lox::Upvalue upvalue{nullptr};
+  lox::String closed{"closed"};
+  upvalue.closed = &closed;
+
+  lox::Closure closure{&func};
+  closure.get_upvalues()[0] = &upvalue;
+  call_frames.push(&closure);
+
+  lox::Upvalue open_upvalue{nullptr};
+  lox::String open_closed{"open_closed"};
+  open_upvalue.closed = &open_closed;
+  heap.upvalues.insert(&open_upvalue);
+
+  lox::Function compile_func;
+  lox::String compile_func_name{"compile_func"};
+  func.name = &compile_func_name;
+
+  compiler.functions.push_back(&compile_func);
+
+  REQUIRE(!string.is_marked);
+  REQUIRE(!key.is_marked);
+  REQUIRE(!value.is_marked);
+  REQUIRE(!func.is_marked);
+  REQUIRE(!upvalue.is_marked);
+  REQUIRE(!closed.is_marked);
+  REQUIRE(!closure.is_marked);
+  REQUIRE(!open_upvalue.is_marked);
+  REQUIRE(!open_closed.is_marked);
+  REQUIRE(!compile_func.is_marked);
+
   lox::GC<Heap_mockup, lox::Hash_table, Value_stack, Call_frame_stack, Compiler>
       gc{heap, globals, stack, call_frames, compiler};
   gc.collect_garbage();
@@ -63,4 +102,11 @@ TEST_CASE("gc") {
   REQUIRE(string.is_marked);
   REQUIRE(key.is_marked);
   REQUIRE(value.is_marked);
+  REQUIRE(func.is_marked);
+  REQUIRE(upvalue.is_marked);
+  REQUIRE(closed.is_marked);
+  REQUIRE(closure.is_marked);
+  REQUIRE(open_upvalue.is_marked);
+  REQUIRE(open_closed.is_marked);
+  REQUIRE(compile_func.is_marked);
 }

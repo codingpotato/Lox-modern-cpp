@@ -254,7 +254,7 @@ class Compiler {
   }
 
   void parse_return() {
-    if (!current_func_frame().func->get_name()) {
+    if (!current_func_frame().func->name) {
       throw make_compile_error("Cannot return from top-level code.");
     }
     if (match(Token::semicolon)) {

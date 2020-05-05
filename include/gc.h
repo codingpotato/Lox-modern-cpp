@@ -26,7 +26,6 @@ class GC : Heap::Delegate {
   void collect_garbage() noexcept override {
     mark_roots();
     trace_references();
-    heap->erase_unmarked_strings();
     heap->sweep();
   }
 
@@ -85,7 +84,7 @@ class GC : Heap::Delegate {
       }
     } else if (object->is<Function>()) {
       auto func = object->as<Function>();
-      mark_object(func->get_name());
+      mark_object(func->name);
       for (auto value : func->get_chunk().get_constants()) {
         mark_value(value);
       }

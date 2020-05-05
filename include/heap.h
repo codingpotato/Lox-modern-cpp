@@ -60,6 +60,9 @@ class Heap {
   }
 
   void sweep() noexcept {
+    strings.erase_if(
+        [](const String* string, Value) { return !string->is_marked; });
+
     objects.erase_if([](Object* object) {
       if (object->is_marked) {
         object->is_marked = false;
@@ -67,10 +70,6 @@ class Heap {
       }
       return true;
     });
-  }
-
-  void erase_unmarked_strings() noexcept {
-    strings.erase_if([](String* string, Value) { return !string->is_marked; });
   }
 
  private:

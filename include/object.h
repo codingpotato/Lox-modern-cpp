@@ -93,8 +93,6 @@ class Function : public Object {
   const Chunk& get_chunk() const noexcept { return chunk; }
   Chunk& get_chunk() noexcept { return chunk; }
   size_t get_arity() const noexcept { return arity; }
-  const String* get_name() const noexcept { return name; }
-  String* get_name() noexcept { return name; }
 
   void inc_arity() noexcept { ++arity; }
 
