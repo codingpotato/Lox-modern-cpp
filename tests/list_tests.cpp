@@ -4,6 +4,8 @@
 #include "object.h"
 
 struct Node {
+  size_t size() const noexcept { return sizeof(Node); }
+
   int value = 0;
   Node* next = nullptr;
 };

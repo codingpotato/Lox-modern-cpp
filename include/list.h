@@ -4,6 +4,7 @@
 #include <iterator>
 
 #include "contract.h"
+#include "gc.h"
 
 namespace lox {
 
@@ -35,7 +36,7 @@ class List {
     if constexpr (Owened) {
       while (head) {
         auto next = head->next;
-        delete head;
+        free_node(head);
         head = next;
       }
     }
@@ -70,7 +71,7 @@ class List {
         } else {
           head = node;
         }
-        delete erased;
+        free_node(erased);
       } else {
         previous = node;
         node = node->next;
@@ -79,6 +80,14 @@ class List {
   }
 
  private:
+  static void free_node(Node* node) noexcept {
+    ENSURES(node);
+    if (auto tracker = Memory_tracker::current(); tracker) {
+      tracker->free(node->size());
+    }
+    delete node;
+  }
+
   Node* head = nullptr;
 };
 

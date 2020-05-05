@@ -47,6 +47,7 @@ class Object {
     return const_cast<T*>(std::as_const(*this).as<T>());
   }
 
+  virtual size_t size() const noexcept = 0;
   virtual std::string to_string(bool = false) const noexcept = 0;
 
   Object* next = nullptr;
@@ -75,6 +76,7 @@ class String : public Object {
   const std::string& get_string() const noexcept { return string; }
   uint32_t get_hash() const noexcept { return hash; }
 
+  size_t size() const noexcept override { return sizeof(String); };
   std::string to_string(bool = false) const noexcept override { return string; }
 
   friend bool operator==(const String& lhs, const String& rhs) noexcept {
@@ -96,6 +98,7 @@ class Function : public Object {
 
   void inc_arity() noexcept { ++arity; }
 
+  size_t size() const noexcept override { return sizeof(Function); };
   std::string to_string(bool verbose = false) const noexcept override {
     const std::string message =
         name ? "<func: " + name->get_string() + ">" : "<script>";
@@ -120,6 +123,7 @@ class Native_func : public Object {
     return (*func)(arg_count, args);
   }
 
+  size_t size() const noexcept override { return sizeof(Native_func); };
   std::string to_string(bool = false) const noexcept override {
     return "<native func>";
   }
@@ -133,6 +137,7 @@ class Upvalue : public Object {
   explicit Upvalue(Value* location) noexcept
       : Object{id_of<Upvalue>}, location{location} {}
 
+  size_t size() const noexcept override { return sizeof(Upvalue); };
   std::string to_string(bool = false) const noexcept override {
     return "upvalue";
   }
@@ -156,6 +161,7 @@ class Closure : public Object {
   const Upvalue_vector& get_upvalues() const noexcept { return upvalues; }
   Upvalue_vector& get_upvalues() noexcept { return upvalues; }
 
+  size_t size() const noexcept override { return sizeof(Closure); };
   std::string to_string(bool verbose = false) const noexcept override {
     return func->to_string(verbose);
   }

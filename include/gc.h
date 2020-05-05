@@ -3,14 +3,42 @@
 
 #include <vector>
 
+#include "contract.h"
 #include "object.h"
 #include "value.h"
 
 namespace lox {
 
+struct Memory_tracker {
+  Memory_tracker() noexcept { current_tracker = this; }
+  virtual ~Memory_tracker() noexcept { current_tracker = nullptr; }
+
+  static Memory_tracker* current() noexcept { return current_tracker; }
+
+  void allocate(size_t size) noexcept {
+    bytes_allocated += size;
+    if (bytes_allocated > next_gc) {
+      collect_garbage();
+      next_gc = bytes_allocated * 2;
+    }
+  }
+  void free(size_t size) noexcept { bytes_allocated -= size; }
+
+ private:
+  virtual void collect_garbage() noexcept = 0;
+
+  static constexpr size_t initial_gc = 1024 * 1024;
+  static constexpr size_t heap_grow_factor = 2;
+
+  inline static Memory_tracker* current_tracker = nullptr;
+
+  size_t bytes_allocated = 0;
+  size_t next_gc = initial_gc;
+};
+
 template <typename Heap, typename Hash_table, typename Value_stack,
           typename Call_frame_stack, typename Compiler>
-class GC : Heap::Delegate {
+class GC : Memory_tracker {
  public:
   GC(Heap& heap, const Hash_table& globals, const Value_stack& stack,
      const Call_frame_stack& call_frames, const Compiler& compiler)
@@ -19,9 +47,7 @@ class GC : Heap::Delegate {
         globals{&globals},
         stack{&stack},
         call_frames{&call_frames},
-        compiler{&compiler} {
-    heap.set_delegate(*this);
-  }
+        compiler{&compiler} {}
 
   void collect_garbage() noexcept override {
     mark_roots();

@@ -2,6 +2,7 @@
 #define LOX_HASH_TABLE_H
 
 #include "contract.h"
+#include "gc.h"
 #include "object.h"
 #include "value.h"
 
@@ -10,12 +11,7 @@ namespace lox {
 struct Hash_table {
  public:
   Hash_table() noexcept : entries{nullptr}, capacity_mask{-1}, count{0} {}
-
-  ~Hash_table() noexcept {
-    if (entries) {
-      delete[] entries;
-    }
-  }
+  ~Hash_table() noexcept { free_current_entries(); }
 
   bool contains(const String* key) const noexcept {
     const auto& dest = find_entry(entries, capacity_mask, key);
@@ -136,8 +132,7 @@ struct Hash_table {
       const auto capacity = capacity_of(capacity_mask);
       const auto new_capacity_mask = capacity_mask_of(
           capacity < initial_capacity ? initial_capacity : capacity * 2);
-      const auto new_capacity = capacity_of(new_capacity_mask);
-      auto new_entries = new Entry[new_capacity];
+      auto new_entries = allocate_new_entries(capacity_of(new_capacity_mask));
       count = 0;
       for (int index = 0; index <= capacity_mask; ++index) {
         auto current = &entries[index];
@@ -147,11 +142,25 @@ struct Hash_table {
           ++count;
         }
       }
-      if (entries) {
-        delete[] entries;
-      }
+      free_current_entries();
       entries = new_entries;
       capacity_mask = new_capacity_mask;
+    }
+  }
+
+  Entry* allocate_new_entries(size_t count) const noexcept {
+    if (auto tracker = Memory_tracker::current(); tracker) {
+      tracker->allocate(sizeof(Entry) * count);
+    }
+    return new Entry[count];
+  }
+
+  void free_current_entries() noexcept {
+    if (entries) {
+      if (auto tracker = Memory_tracker::current(); tracker) {
+        tracker->free(sizeof(Entry) * capacity_of(capacity_mask));
+      }
+      delete[] entries;
     }
   }
 

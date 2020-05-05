@@ -14,14 +14,7 @@ constexpr size_t max_size = 10;
 struct Heap_mockup {
   using Upvalue_list = lox::List<lox::Upvalue, false>;
 
-  struct Delegate {
-    virtual ~Delegate() noexcept = default;
-    virtual void collect_garbage() noexcept = 0;
-  };
-
   const Upvalue_list& get_open_upvalues() const noexcept { return upvalues; }
-
-  void set_delegate(Delegate&) const noexcept {}
 
   void sweep() noexcept {}
 

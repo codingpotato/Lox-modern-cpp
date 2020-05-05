@@ -3,6 +3,7 @@
 
 #include <string>
 
+#include "gc.h"
 #include "hash_table.h"
 #include "list.h"
 #include "object.h"
@@ -16,14 +17,11 @@ class Heap {
   using Object_list = List<Object>;
   using Upvalue_list = List<Upvalue, false>;
 
-  class Delegate {
-   public:
-    virtual ~Delegate() noexcept = default;
-    virtual void collect_garbage() noexcept = 0;
-  };
-
   template <typename T, typename... Args>
   T* make_object(Args&&... args) noexcept {
+    if (auto tracker = Memory_tracker::current(); tracker) {
+      tracker->allocate(sizeof(T));
+    }
     const auto obj = new T{std::forward<Args>(args)...};
     objects.insert(obj);
     return obj;
@@ -53,8 +51,6 @@ class Heap {
     return upvalue;
   }
 
-  void set_delegate(Delegate& d) noexcept { delegate = &d; }
-
   const Upvalue_list& get_open_upvalues() const noexcept {
     return open_upvalues;
   }
@@ -76,7 +72,6 @@ class Heap {
   Object_list objects;
   Hash_table strings;
   Upvalue_list open_upvalues;
-  Delegate* delegate = nullptr;
 };
 
 }  // namespace lox
