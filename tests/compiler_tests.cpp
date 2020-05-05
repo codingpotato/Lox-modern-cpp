@@ -5,7 +5,7 @@
 
 #include "helper.h"
 
-TEST_CASE("compile: primary") {
+TEST_CASE("compiler: primary") {
   const std::string source{R"(1; 2; nil;
 true; false; "str";
 )"};
@@ -28,7 +28,7 @@ true; false; "str";
   CHECK_EQ(compile(source, "primary"), expected);
 }
 
-TEST_CASE("compile: if") {
+TEST_CASE("compiler: if") {
   const std::string source{R"(
 if (1 > 0) print 1;
 else print 0;
@@ -51,7 +51,7 @@ else print 0;
   CHECK_EQ(compile(source, "if"), expected);
 }
 
-TEST_CASE("compile: while") {
+TEST_CASE("compiler: while") {
   const std::string source{R"(
 while (1 > 0) print 1;
 )"};
@@ -71,7 +71,7 @@ while (1 > 0) print 1;
   CHECK_EQ(compile(source, "while"), expected);
 }
 
-TEST_CASE("compile: function call") {
+TEST_CASE("compiler: function call") {
   const std::string source{R"(
 fun add(a, b) { return a + b; }
 print add(1, 2);
@@ -97,7 +97,7 @@ print add(1, 2);
   CHECK_EQ(compile(source, "function call"), expected);
 }
 
-TEST_CASE("compile: fib") {
+TEST_CASE("compiler: fib") {
   const std::string source{R"(
 fun fib(n) {
   if (n < 2) return n;
@@ -142,7 +142,7 @@ print fib(8);
   CHECK_EQ(compile(source, "fib"), expected);
 }
 
-TEST_CASE("compile: and truth") {
+TEST_CASE("compiler: and truth") {
   const std::string source{R"(
 print false and "bad";
 print nil and "bad";
