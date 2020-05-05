@@ -7,7 +7,6 @@
 #include "hash_table.h"
 #include "list.h"
 #include "object.h"
-#include "stack.h"
 #include "value.h"
 
 namespace lox {

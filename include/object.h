@@ -21,15 +21,17 @@ class Closure;
 class Object {
  public:
   using Types = Type_list<String, Function, Native_func, Upvalue, Closure>;
+
   template <typename T>
   constexpr static size_t id_of = Index_of<T, Types>::value;
 
   explicit Object(size_t id) noexcept : id{id} { ENSURES(id < Types::size); }
+  virtual ~Object() noexcept = default;
+
   Object(const Object&) noexcept = delete;
   Object(Object&&) noexcept = delete;
   Object& operator=(const Object&) noexcept = delete;
   Object& operator=(Object&&) noexcept = delete;
-  virtual ~Object() noexcept = default;
 
   template <typename T>
   bool is() const noexcept {
@@ -94,8 +96,8 @@ class Function : public Object {
 
   const Chunk& get_chunk() const noexcept { return chunk; }
   Chunk& get_chunk() noexcept { return chunk; }
-  size_t get_arity() const noexcept { return arity; }
 
+  size_t get_arity() const noexcept { return arity; }
   void inc_arity() noexcept { ++arity; }
 
   size_t size() const noexcept override { return sizeof(Function); };
@@ -158,6 +160,7 @@ class Closure : public Object {
 
   const Function* get_func() const noexcept { return func; }
   Function* get_func() noexcept { return func; }
+
   const Upvalue_vector& get_upvalues() const noexcept { return upvalues; }
   Upvalue_vector& get_upvalues() noexcept { return upvalues; }
 

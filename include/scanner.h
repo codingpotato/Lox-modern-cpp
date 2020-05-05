@@ -305,7 +305,7 @@ struct Scanner {
     return Token::identifier;
   }
 
-  Compile_error make_compiler_error(const std::string& message) const {
+  Compile_error make_compiler_error(const std::string& message) const noexcept {
     std::string string = {start, current};
     return Compile_error{
         "[line " + std::to_string(line) + "] " +

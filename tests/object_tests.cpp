@@ -4,9 +4,9 @@
 
 #include "object.h"
 
-TEST_CASE("string") {
-  const std::string str = "test string";
+TEST_CASE("object") {
+  const std::string str = "string";
   lox::String string{str};
-  CHECK_EQ(string.get_hash(), lox::String::hash_from(str));
-  CHECK_EQ(string, str);
+  REQUIRE_EQ(string.get_hash(), lox::String::hash_from(str));
+  REQUIRE_EQ(string, str);
 }

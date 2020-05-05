@@ -4,10 +4,8 @@
 
 #include "heap.h"
 
-TEST_CASE("heap") {
+TEST_CASE("heap: make string") {
   lox::Heap heap;
-  std::string str{"test string"};
-  auto obj = heap.make_string(str);
-  (void)obj;
-  CHECK_EQ(heap.make_string(str), obj);
+  std::string str{"string"};
+  CHECK_EQ(heap.make_string(str), heap.make_string(str));
 }

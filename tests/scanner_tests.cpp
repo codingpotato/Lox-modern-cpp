@@ -4,13 +4,13 @@
 #include "scanner.h"
 
 inline void check_tokens(const lox::Token_vector& tokens,
-                         const lox::Token_vector& expected) noexcept {
-  (void)(expected);
-  CHECK_EQ(tokens.size(), expected.size());
+                         const lox::Token_vector& expected
+                         __attribute((unused))) noexcept {
+  REQUIRE_EQ(tokens.size(), expected.size());
   for (std::size_t i = 0; i < tokens.size(); ++i) {
-    CHECK_EQ(tokens[i].type, expected[i].type);
-    CHECK_EQ(tokens[i].lexeme, expected[i].lexeme);
-    CHECK_EQ(tokens[i].line, expected[i].line);
+    REQUIRE_EQ(tokens[i].type, expected[i].type);
+    REQUIRE_EQ(tokens[i].lexeme, expected[i].lexeme);
+    REQUIRE_EQ(tokens[i].line, expected[i].line);
   }
 }
 
@@ -19,8 +19,8 @@ TEST_CASE("scanner: identifiers") {
 andy formless fo _ _123 _abc ab123
 abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890_
 )"};
-  auto tokens = scanner.scan();
-  std::vector<lox::Token> expected = {
+  const auto tokens = scanner.scan();
+  const std::vector<lox::Token> expected = {
       {lox::Token::identifier, "andy", 2},
       {lox::Token::identifier, "formless", 2},
       {lox::Token::identifier, "fo", 2},
@@ -39,8 +39,8 @@ TEST_CASE("scanner: keywords") {
   lox::Scanner scanner{R"(
 and class else false for fun if nil or return super this true var while
 )"};
-  auto tokens = scanner.scan();
-  std::vector<lox::Token> expected = {
+  const auto tokens = scanner.scan();
+  const std::vector<lox::Token> expected = {
       {lox::Token::k_and, "and", 2},     {lox::Token::k_class, "class", 2},
       {lox::Token::k_else, "else", 2},   {lox::Token::k_false, "false", 2},
       {lox::Token::k_for, "for", 2},     {lox::Token::k_func, "fun", 2},
@@ -60,8 +60,8 @@ TEST_CASE("scanner: numbers") {
 .456
 123.
 )"};
-  auto tokens = scanner.scan();
-  std::vector<lox::Token> expected = {
+  const auto tokens = scanner.scan();
+  const std::vector<lox::Token> expected = {
       {lox::Token::number, "123", 2}, {lox::Token::number, "123.456", 3},
       {lox::Token::dot, ".", 4},      {lox::Token::number, "456", 4},
       {lox::Token::number, "123", 5}, {lox::Token::dot, ".", 5},
@@ -74,8 +74,8 @@ TEST_CASE("scanner: punctuators") {
   lox::Scanner scanner{R"(
 (){};,+-*!===<=>=!=<>/.
 )"};
-  auto tokens = scanner.scan();
-  std::vector<lox::Token> expected = {
+  const auto tokens = scanner.scan();
+  const std::vector<lox::Token> expected = {
       {lox::Token::left_paren, "(", 2},
       {lox::Token::right_paren, ")", 2},
       {lox::Token::left_brace, "{", 2},
@@ -104,8 +104,8 @@ TEST_CASE("scanner: strings") {
 ""
 "string"
 )"};
-  auto tokens = scanner.scan();
-  std::vector<lox::Token> expected = {
+  const auto tokens = scanner.scan();
+  const std::vector<lox::Token> expected = {
       {lox::Token::string, "", 2},
       {lox::Token::string, "string", 3},
       {lox::Token::eof, "", 4},
@@ -122,8 +122,8 @@ space    tabs				newlines
 
 end
 )"};
-  auto tokens = scanner.scan();
-  std::vector<lox::Token> expected = {
+  const auto tokens = scanner.scan();
+  const std::vector<lox::Token> expected = {
       {lox::Token::identifier, "space", 2},
       {lox::Token::identifier, "tabs", 2},
       {lox::Token::identifier, "newlines", 2},
