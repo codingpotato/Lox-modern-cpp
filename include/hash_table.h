@@ -28,9 +28,8 @@ struct Hash_table {
     dest.value = value;
   }
 
-  bool set(String* key, Value value) noexcept {
-    auto& dest = find_entry(entries, capacity_mask, key);
-    if (dest.key) {
+  bool set(const String* key, Value value) noexcept {
+    if (auto& dest = find_entry(entries, capacity_mask, key); dest.key) {
       dest.value = value;
       return true;
     }
@@ -46,8 +45,7 @@ struct Hash_table {
     if (count == 0) {
       return false;
     }
-    auto& dest = find_entry(entries, capacity_mask, key);
-    if (dest.key != nullptr) {
+    if (auto& dest = find_entry(entries, capacity_mask, key); dest.key) {
       dest.key = nullptr;
       return true;
     }
@@ -60,8 +58,8 @@ struct Hash_table {
     }
     int index = String::hash_from(string) & capacity_mask;
     while (true) {
-      auto& current = entries[index];
-      if (current.key != nullptr && *current.key == string) {
+      if (auto& current = entries[index];
+          current.key && *current.key == string) {
         return current.key;
       } else if (current.value.is_nil()) {
         return nullptr;
@@ -71,7 +69,7 @@ struct Hash_table {
   }
 
   template <typename Visitor>
-  void for_each(Visitor visitor) const noexcept {
+  void for_each(Visitor&& visitor) const noexcept {
     for (auto i = 0; i <= capacity_mask; ++i) {
       if (entries[i].key) {
         visitor(entries[i].key, entries[i].value);
@@ -80,12 +78,11 @@ struct Hash_table {
   }
 
   template <typename Pred>
-  void erase_if(Pred pred) noexcept {
+  void erase_if(Pred&& pred) noexcept {
     for (auto i = 0; i <= capacity_mask; ++i) {
-      auto dest = &entries[i];
-      if (dest->key && pred(dest->key, dest->value)) {
-        dest->key = nullptr;
-        dest->value = true;
+      if (auto& dest = entries[i]; dest.key && pred(dest.key, dest.value)) {
+        dest.key = nullptr;
+        dest.value = true;
       }
     }
   }
@@ -108,19 +105,15 @@ struct Hash_table {
     int index = key->get_hash() & capacity_mask;
     Entry* tobmstone = nullptr;
     while (true) {
-      auto current = &entries[index];
-      if (current->key == nullptr) {
-        if (current->value.is_nil()) {
-          return tobmstone != nullptr ? *tobmstone : *current;
-        } else {
-          if (tobmstone == nullptr) {
-            tobmstone = current;
-          }
+      if (auto& current = entries[index]; !current.key) {
+        if (current.value.is_nil()) {
+          return tobmstone ? *tobmstone : current;
+        } else if (!tobmstone) {
+          tobmstone = &current;
         }
-      } else if (current->key == key) {
-        return *current;
+      } else if (current.key == key) {
+        return current;
       }
-
       index = (index + 1) & capacity_mask;
     }
   }
@@ -135,10 +128,9 @@ struct Hash_table {
       auto new_entries = allocate_new_entries(capacity_of(new_capacity_mask));
       count = 0;
       for (int index = 0; index <= capacity_mask; ++index) {
-        auto current = &entries[index];
-        if (current->key != nullptr) {
-          auto& dest = find_entry(new_entries, new_capacity_mask, current->key);
-          dest = *current;
+        if (const auto& current = entries[index]; current.key) {
+          auto& dest = find_entry(new_entries, new_capacity_mask, current.key);
+          dest = current;
           ++count;
         }
       }
