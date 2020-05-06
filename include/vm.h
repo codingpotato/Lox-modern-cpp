@@ -38,30 +38,33 @@ class VM {
  private:
   struct Call_frame {
     Call_frame() noexcept {}
-    Call_frame(Closure* closure, size_t bottom = 0) noexcept
-        : closure{closure}, bottom_of_stack{bottom} {}
+    Call_frame(Closure& closure, size_t bottom = 0) noexcept
+        : closure{&closure},
+          ip{&closure.get_func()->get_chunk().get_code()[0]},
+          bottom_of_stack{bottom} {}
 
     Closure* closure = nullptr;
-    size_t ip = 0;
+    const Bytecode* ip;
     size_t bottom_of_stack = 0;
   };
 
   struct Executor {
-    void copy_from(const Closure* closure) noexcept {
-      const auto& chunk = closure->get_func()->get_chunk();
-      code = &chunk.get_code();
+    void copy_from(const Closure& closure) noexcept {
+      const auto& chunk = closure.get_func()->get_chunk();
+      const auto& code = chunk.get_code();
+      ip = &code[0];
+      end = &code[code.size()];
       constants = &chunk.get_constants();
-      ip = 0;
     }
 
     void copy_from(const Call_frame& frame) noexcept {
-      copy_from(frame.closure);
+      copy_from(*frame.closure);
       ip = frame.ip;
     }
 
-    const Bytecode_vector* code = nullptr;
+    const Bytecode* ip;
+    const Bytecode* end;
     const Value_vector* constants = nullptr;
-    size_t ip = 0;
   };
 
   template <typename Func>
@@ -90,7 +93,7 @@ class VM {
     }
   }
 
-  void call_closure(Closure* closure, size_t argument_count) {
+  void call_closure(Closure& closure, size_t argument_count) {
     if (!call_frames.empty()) {
       top_frame().ip = executor.ip;
     }
@@ -301,7 +304,7 @@ inline void VM::handle(const instruction::Call& call) {
       auto closure = object->as<Closure>();
       const auto arity = closure->get_func()->get_arity();
       if (argument_count == arity) {
-        call_closure(closure, argument_count);
+        call_closure(*closure, argument_count);
         return;
       }
       throw_incorrect_argument_count(arity, argument_count);
@@ -361,12 +364,12 @@ inline void VM::handle(const instruction::Return&) {
   }
 }
 
-#define INTERPRET_CASE(instr_struct, base)                                  \
-  case instruction::instr_struct::opcode: {                                 \
-    auto instr = instruction::instr_struct{&(*executor.code)[executor.ip]}; \
-    executor.ip += instr.size;                                              \
-    handle(instr);                                                          \
-    break;                                                                  \
+#define INTERPRET_CASE(instr_struct, base)               \
+  case instruction::instr_struct::opcode: {              \
+    auto instr = instruction::instr_struct{executor.ip}; \
+    executor.ip += instr.size;                           \
+    handle(instr);                                       \
+    break;                                               \
   }
 
 template <bool Debug>
@@ -376,9 +379,9 @@ inline void VM::interpret(std::string source) noexcept {
     auto func = compiler.compile(scanner.scan());
     auto closure = heap.make_object<Closure>(func);
     stack.push(closure);
-    call_closure(closure, 0);
-    while (executor.ip < executor.code->size()) {
-      switch ((*executor.code)[executor.ip]) { INSTRUCTIONS(INTERPRET_CASE) }
+    call_closure(*closure, 0);
+    while (executor.ip != executor.end) {
+      switch (*executor.ip) { INSTRUCTIONS(INTERPRET_CASE) }
       if constexpr (Debug) {
         for (size_t i = 0; i < stack.size(); ++i) {
           *out << to_string(stack[i]) << " ";
