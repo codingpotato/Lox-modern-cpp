@@ -38,8 +38,7 @@ struct Rule {
 };
 
 template <typename Compiler>
-using Rules =
-    std::array<Rule<Compiler>, static_cast<std::size_t>(Token::eof) + 1>;
+using Rules = std::array<Rule<Compiler>, static_cast<size_t>(Token::eof) + 1>;
 
 template <typename Compiler>
 struct rules_generator {
@@ -51,17 +50,19 @@ struct rules_generator {
     constexpr element elements[] = {
         {Token::left_paren,
          {&Compiler::parse_grouping, &Compiler::parse_call, p_call}},
-        {Token::minus, {&Compiler::unary, &Compiler::binary, p_term}},
-        {Token::plus, {nullptr, &Compiler::binary, p_term}},
-        {Token::slash, {nullptr, &Compiler::binary, p_factor}},
-        {Token::star, {nullptr, &Compiler::binary, p_factor}},
-        {Token::bang, {&Compiler::unary, nullptr, p_none}},
-        {Token::bang_equal, {nullptr, &Compiler::binary, p_equality}},
-        {Token::equal_equal, {nullptr, &Compiler::binary, p_equality}},
-        {Token::greater, {nullptr, &Compiler::binary, p_comparison}},
-        {Token::greater_equal, {nullptr, &Compiler::binary, p_comparison}},
-        {Token::less, {nullptr, &Compiler::binary, p_comparison}},
-        {Token::less_equal, {nullptr, &Compiler::binary, p_comparison}},
+        {Token::minus,
+         {&Compiler::parse_unary, &Compiler::parse_binary, p_term}},
+        {Token::plus, {nullptr, &Compiler::parse_binary, p_term}},
+        {Token::slash, {nullptr, &Compiler::parse_binary, p_factor}},
+        {Token::star, {nullptr, &Compiler::parse_binary, p_factor}},
+        {Token::bang, {&Compiler::parse_unary, nullptr, p_none}},
+        {Token::bang_equal, {nullptr, &Compiler::parse_binary, p_equality}},
+        {Token::equal_equal, {nullptr, &Compiler::parse_binary, p_equality}},
+        {Token::greater, {nullptr, &Compiler::parse_binary, p_comparison}},
+        {Token::greater_equal,
+         {nullptr, &Compiler::parse_binary, p_comparison}},
+        {Token::less, {nullptr, &Compiler::parse_binary, p_comparison}},
+        {Token::less_equal, {nullptr, &Compiler::parse_binary, p_comparison}},
         {Token::identifier, {&Compiler::add_variable, nullptr, p_none}},
         {Token::number, {&Compiler::add_number_constant, nullptr, p_none}},
         {Token::string, {&Compiler::add_string_constant, nullptr, p_none}},
@@ -299,7 +300,7 @@ class Compiler {
 
   void parse_expression() { parse_precedence(precedence::p_assignment); }
 
-  void binary(bool) {
+  void parse_binary(bool) {
     const auto op_type = previous->type;
     parse_precedence(
         static_cast<precedence::Type>(p_rules_[op_type].precedence + 1));
@@ -342,9 +343,9 @@ class Compiler {
     }
   }
 
-  void parse_call(bool) { add<instruction::Call>(argument_list()); }
+  void parse_call(bool) { add<instruction::Call>(parse_argument_list()); }
 
-  size_t argument_list() {
+  size_t parse_argument_list() {
     size_t count = 0;
     if (!check(Token::right_paren)) {
       do {
@@ -366,7 +367,7 @@ class Compiler {
     consume(Token::right_paren, "Expect ')' after expression.");
   }
 
-  void unary(bool) {
+  void parse_unary(bool) {
     auto op_type = previous->type;
     parse_precedence(precedence::p_unary);
     switch (op_type) {
