@@ -1,7 +1,10 @@
 #ifndef LOX_CONFIG_H
 #define LOX_CONFIG_H
 
-constexpr const char* const benchmark_sum_lox =
+const char* const lox_benchmark_sum =
     "@PROJECT_SOURCE_DIR@/lox/benchmark/sum.lox";
+
+const char* const lox_benchmark_fib =
+    "@PROJECT_SOURCE_DIR@/lox/benchmark/fib.lox";
 
 #endif
