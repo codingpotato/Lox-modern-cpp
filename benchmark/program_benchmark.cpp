@@ -1,20 +1,14 @@
 #include <benchmark/benchmark.h>
 
-#include "compiler.h"
+#include <fstream>
+
+#include "config.h"
 #include "helper.h"
-#include "scanner.h"
-#include "vm.h"
 
 static void sum(benchmark::State& state) {
-  std::string source{R"(
-var sum = 0.0;
-var i = 0;
-while (i < 10000000) {
-    sum = sum + i;
-    i = i + 1;
-}
-print sum;
-)"};
+  std::ifstream ifs(benchmark_sum_lox);
+  const auto source = std::string{std::istreambuf_iterator<char>{ifs},
+                  std::istreambuf_iterator<char>{}};
   while (state.KeepRunning()) {
     run(source);
   }

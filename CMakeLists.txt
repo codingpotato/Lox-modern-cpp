@@ -33,6 +33,8 @@ if(CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   target_link_options(coverage_config INTERFACE --coverage)
 endif(CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 
+configure_file(config.h.in ${CMAKE_BINARY_DIR}/config.h)
+
 add_subdirectory(benchmark)
 add_subdirectory(src)
 add_subdirectory(tests)
