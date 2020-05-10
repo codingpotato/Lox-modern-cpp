@@ -1,10 +1,12 @@
 #ifndef LOX_TESTS_HELPER_H
 #define LOX_TESTS_HELPER_H
 
+#include <algorithm>
 #include <fstream>
+#include <stdexcept>
 #include <string>
+#include <utility>
 
-#include "chunk.h"
 #include "compiler.h"
 #include "heap.h"
 #include "object.h"
@@ -28,13 +30,15 @@ inline std::string expected_from(const std::string& source) noexcept {
   return expected;
 }
 
-inline std::pair<std::string, std::string> load(
-    const std::string& filename) noexcept {
+inline std::pair<std::string, std::string> load(const std::string& filename) {
   std::ifstream ifs{filename};
   auto source = std::string{std::istreambuf_iterator<char>{ifs},
                             std::istreambuf_iterator<char>{}};
-  auto expected = expected_from(source);
-  return {std::move(source), std::move(expected)};
+  if (!source.empty()) {
+    auto expected = expected_from(source);
+    return {std::move(source), std::move(expected)};
+  }
+  throw std::runtime_error{"Read " + filename + " failed."};
 }
 
 inline std::string compile(std::string source,

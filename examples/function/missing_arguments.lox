@@ -1,0 +1,5 @@
+fun f(a, b) {}
+
+f(1);
+// expect: Expected 2 arguments but got 1.
+// expect: [line 0001] in <script>

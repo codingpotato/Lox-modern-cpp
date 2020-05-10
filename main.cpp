@@ -10,21 +10,12 @@
 
 namespace lox {
 
-inline void run(std::string source) {
-  try {
-    VM vm{std::cout};
-    vm.interpret(std::move(source));
-  } catch (std::exception &e) {
-    std::cout << e.what() << '\n';
-  }
-}
-
 inline void repl() noexcept {}
 
 inline void run_file(const std::string &filepath) {
   std::ifstream ifs(filepath);
-  run(std::string((std::istreambuf_iterator<char>(ifs)),
-                  (std::istreambuf_iterator<char>())));
+  VM{std::cout}.interpret(std::string{std::istreambuf_iterator<char>{ifs},
+                                      std::istreambuf_iterator<char>{}});
 }
 
 inline int main(int argc, char *argv[]) noexcept {

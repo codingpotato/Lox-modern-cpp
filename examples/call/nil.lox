@@ -1,0 +1,3 @@
+nil();
+// expect: Can only call functions and classes.
+// expect: [line 0001] in <script>

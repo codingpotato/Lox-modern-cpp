@@ -1,0 +1,4 @@
+fun foo() {}
+print foo; // expect: <func: foo>
+
+print clock; // expect: <native func>

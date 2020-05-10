@@ -1,0 +1,15 @@
+{
+  fun isEven(n) {
+    if (n == 0) return true;
+    return isOdd(n - 1);
+  }
+
+  fun isOdd(n) {
+    return isEven(n - 1);
+  }
+
+  isEven(4);
+}
+// expect: Undefined variable 'isOdd'.
+// expect: [line 0003] in <func: isEven>
+// expect: [line 0011] in <script>

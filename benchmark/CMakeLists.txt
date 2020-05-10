@@ -1,4 +1,4 @@
-file(GLOB SOURCES "*.cpp")
+set(SOURCES hash_table_benchmark.cpp main.cpp)
 
 add_executable(lox_benchmark ${SOURCES})
 target_include_directories(lox_benchmark PRIVATE ${PROJECT_SOURCE_DIR}/include
