@@ -7,7 +7,8 @@ project(
   LANGUAGES CXX)
 
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
-include(UpdateSubmodules)
+include(coverage)
+include(update_submodules)
 
 enable_testing()
 
@@ -26,14 +27,7 @@ set(BENCHMARK_DIR ${PROJECT_SOURCE_DIR}/tools/benchmark)
 set(DOCTEST_DIR ${PROJECT_SOURCE_DIR}/tools/doctest)
 add_subdirectory(tools)
 
-add_library(coverage_config INTERFACE)
-option(CODE_COVERAGE "Enable coverage reporting" OFF)
-if(CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-  target_compile_options(coverage_config INTERFACE -O0 -g --coverage)
-  target_link_options(coverage_config INTERFACE --coverage)
-endif(CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-
-configure_file(config.h.in ${CMAKE_BINARY_DIR}/config.h)
+configure_file(config.h.in ${CMAKE_BINARY_DIR}/config.h @ONLY)
 
 add_subdirectory(benchmark)
 add_subdirectory(src)

@@ -22,7 +22,7 @@ void VM::throw_runtime_error(const char* message) {
 }
 
 void VM::throw_undefined_variable(const String* name) {
-  throw Runtime_error{"Undefined variable: '" + name->get_string() + "'."};
+  throw Runtime_error{"Undefined variable '" + name->get_string() + "'."};
 }
 
 void VM::throw_incorrect_argument_count(int arity, int argument_count) {

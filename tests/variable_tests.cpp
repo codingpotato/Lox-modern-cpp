@@ -185,7 +185,7 @@ TEST_CASE("variable: undefined global") {
   const std::string source{R"(
 print notDefined;
 )"};
-  const std::string expected{R"(Undefined variable: 'notDefined'.
+  const std::string expected{R"(Undefined variable 'notDefined'.
 [line 0002] in <script>
 )"};
   CHECK_EQ(run(source), expected);
@@ -197,7 +197,7 @@ TEST_CASE("variable: undefined local") {
   print notDefined;
 }
 )"};
-  const std::string expected{R"(Undefined variable: 'notDefined'.
+  const std::string expected{R"(Undefined variable 'notDefined'.
 [line 0003] in <script>
 )"};
   CHECK_EQ(run(source), expected);

@@ -35,7 +35,7 @@ TEST_CASE("function: local mutual recursion") {
   isEven(4);
 }
 )"};
-  std::string expected{R"(Undefined variable: 'isOdd'.
+  std::string expected{R"(Undefined variable 'isOdd'.
 [line 0004] in <func: isEven>
 [line 0010] in <script>
 )"};

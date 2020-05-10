@@ -10,7 +10,7 @@ var a = "1
 ";
 err;
 )"};
-  const std::string expected{R"(Undefined variable: 'err'.
+  const std::string expected{R"(Undefined variable 'err'.
 [line 0005] in <script>
 )"};
   CHECK_EQ(run(source), expected);

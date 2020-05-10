@@ -5,7 +5,7 @@
 
 BENCHMARK_MAIN();
 
-static void fib(benchmark::State& state) {
+/*static void fib(benchmark::State& state) {
   auto source = load_source(lox_benchmark_fib);
   while (state.KeepRunning()) {
     run(source);
@@ -20,3 +20,4 @@ static void sum(benchmark::State& state) {
   }
 }
 BENCHMARK(sum);
+*/
