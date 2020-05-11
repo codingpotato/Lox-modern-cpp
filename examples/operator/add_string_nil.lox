@@ -1,1 +1,3 @@
-"s" + nil; // expect runtime error: Operands must be two numbers or two strings.
+"s" + nil;
+// expect: Operands must be two numbers or two strings.
+// expect: [line 0001] in <script>

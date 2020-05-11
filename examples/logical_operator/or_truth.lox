@@ -4,5 +4,5 @@ print nil or "ok"; // expect: ok
 
 // Everything else is true.
 print true or "ok"; // expect: true
-print 0 or "ok"; // expect: 0
+print 0 or "ok"; // expect: 0.000000
 print "s" or "ok"; // expect: s

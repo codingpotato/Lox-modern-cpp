@@ -1,8 +1,8 @@
 // Note: These tests implicitly depend on ints being truthy.
 
 // Return the first true argument.
-print 1 or true; // expect: 1
-print false or 1; // expect: 1
+print 1 or true; // expect: 1.000000
+print false or 1; // expect: 1.000000
 print false or false or true; // expect: true
 
 // Return the last argument if all are false.

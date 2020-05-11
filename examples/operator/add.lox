@@ -1,2 +1,2 @@
-print 123 + 456; // expect: 579
+print 123 + 456; // expect: 579.000000
 print "str" + "ing"; // expect: string

@@ -4,5 +4,8 @@ set(TESTS_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/gc_tests.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/hash_table_tests.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/heap_tests.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/list_tests.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/lox_tests.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/native_tests.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/object_tests.cpp
   PARENT_SCOPE)
