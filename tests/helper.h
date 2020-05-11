@@ -34,7 +34,7 @@ inline std::pair<std::string, std::string> load(const std::string& filename) {
   std::ifstream ifs{filename};
   auto source = std::string{std::istreambuf_iterator<char>{ifs},
                             std::istreambuf_iterator<char>{}};
-  if (!source.empty()) {
+  if (ifs.good()) {
     auto expected = expected_from(source);
     return {std::move(source), std::move(expected)};
   }

@@ -8,4 +8,8 @@ set(TESTS_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/lox_tests.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/native_tests.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/object_tests.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/scanner_tests.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/stack_tests.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/type_list_tests.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/value_tests.cpp
   PARENT_SCOPE)

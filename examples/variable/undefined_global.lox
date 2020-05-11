@@ -1,1 +1,3 @@
-print notDefined;  // expect runtime error: Undefined variable 'notDefined'.
+print notDefined;
+// expect: Undefined variable 'notDefined'.
+// expect: [line 0001] in <script>
