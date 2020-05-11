@@ -136,3 +136,14 @@ LOX_TEST_CASE("operator/not")
 LOX_TEST_CASE("operator/subtract_nonnum_num")
 LOX_TEST_CASE("operator/subtract_num_nonnum")
 LOX_TEST_CASE("operator/subtract")
+
+LOX_TEST_CASE("print/missing_argument")
+
+LOX_TEST_CASE("regression/40")
+
+LOX_TEST_CASE("return/after_else")
+LOX_TEST_CASE("return/after_if")
+LOX_TEST_CASE("return/after_while")
+LOX_TEST_CASE("return/at_top_level")
+LOX_TEST_CASE("return/in_function")
+LOX_TEST_CASE("return/return_nil_if_no_value")
