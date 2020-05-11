@@ -11,6 +11,10 @@
     REQUIRE_EQ(run(source), expected);                                \
   }
 
+LOX_TEST_CASE("empty_file")
+LOX_TEST_CASE("precedence")
+LOX_TEST_CASE("unexpected_character")
+
 LOX_TEST_CASE("assignment/associativity")
 LOX_TEST_CASE("assignment/global")
 LOX_TEST_CASE("assignment/grouping")
@@ -148,10 +152,6 @@ LOX_TEST_CASE("return/at_top_level")
 LOX_TEST_CASE("return/in_function")
 LOX_TEST_CASE("return/return_nil_if_no_value")
 
-LOX_TEST_CASE("empty_file")
-LOX_TEST_CASE("precedence")
-LOX_TEST_CASE("unexpected_character")
-
 LOX_TEST_CASE("string/error_after_multiline")
 LOX_TEST_CASE("string/literals")
 LOX_TEST_CASE("string/multiline")
@@ -178,3 +178,11 @@ LOX_TEST_CASE("variable/unreached_undefined")
 LOX_TEST_CASE("variable/in_nested_block")
 LOX_TEST_CASE("variable/shadow_global")
 LOX_TEST_CASE("variable/use_false_as_var")
+
+LOX_TEST_CASE("while/class_in_body")
+LOX_TEST_CASE("while/closure_in_body")
+LOX_TEST_CASE("while/fun_in_body")
+LOX_TEST_CASE("while/return_closure")
+LOX_TEST_CASE("while/return_inside")
+LOX_TEST_CASE("while/syntax")
+LOX_TEST_CASE("while/var_in_body")

@@ -14,6 +14,6 @@ while (i < 4) {
   i = i + 1;
 }
 
-f1(); // expect: 1
-f2(); // expect: 2
-f3(); // expect: 3
+f1(); // expect: 1.000000
+f2(); // expect: 2.000000
+f3(); // expect: 3.000000
