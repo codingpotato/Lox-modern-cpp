@@ -2348,4 +2348,4 @@ while (false) {
   nil; nil; nil; nil; nil; nil; nil; nil; nil; nil; nil; nil; nil; nil; nil; nil;
   nil; nil; nil; nil; nil; nil; nil; nil; nil; nil; nil; nil; nil; nil; nil; nil;
   nil; nil; nil; nil; nil; nil; nil; nil; nil; nil; nil; nil; nil; nil; nil; nil;
-} // Error at '}': Loop body too large.
+} // expect: [line 2351] Error at '}': Loop body too large.

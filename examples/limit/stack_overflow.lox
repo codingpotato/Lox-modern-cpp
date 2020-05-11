@@ -15,7 +15,73 @@ fun foo() {
   var a14;
   var a15;
   var a16;
-  foo(); // expect runtime error: Stack overflow.
+  foo();
 }
 
 foo();
+
+// expect: Stack overflow.
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0018] in <func: foo>
+// expect: [line 0021] in <script>
