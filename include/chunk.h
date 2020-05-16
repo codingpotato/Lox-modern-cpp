@@ -34,7 +34,7 @@ struct Chunk {
 
   template <typename Instruction>
   size_t add(size_t operand,
-             const typename Instruction::Upvalue_vector& upvalues,
+             const typename Instruction::Upvalue_vector &upvalues,
              size_t line) noexcept {
     static_assert(std::is_base_of_v<instruction::Closure_instr, Instruction>);
 
@@ -48,7 +48,7 @@ struct Chunk {
   }
 
   template <typename... Args>
-  size_t add_constant(Args&&... args) noexcept {
+  size_t add_constant(Args &&... args) noexcept {
     constants.emplace_back(std::forward<Args>(args)...);
     return constants.size() - 1;
   }
@@ -59,18 +59,18 @@ struct Chunk {
   }
 
   size_t code_size() const noexcept { return code.size(); }
-  const Bytecode* code_begin() const noexcept { return &code[0]; }
-  const Bytecode* code_end() const noexcept { return &code[code.size()]; }
+  const Bytecode *code_begin() const noexcept { return &code[0]; }
+  const Bytecode *code_end() const noexcept { return &code[code.size()]; }
 
-  const Value_vector& get_constants() const noexcept { return constants; }
-  Value_vector& get_constants() noexcept { return constants; }
+  const Value_vector &get_constants() const noexcept { return constants; }
+  Value_vector &get_constants() noexcept { return constants; }
 
   size_t line_at(size_t pos) const noexcept {
     ENSURES(pos < lines.size());
     return lines[pos];
   }
 
-  std::string to_string(const std::string& name, int level = 0) const noexcept;
+  std::string to_string(const std::string &name, int level = 0) const noexcept;
 
  private:
   using Line_vector = std::vector<size_t>;

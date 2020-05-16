@@ -41,13 +41,13 @@ template <typename Compiler>
 using Rules = std::array<Rule<Compiler>, static_cast<size_t>(Token::eof) + 1>;
 
 template <typename Compiler>
-struct rules_generator {
+struct Rules_generator {
   static constexpr Rules<Compiler> make_rules() noexcept {
-    struct element {
+    struct Element {
       Token::Type type;
       Rule<Compiler> rule_of_type;
     };
-    constexpr element elements[] = {
+    constexpr Element elements[] = {
         {Token::left_paren,
          {&Compiler::parse_grouping, &Compiler::parse_call, p_call}},
         {Token::minus,
@@ -74,7 +74,7 @@ struct rules_generator {
     };
     Rules<Compiler> rules{};
     for (auto it = std::cbegin(elements); it != std::end(elements); ++it) {
-      rules[static_cast<std::size_t>(it->type)] = it->rule_of_type;
+      rules[static_cast<size_t>(it->type)] = it->rule_of_type;
     }
     return rules;
   };
@@ -84,9 +84,9 @@ struct rules_generator {
 
 class Compiler {
  public:
-  explicit Compiler(Heap& heap) noexcept : heap{&heap} {}
+  explicit Compiler(Heap &heap) noexcept : heap{&heap} {}
 
-  Function* compile(Token_vector ts) {
+  Function *compile(Token_vector ts) {
     make_func_frame("", 0);
     tokens = std::move(ts);
     current = tokens.cbegin();
@@ -99,8 +99,8 @@ class Compiler {
   }
 
   template <typename Visitor>
-  void for_each_func(Visitor&& visitor) const noexcept {
-    for (auto& func_frame : func_frames) {
+  void for_each_func(Visitor &&visitor) const noexcept {
+    for (const auto &func_frame : func_frames) {
       visitor(func_frame.func);
     }
   }
@@ -127,6 +127,20 @@ class Compiler {
     make_func_frame(previous->lexeme, 1);
     current_func_frame->begin_scope();
     consume(Token::left_paren, "Expect '(' after function name.");
+
+    parse_parameters();
+
+    consume(Token::left_brace, "Expect '{' before function body.");
+    parse_block();
+
+    add_return_instruction();
+    const auto func = current_func_frame->func;
+    const auto upvalues = std::move(current_func_frame->upvalues);
+    pop_func_frame();
+    add<instruction::Closure>(add_constant(func), upvalues);
+  }
+
+  void parse_parameters() {
     if (!check(Token::right_paren)) {
       do {
         auto func = current_func_frame->func;
@@ -142,19 +156,6 @@ class Compiler {
       } while (match(Token::comma));
     }
     consume(Token::right_paren, "Expect ')' after parameters.");
-
-    consume(Token::left_brace, "Expect '{' before function body.");
-    parse_block();
-    add_return_instruction();
-    auto func = current_func_frame->func;
-    auto upvalues = std::move(current_func_frame->upvalues);
-    pop_func_frame();
-    add<instruction::Closure>(add_constant(func), upvalues);
-  }
-
-  void add_return_instruction() noexcept {
-    add<instruction::Nil>();
-    add<instruction::Return>();
   }
 
   void parse_var_declaration() {
@@ -168,7 +169,7 @@ class Compiler {
     current_func_frame->define_variable(name, previous->line);
   }
 
-  size_t parse_variable(const std::string& message) {
+  size_t parse_variable(const std::string &message) {
     consume(Token::identifier, message);
     current_func_frame->declare_variable(*previous);
     if (current_func_frame->scope_depth > 0) {
@@ -200,10 +201,9 @@ class Compiler {
   void parse_for() {
     current_func_frame->begin_scope();
     consume(Token::left_paren, "Expect '(' after 'for'.");
-    if (match(Token::semicolon)) {
-    } else if (match(Token::k_var)) {
+    if (match(Token::k_var)) {
       parse_var_declaration();
-    } else {
+    } else if (!match(Token::semicolon)) {
       expression_statement();
     }
     auto loop_start = current_func_frame->current_code_position();
@@ -216,8 +216,8 @@ class Compiler {
     }
 
     if (!match(Token::right_paren)) {
-      auto body_jump = add<instruction::Jump>(0);
-      auto increament_start = current_func_frame->current_code_position();
+      const auto body_jump = add<instruction::Jump>(0);
+      const auto increament_start = current_func_frame->current_code_position();
       parse_expression();
       add<instruction::Pop>();
       consume(Token::right_paren, "Expect ')' after for clauses.");
@@ -422,7 +422,7 @@ class Compiler {
     }
   }
 
-  int resolve_upvalue(const std::string& name, size_t frame_index) {
+  int resolve_upvalue(const std::string &name, size_t frame_index) {
     if (frame_index > 0) {
       if (auto local = func_frames[frame_index - 1].resolve_local(*previous);
           local != -1) {
@@ -511,7 +511,7 @@ class Compiler {
     ++current;
   }
 
-  void consume(Token::Type type, const std::string& message) {
+  void consume(Token::Type type, const std::string &message) {
     if (current->type == type) {
       advance();
     } else {
@@ -529,29 +529,34 @@ class Compiler {
     return false;
   }
 
+  void add_return_instruction() noexcept {
+    add<instruction::Nil>();
+    add<instruction::Return>();
+  }
+
   template <typename Instruction>
   size_t add() noexcept {
     ENSURES(!func_frames.empty() && func_frames.back().func);
-    auto& chunk = func_frames.back().func->get_chunk();
+    auto &chunk = func_frames.back().func->get_chunk();
     return chunk.add<Instruction>(previous->line);
   }
   template <typename Instruction>
   size_t add(size_t operand) noexcept {
     ENSURES(!func_frames.empty() && func_frames.back().func);
-    auto& chunk = func_frames.back().func->get_chunk();
+    auto &chunk = func_frames.back().func->get_chunk();
     return chunk.add<Instruction>(operand, previous->line);
   }
   template <typename Instruction>
   size_t add(size_t operand,
-             const typename Instruction::Upvalue_vector& upvalues) noexcept {
+             const typename Instruction::Upvalue_vector &upvalues) noexcept {
     ENSURES(!func_frames.empty() && func_frames.back().func);
-    auto& chunk = func_frames.back().func->get_chunk();
+    auto &chunk = func_frames.back().func->get_chunk();
     return chunk.add<Instruction>(operand, upvalues, previous->line);
   }
   template <typename... Args>
-  size_t add_constant(Args&&... args) {
+  size_t add_constant(Args &&... args) {
     ENSURES(!func_frames.empty() && func_frames.back().func);
-    auto& chunk = func_frames.back().func->get_chunk();
+    auto &chunk = func_frames.back().func->get_chunk();
     const auto index = chunk.add_constant(std::forward<Args>(args)...);
     if (index <= instruction::Constant_instr::operand_max) {
       return index;
@@ -570,16 +575,16 @@ class Compiler {
   using Local_vector = std::vector<Local>;
 
   struct Func_frame {
-    Func_frame(Function* func, int depth) noexcept
+    Func_frame(Function *func, int depth) noexcept
         : func{func}, scope_depth{depth} {
       ENSURES(func);
       locals.emplace_back("function object", depth);
     }
 
-    Chunk& get_chunk() noexcept { return func->get_chunk(); }
+    Chunk &get_chunk() noexcept { return func->get_chunk(); }
 
-    void declare_variable(const Token& token) {
-      const auto& name = token.lexeme;
+    void declare_variable(const Token &token) {
+      const auto &name = token.lexeme;
       if (scope_depth > 0) {
         for (auto it = locals.crbegin(); it != locals.crend(); ++it) {
           if (it->depth != -1 && it->depth < scope_depth) {
@@ -610,8 +615,8 @@ class Compiler {
       }
     }
 
-    int resolve_local(const Token& token) const {
-      const auto& name = token.lexeme;
+    int resolve_local(const Token &token) const {
+      const auto &name = token.lexeme;
       for (int i = locals.size() - 1; i >= 0; --i) {
         if (locals[i].name == name) {
           if (locals[i].depth != -1) {
@@ -635,7 +640,7 @@ class Compiler {
       return current_code_position() + instruction::Loop::size - pos;
     }
 
-    void add_local(std::string name, const Token& token) {
+    void add_local(std::string name, const Token &token) {
       if (locals.size() <= UINT8_MAX) {
         locals.emplace_back(std::move(name), -1);
       } else {
@@ -648,7 +653,7 @@ class Compiler {
     void end_scope(int line) noexcept {
       --scope_depth;
       while (!locals.empty() && locals.back().depth > scope_depth) {
-        if (const auto& local = locals.back(); local.is_captured) {
+        if (const auto &local = locals.back(); local.is_captured) {
           get_chunk().add<instruction::Close_upvalue>(line);
         } else {
           get_chunk().add<instruction::Pop>(line);
@@ -657,7 +662,7 @@ class Compiler {
       }
     }
 
-    size_t add_upvalue(size_t index, bool is_local, const Token& token) {
+    size_t add_upvalue(size_t index, bool is_local, const Token &token) {
       for (size_t i = 0; i < upvalues.size(); ++i) {
         if (upvalues[i].index == index && upvalues[i].is_local == is_local) {
           return i;
@@ -672,7 +677,7 @@ class Compiler {
                                token);
     }
 
-    Function* func;
+    Function *func;
     Local_vector locals;
     instruction::Closure::Upvalue_vector upvalues;
     int scope_depth;
@@ -680,7 +685,7 @@ class Compiler {
 
   using Func_frame_vector = std::vector<Func_frame>;
 
-  void make_func_frame(const std::string& name, int depth) noexcept {
+  void make_func_frame(const std::string &name, int depth) noexcept {
     auto func = heap->make_object<Function>();
     func_frames.emplace_back(func, depth);
     if (!name.empty()) {
@@ -693,21 +698,21 @@ class Compiler {
     current_func_frame = func_frames.empty() ? nullptr : &func_frames.back();
   }
 
-  static Compile_error make_compile_error(const std::string& message,
-                                          const Token& token) noexcept;
+  static Compile_error make_compile_error(const std::string &message,
+                                          const Token &token) noexcept;
 
-  Compile_error make_compile_error(const std::string& message,
+  Compile_error make_compile_error(const std::string &message,
                                    bool from_current = false) const noexcept;
 
-  friend precedence::rules_generator<Compiler>;
+  friend precedence::Rules_generator<Compiler>;
   constexpr static precedence::Rules<Compiler> p_rules_ =
-      precedence::rules_generator<Compiler>::make_rules();
+      precedence::Rules_generator<Compiler>::make_rules();
 
   constexpr static int max_function_parameters = 255;
 
-  Heap* heap;
+  Heap *heap;
   Func_frame_vector func_frames;
-  Func_frame* current_func_frame = nullptr;
+  Func_frame *current_func_frame = nullptr;
   Token_vector tokens;
   Token_vector::const_iterator current;
   Token_vector::const_iterator previous;
