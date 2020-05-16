@@ -104,7 +104,7 @@ class Function : public Object {
   std::string to_string(bool verbose = false) const noexcept override {
     const std::string message =
         name ? "<func: " + name->get_string() + ">" : "<script>";
-    return verbose ? ::lox::to_string(chunk, message, 1) : message;
+    return verbose ? chunk.to_string(message, 1) : message;
   }
 
   String* name = nullptr;

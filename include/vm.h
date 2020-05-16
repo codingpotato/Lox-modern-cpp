@@ -40,7 +40,7 @@ class VM {
     Call_frame() noexcept {}
     Call_frame(Closure& closure, size_t bottom = 0) noexcept
         : closure{&closure},
-          ip{&closure.get_func()->get_chunk().get_code()[0]},
+          ip{closure.get_func()->get_chunk().code_begin()},
           bottom_of_stack{bottom} {}
 
     Closure* closure = nullptr;
@@ -49,11 +49,10 @@ class VM {
   };
 
   struct Executor {
-    void copy_from(const Closure& closure) noexcept {
-      const auto& chunk = closure.get_func()->get_chunk();
-      const auto& code = chunk.get_code();
-      ip = &code[0];
-      end = &code[code.size()];
+    void copy_from(Closure& closure) noexcept {
+      Chunk& chunk = closure.get_func()->get_chunk();
+      ip = chunk.code_begin();
+      end = chunk.code_end();
       constants = &chunk.get_constants();
     }
 
@@ -62,9 +61,15 @@ class VM {
       ip = frame.ip;
     }
 
-    const Bytecode* ip;
-    const Bytecode* end;
-    const Value_vector* constants = nullptr;
+    Value& constant_at(size_t pos) const noexcept {
+      ENSURES(constants);
+      ENSURES(pos < constants->size());
+      return (*constants)[pos];
+    }
+
+    const Bytecode* ip = nullptr;
+    const Bytecode* end = nullptr;
+    Value_vector* constants = nullptr;
   };
 
   template <typename Func>
@@ -131,9 +136,7 @@ class VM {
 
 template <>
 inline void VM::handle(const instruction::Constant& constant) {
-  ENSURES(executor.constants != nullptr);
-  ENSURES(constant.operand() < executor.constants->size());
-  stack.push((*executor.constants)[constant.operand()]);
+  stack.push(executor.constant_at(constant.operand()));
 }
 
 template <>
@@ -168,11 +171,9 @@ inline void VM::handle(const instruction::Set_local& set_local) {
 
 template <>
 inline void VM::handle(const instruction::Get_global& get_global) {
-  ENSURES(executor.constants != nullptr);
-  ENSURES(get_global.operand() < executor.constants->size());
-  auto constant = (*executor.constants)[get_global.operand()];
-  auto name = constant.as_object()->as<String>();
-  if (auto value = globals.get_if(name); value != nullptr) {
+  const auto constant = executor.constant_at(get_global.operand());
+  const auto name = constant.as_object()->as<String>();
+  if (const auto* value = globals.get_if(name); value != nullptr) {
     stack.push(*value);
   } else {
     throw_undefined_variable(name);
@@ -181,19 +182,15 @@ inline void VM::handle(const instruction::Get_global& get_global) {
 
 template <>
 inline void VM::handle(const instruction::Define_global& define_global) {
-  ENSURES(executor.constants != nullptr);
-  ENSURES(define_global.operand() < executor.constants->size());
-  auto constant = (*executor.constants)[define_global.operand()];
+  const auto constant = executor.constant_at(define_global.operand());
   const auto name = constant.as_object()->as<String>();
-  const auto str = heap.make_string(name->get_string());
+  auto* str = heap.make_string(name->get_string());
   globals.insert(str, stack.pop());
 }
 
 template <>
 inline void VM::handle(const instruction::Set_global& set_global) {
-  ENSURES(executor.constants != nullptr);
-  ENSURES(set_global.operand() < executor.constants->size());
-  auto constant = (*executor.constants)[set_global.operand()];
+  const auto constant = executor.constant_at(set_global.operand());
   const auto name = constant.as_object()->as<String>();
   if (!globals.set(name, stack.peek())) {
     throw_undefined_variable(name);
@@ -323,11 +320,9 @@ inline void VM::handle(const instruction::Call& call) {
 
 template <>
 inline void VM::handle(const instruction::Closure& closure_instr) {
-  ENSURES(executor.constants != nullptr);
-  ENSURES(closure_instr.operand() < executor.constants->size());
-  auto value = (*executor.constants)[closure_instr.operand()];
-  auto func = value.as_object()->as<Function>();
-  auto closure = heap.make_object<Closure>(func);
+  auto value = executor.constant_at(closure_instr.operand());
+  auto* func = value.as_object()->as<Function>();
+  auto* closure = heap.make_object<Closure>(func);
   stack.push(closure);
   const auto upvalues = closure_instr.upvalues();
   for (size_t i = 0; i < func->upvalue_count; ++i) {

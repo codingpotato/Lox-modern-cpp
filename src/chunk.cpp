@@ -85,10 +85,8 @@ static std::pair<std::string, size_t> to_string(
   return {oss.str(), instr.size};
 }
 
-std::string to_string(const Chunk& chunk, const std::string& name,
-                      int level) noexcept {
-  const auto& code = chunk.get_code();
-  const auto& lines = chunk.get_lines();
+std::string Chunk::to_string(const std::string& name, int level) const
+    noexcept {
   std::string result = level == 0 ? "== " + name + " ==\n" : name + "\n";
   size_t pos = 0;
   while (pos < code.size()) {
@@ -102,7 +100,7 @@ std::string to_string(const Chunk& chunk, const std::string& name,
     }
     result += oss.str();
     instruction::visit(code, pos, [&](const auto& instr) {
-      auto [string, size] = to_string(instr, pos, chunk.get_constants());
+      auto [string, size] = lox::to_string(instr, pos, constants);
       result += string;
       pos += size;
     });

@@ -35,10 +35,9 @@ void VM::backtrace() const noexcept {
   for (size_t distance = 0; distance < call_frames.size(); ++distance) {
     auto& frame = call_frames.peek(distance);
     auto func = frame.closure->get_func();
-    const auto& code = func->get_chunk().get_code();
-    const auto index = frame.ip - &code[0];
+    const auto index = frame.ip - func->get_chunk().code_begin();
     *out << "[line " << std::setfill('0') << std::setw(4)
-         << func->get_chunk().get_lines()[index] << "] in " << func->to_string()
+         << func->get_chunk().line_at(index) << "] in " << func->to_string()
          << "\n";
   }
 }

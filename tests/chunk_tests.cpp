@@ -30,5 +30,5 @@ TEST_CASE("chunk") {
 0008    3 OP_Jump 5 -> 16
 0011    4 OP_Return
 )";
-  REQUIRE_EQ(to_string(chunk, "test"), expected);
+  REQUIRE_EQ(chunk.to_string("test"), expected);
 }

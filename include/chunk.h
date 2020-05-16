@@ -1,7 +1,6 @@
 #ifndef LOX_CHUNK_H
 #define LOX_CHUNK_H
 
-#include <type_traits>
 #include <vector>
 
 #include "contract.h"
@@ -11,12 +10,6 @@
 namespace lox {
 
 struct Chunk {
-  using Line_vector = std::vector<size_t>;
-
-  const Bytecode_vector& get_code() const noexcept { return code; }
-  const Value_vector& get_constants() const noexcept { return constants; }
-  const Line_vector& get_lines() const noexcept { return lines; }
-
   template <typename Instruction>
   size_t add(size_t line) noexcept {
     const auto pos = code.size();
@@ -65,14 +58,27 @@ struct Chunk {
     instruction::Jump_instr::set_operand(&code[pos], operand);
   }
 
+  size_t code_size() const noexcept { return code.size(); }
+  const Bytecode* code_begin() const noexcept { return &code[0]; }
+  const Bytecode* code_end() const noexcept { return &code[code.size()]; }
+
+  const Value_vector& get_constants() const noexcept { return constants; }
+  Value_vector& get_constants() noexcept { return constants; }
+
+  size_t line_at(size_t pos) const noexcept {
+    ENSURES(pos < lines.size());
+    return lines[pos];
+  }
+
+  std::string to_string(const std::string& name, int level = 0) const noexcept;
+
  private:
+  using Line_vector = std::vector<size_t>;
+
   Bytecode_vector code;
   Value_vector constants;
   Line_vector lines;
 };
-
-std::string to_string(const Chunk& chunk, const std::string& name,
-                      int level = 0) noexcept;
 
 }  // namespace lox
 

@@ -47,7 +47,7 @@ inline std::string compile(std::string source,
   lox::Heap heap;
   lox::Compiler compiler{heap};
   auto func = compiler.compile(scanner.scan());
-  return lox::to_string(func->get_chunk(), message);
+  return func->get_chunk().to_string(message);
 }
 
 template <bool Debug = false>

@@ -111,8 +111,9 @@ class GC : Memory_tracker {
     } else if (object->is<Function>()) {
       auto func = object->as<Function>();
       mark_object(func->name);
-      for (auto value : func->get_chunk().get_constants()) {
-        mark_value(value);
+
+      for (auto constant : func->get_chunk().get_constants()) {
+        mark_value(constant);
       }
     } else if (object->is<Upvalue>()) {
       mark_value(object->as<Upvalue>()->closed);
