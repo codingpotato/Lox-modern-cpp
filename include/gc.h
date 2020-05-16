@@ -9,9 +9,16 @@
 
 namespace lox {
 
-struct Memory_tracker {
+class Memory_tracker {
+ public:
   Memory_tracker() noexcept { current_tracker = this; }
+
   virtual ~Memory_tracker() noexcept { current_tracker = nullptr; }
+
+  Memory_tracker(const Memory_tracker&) = delete;
+  Memory_tracker(Memory_tracker&&) = delete;
+  Memory_tracker& operator=(const Memory_tracker&) = delete;
+  Memory_tracker& operator=(Memory_tracker&&) = delete;
 
   static Memory_tracker* current() noexcept { return current_tracker; }
 

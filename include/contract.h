@@ -1,20 +1,20 @@
 #ifndef LOX_CONTRACT_H
 #define LOX_CONTRACT_H
 
-#include <exception>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 
 namespace lox {
 namespace contract {
 
-struct exception : public std::exception {
-  exception(const char* rule, const char* filename, int line) noexcept {
-    std::ostringstream ss;
-    ss << "Condition '" << rule << "' violated at " << filename << ":" << line;
-    message_ = ss.str();
+struct Exception : public std::exception {
+  Exception(const char* rule, const char* filename, int line) noexcept {
+    std::ostringstream oss;
+    oss << "Condition '" << rule << "' violated at " << filename << ":" << line;
+    message_ = oss.str();
   }
-  virtual ~exception() {}
+  virtual ~Exception() {}
 
   const char* what() const noexcept override { return message_.c_str(); }
 
@@ -25,7 +25,7 @@ struct exception : public std::exception {
 inline constexpr void assures(bool condition, const char* rule,
                               const char* filename, int line) {
   if (!condition) {
-    throw exception(rule, filename, line);
+    throw Exception(rule, filename, line);
   }
 }
 

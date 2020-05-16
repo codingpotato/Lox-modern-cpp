@@ -8,7 +8,8 @@ namespace lox {
 
 class Exception : public std::exception {
  public:
-  Exception(std::string message) noexcept : message{std::move(message)} {}
+  explicit Exception(std::string message) noexcept
+      : message{std::move(message)} {}
 
   const char* what() const noexcept override { return message.c_str(); }
 

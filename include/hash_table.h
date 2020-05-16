@@ -13,6 +13,11 @@ struct Hash_table {
   Hash_table() noexcept : entries{nullptr}, capacity_mask{-1}, count{0} {}
   ~Hash_table() noexcept { free_current_entries(); }
 
+  Hash_table(const Hash_table&) = delete;
+  Hash_table(Hash_table&&) = delete;
+  Hash_table& operator=(const Hash_table&) = delete;
+  Hash_table& operator=(Hash_table&&) = delete;
+
   bool contains(const String* key) const noexcept {
     const auto& dest = find_entry(entries, capacity_mask, key);
     return dest.key != nullptr;
