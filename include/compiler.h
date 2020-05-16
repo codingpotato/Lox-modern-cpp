@@ -95,7 +95,7 @@ class Compiler {
     }
     add_return_instruction();
     EXPECTS(func_frames.size() == 1)
-    return current_func_frame->func;
+    return func_frames.back().func;
   }
 
   template <typename Visitor>
@@ -194,7 +194,7 @@ class Compiler {
       parse_block();
       current_func_frame->end_scope(previous->line);
     } else {
-      expression_statement();
+      parse_expression_statement();
     }
   }
 
@@ -204,9 +204,9 @@ class Compiler {
     if (match(Token::k_var)) {
       parse_var_declaration();
     } else if (!match(Token::semicolon)) {
-      expression_statement();
+      parse_expression_statement();
     }
-    auto loop_start = current_func_frame->current_code_position();
+    auto loop_start = current_code_size();
     auto exit_jump = -1;
     if (!match(Token::semicolon)) {
       parse_expression();
@@ -217,19 +217,19 @@ class Compiler {
 
     if (!match(Token::right_paren)) {
       const auto body_jump = add<instruction::Jump>(0);
-      const auto increament_start = current_func_frame->current_code_position();
+      const auto increament_start = current_code_size();
       parse_expression();
       add<instruction::Pop>();
       consume(Token::right_paren, "Expect ')' after for clauses.");
       emit_loop_from(loop_start);
       loop_start = increament_start;
-      current_func_frame->patch_jump(body_jump);
+      patch_jump(body_jump);
     }
 
     parse_statement();
     emit_loop_from(loop_start);
     if (exit_jump != -1) {
-      current_func_frame->patch_jump(exit_jump);
+      patch_jump(exit_jump);
       add<instruction::Pop>();
     }
     current_func_frame->end_scope(previous->line);
@@ -245,12 +245,12 @@ class Compiler {
     parse_statement();
     const auto else_jump_index = add<instruction::Jump>(0);
 
-    current_func_frame->patch_jump(then_jump_index);
+    patch_jump(then_jump_index);
     add<instruction::Pop>();
     if (match(Token::k_else)) {
       parse_statement();
     }
-    current_func_frame->patch_jump(else_jump_index);
+    patch_jump(else_jump_index);
   }
 
   void parse_return() {
@@ -267,7 +267,7 @@ class Compiler {
   }
 
   void parse_while() {
-    const auto loop_start = current_func_frame->current_code_position();
+    const auto loop_start = current_code_size();
     consume(Token::left_paren, "Expect '(' after 'while'.");
     parse_expression();
     consume(Token::right_paren, "Expect ')' after condition.");
@@ -275,7 +275,7 @@ class Compiler {
     add<instruction::Pop>();
     parse_statement();
     emit_loop_from(loop_start);
-    current_func_frame->patch_jump(exit_jump_index);
+    patch_jump(exit_jump_index);
     add<instruction::Pop>();
   }
 
@@ -292,7 +292,7 @@ class Compiler {
     add<instruction::Print>();
   }
 
-  void expression_statement() {
+  void parse_expression_statement() {
     parse_expression();
     consume(Token::semicolon, "Expect ';' after value.");
     add<instruction::Pop>();
@@ -339,7 +339,7 @@ class Compiler {
         add<instruction::Divide>();
         break;
       default:
-        break;
+        EXPECTS(false);
     }
   }
 
@@ -382,41 +382,90 @@ class Compiler {
     }
   }
 
+  void parse_and(bool) {
+    const auto end_jump_index = add<instruction::Jump_if_false>(0);
+    add<instruction::Pop>();
+    parse_precedence(precedence::p_and);
+    patch_jump(end_jump_index);
+  }
+
+  void parse_or(bool) {
+    const auto else_jump_index = add<instruction::Jump_if_false>(0);
+    const auto end_jump_index = add<instruction::Jump>(0);
+    patch_jump(else_jump_index);
+    add<instruction::Pop>();
+    parse_precedence(precedence::p_or);
+    patch_jump(end_jump_index);
+  }
+
+  void parse_precedence(precedence::Type precedence) {
+    advance();
+    const auto prefix = p_rules_[previous->type].prefix;
+    if (prefix == nullptr) {
+      throw make_compile_error("Expect expression.");
+    }
+    const auto can_assign = precedence <= precedence::p_assignment;
+    (this->*prefix)(can_assign);
+    while (static_cast<int>(precedence) <=
+           static_cast<int>(p_rules_[current->type].precedence)) {
+      advance();
+      const auto infix = p_rules_[previous->type].infix;
+      (this->*infix)(can_assign);
+    }
+
+    if (can_assign && match(Token::equal)) {
+      throw make_compile_error("Invalid assignment target.");
+    }
+  }
+
+  struct Variable_get {};
+  struct Variable_set {};
+  enum class Variable_type { local, upvalue, global };
+
   void add_variable(bool can_assign) {
-    enum Type { local, upvalue, global } type = local;
+    auto type = Variable_type::local;
     auto index = current_func_frame->resolve_local(*previous);
     if (index == -1) {
       index = resolve_upvalue(previous->lexeme, func_frames.size() - 1);
       if (index != -1) {
-        type = upvalue;
+        type = Variable_type::upvalue;
       } else {
-        type = global;
+        type = Variable_type::global;
         index = add_constant(heap->make_string(previous->lexeme));
       }
     }
     if (can_assign && match(Token::equal)) {
       parse_expression();
+      add_variable<Variable_set>(type, index);
+    } else {
+      add_variable<Variable_get>(type, index);
+    }
+  }
+
+  template <typename Variable_get_set>
+  void add_variable(Variable_type type, size_t index) {
+    if constexpr (std::is_same_v<Variable_get_set, Variable_get>) {
       switch (type) {
-        case local:
-          add<instruction::Set_local>(index);
+        case Variable_type::global:
+          add<instruction::Get_global>(index);
           break;
-        case upvalue:
-          add<instruction::Set_upvalue>(index);
+        case Variable_type::local:
+          add<instruction::Get_local>(index);
           break;
-        case global:
-          add<instruction::Set_global>(index);
+        case Variable_type::upvalue:
+          add<instruction::Get_upvalue>(index);
           break;
       }
     } else {
       switch (type) {
-        case local:
-          add<instruction::Get_local>(index);
+        case Variable_type::global:
+          add<instruction::Set_global>(index);
           break;
-        case upvalue:
-          add<instruction::Get_upvalue>(index);
+        case Variable_type::local:
+          add<instruction::Set_local>(index);
           break;
-        case global:
-          add<instruction::Get_global>(index);
+        case Variable_type::upvalue:
+          add<instruction::Set_upvalue>(index);
           break;
       }
     }
@@ -424,26 +473,19 @@ class Compiler {
 
   int resolve_upvalue(const std::string &name, size_t frame_index) {
     if (frame_index > 0) {
-      if (auto local = func_frames[frame_index - 1].resolve_local(*previous);
+      ENSURES(frame_index < func_frames.size());
+      auto &previous_frame = func_frames[frame_index - 1];
+      if (const auto local = previous_frame.resolve_local(*previous);
           local != -1) {
-        func_frames[frame_index - 1].locals[local].is_captured = true;
+        previous_frame.locals[local].is_captured = true;
         return func_frames[frame_index].add_upvalue(local, true, *previous);
       }
-      if (auto upvalue = resolve_upvalue(name, frame_index - 1);
+      if (const auto upvalue = resolve_upvalue(name, frame_index - 1);
           upvalue != -1) {
         return func_frames[frame_index].add_upvalue(upvalue, false, *previous);
       }
     }
     return -1;
-  }
-
-  void emit_loop_from(size_t pos) {
-    const auto distance = current_func_frame->loop_distance_from(pos);
-    if (distance <= UINT16_MAX) {
-      add<instruction::Loop>(distance);
-    } else {
-      throw make_compile_error("Loop body too large.", *previous);
-    }
   }
 
   void add_number_constant(bool) {
@@ -470,42 +512,6 @@ class Compiler {
     }
   }
 
-  void parse_and(bool) {
-    const auto end_jump_index = add<instruction::Jump_if_false>(0);
-    add<instruction::Pop>();
-    parse_precedence(precedence::p_and);
-    current_func_frame->patch_jump(end_jump_index);
-  }
-
-  void parse_or(bool) {
-    const auto else_jump_index = add<instruction::Jump_if_false>(0);
-    const auto end_jump_index = add<instruction::Jump>(0);
-    current_func_frame->patch_jump(else_jump_index);
-    add<instruction::Pop>();
-    parse_precedence(precedence::p_or);
-    current_func_frame->patch_jump(end_jump_index);
-  }
-
-  void parse_precedence(precedence::Type precedence) {
-    advance();
-    const auto prefix = p_rules_[previous->type].prefix;
-    if (prefix == nullptr) {
-      throw make_compile_error("Expect expression.");
-    }
-    const auto can_assign = precedence <= precedence::p_assignment;
-    (this->*prefix)(can_assign);
-    while (static_cast<int>(precedence) <=
-           static_cast<int>(p_rules_[current->type].precedence)) {
-      advance();
-      const auto infix = p_rules_[previous->type].infix;
-      (this->*infix)(can_assign);
-    }
-
-    if (can_assign && match(Token::equal)) {
-      throw make_compile_error("Invalid assignment target.");
-    }
-  }
-
   void advance() noexcept {
     previous = current;
     ++current;
@@ -529,6 +535,15 @@ class Compiler {
     return false;
   }
 
+  void emit_loop_from(size_t pos) {
+    const auto distance = current_code_size() + instruction::Loop::size - pos;
+    if (distance <= instruction::Loop::operand_max) {
+      add<instruction::Loop>(distance);
+    } else {
+      throw make_compile_error("Loop body too large.", *previous);
+    }
+  }
+
   void add_return_instruction() noexcept {
     add<instruction::Nil>();
     add<instruction::Return>();
@@ -540,12 +555,14 @@ class Compiler {
     auto &chunk = func_frames.back().func->get_chunk();
     return chunk.add<Instruction>(previous->line);
   }
+
   template <typename Instruction>
   size_t add(size_t operand) noexcept {
     ENSURES(!func_frames.empty() && func_frames.back().func);
     auto &chunk = func_frames.back().func->get_chunk();
     return chunk.add<Instruction>(operand, previous->line);
   }
+
   template <typename Instruction>
   size_t add(size_t operand,
              const typename Instruction::Upvalue_vector &upvalues) noexcept {
@@ -553,6 +570,7 @@ class Compiler {
     auto &chunk = func_frames.back().func->get_chunk();
     return chunk.add<Instruction>(operand, upvalues, previous->line);
   }
+
   template <typename... Args>
   size_t add_constant(Args &&... args) {
     ENSURES(!func_frames.empty() && func_frames.back().func);
@@ -562,6 +580,16 @@ class Compiler {
       return index;
     }
     throw make_compile_error("Too many constants in one chunk.", *previous);
+  }
+
+  void patch_jump(size_t jump) noexcept {
+    auto &chunk = current_func_frame->get_chunk();
+    chunk.patch_jump(jump,
+                     chunk.code_size() - jump - instruction::Jump_instr::size);
+  }
+
+  size_t current_code_size() const noexcept {
+    return current_func_frame->get_chunk().code_size();
   }
 
   struct Local {
@@ -629,17 +657,6 @@ class Compiler {
       return -1;
     }
 
-    void patch_jump(size_t jump) noexcept {
-      get_chunk().patch_jump(
-          jump, current_code_position() - jump - instruction::Jump_instr::size);
-    }
-    size_t current_code_position() const noexcept {
-      return func->get_chunk().code_size();
-    }
-    size_t loop_distance_from(size_t pos) const noexcept {
-      return current_code_position() + instruction::Loop::size - pos;
-    }
-
     void add_local(std::string name, const Token &token) {
       if (locals.size() <= UINT8_MAX) {
         locals.emplace_back(std::move(name), -1);
@@ -693,6 +710,7 @@ class Compiler {
     }
     current_func_frame = &func_frames.back();
   }
+
   void pop_func_frame() noexcept {
     func_frames.pop_back();
     current_func_frame = func_frames.empty() ? nullptr : &func_frames.back();
@@ -708,7 +726,7 @@ class Compiler {
   constexpr static precedence::Rules<Compiler> p_rules_ =
       precedence::Rules_generator<Compiler>::make_rules();
 
-  constexpr static int max_function_parameters = 255;
+  constexpr static int max_function_parameters = UINT8_MAX;
 
   Heap *heap;
   Func_frame_vector func_frames;
