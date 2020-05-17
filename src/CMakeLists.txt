@@ -1,4 +1,4 @@
-set(SOURCES chunk.cpp compiler.cpp value.cpp vm.cpp)
+set(SOURCES chunk.cpp compiler.cpp scanner.cpp value.cpp vm.cpp)
 
 add_library(lox_core ${SOURCES})
 target_include_directories(lox_core PUBLIC ${DOCTEST_DIR} ${CMAKE_BINARY_DIR}

@@ -246,8 +246,8 @@ struct Scanner {
 
   Token::Type check_keyword(int index, const std::string& rest,
                             Token::Type type) const noexcept {
-    auto first = start + index;
-    auto last = start + index + rest.size();
+    const auto first = start + index;
+    const auto last = start + index + rest.size();
     if (current == last &&
         std::equal(first, last, rest.cbegin(), rest.cend())) {
       return type;
@@ -305,12 +305,7 @@ struct Scanner {
     return Token::identifier;
   }
 
-  Compile_error make_compiler_error(const std::string& message) const noexcept {
-    std::string string = {start, current};
-    return Compile_error{
-        "[line " + std::to_string(line) + "] " +
-        (!string.empty() ? "Error at '" + string + "': " : "") + message};
-  }
+  Compile_error make_compiler_error(const std::string& message) const noexcept;
 
   std::string source;
   std::string::const_iterator start;

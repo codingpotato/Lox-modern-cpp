@@ -32,6 +32,8 @@ class List {
     Node* current;
   };
 
+  List() noexcept = default;
+
   ~List() noexcept {
     if constexpr (Owened) {
       while (head) {
@@ -41,6 +43,11 @@ class List {
       }
     }
   }
+
+  List(const List&) noexcept = delete;
+  List(List&&) noexcept = delete;
+  List& operator=(const List&) noexcept = delete;
+  List& operator=(List&) noexcept = delete;
 
   bool empty() const noexcept { return head == nullptr; }
 
