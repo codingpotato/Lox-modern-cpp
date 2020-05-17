@@ -3,7 +3,7 @@
 ![build](https://github.com/codingpotato/Lox-modern-cpp/workflows/build/badge.svg)
 [![codecov](https://codecov.io/gh/codingpotato/Lox-modern-cpp/branch/master/graph/badge.svg)](https://codecov.io/gh/codingpotato/Lox-modern-cpp)
 
-Lox Modern Cpp is a modern cpp (C++17) implement of Lox programming language described in Bob Nystrom's book: [Crafting Interpreters](http://craftinginterpreters.com). The bytecode virtual machine is implemented by the modern cpp features to make it fast, cache friendly, lightweight and modular. 
+Lox Modern Cpp is a modern cpp (C++17) implement of Lox programming language described in Bob Nystrom's book: [Crafting Interpreters](http://craftinginterpreters.com). The bytecode virtual machine is implemented by new modern cpp features to make it fast, cache friendly, lightweight and modular. 
 
 ## Lox language
 Lox is a programming language described in Bob Nystrom's book: [Crafting Interpreters](http://craftinginterpreters.com). The syntax is similiar to C, with dynamic types and garbage collector. Folowing is a example to calcute the sum of 10000000.
