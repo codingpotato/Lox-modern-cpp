@@ -10,7 +10,14 @@
 
 namespace lox {
 
-inline void repl() noexcept {}
+inline void repl() noexcept {
+  while (true) {
+    std::cout << "> ";
+    std::string source;
+    std::getline(std::cin, source);
+    VM{std::cout}.interpret(std::move(source));
+  }
+}
 
 inline void run_file(const std::string &filepath) {
   std::ifstream ifs(filepath);
@@ -32,6 +39,9 @@ inline int main(int argc, char *argv[]) noexcept {
 }  // namespace lox
 
 int main(int argc, char *argv[]) {
+#ifdef NDEBUG
+  lox::main(argc, argv);
+#else
   doctest::Context context;
   context.applyCommandLine(argc, argv);
 
@@ -40,6 +50,9 @@ int main(int argc, char *argv[]) {
     return res;
   }
 
-  int client_stuff_return_code = lox::main(argc, argv);
-  return res + client_stuff_return_code;
+  if (argc > 1) {
+    lox::run_file(argv[argc - 1]);
+  }
+  return res;
+#endif
 }
